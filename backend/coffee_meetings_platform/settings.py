@@ -33,6 +33,12 @@ ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(',')
 # Application definition
 
 INSTALLED_APPS = [
+    'rest_framework',
+    'users',
+    'employees',
+    'campaigns',
+    'matching',
+    'evaluations',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
