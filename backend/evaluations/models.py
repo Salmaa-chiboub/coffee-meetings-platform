@@ -1,8 +1,10 @@
 from django.db import models
+from employees.models import Employee
+from matching.models import EmployeePair
 
 class Evaluation(models.Model):
-    employee_id = models.IntegerField()
-    employee_pair_id = models.IntegerField()
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)
+    employee_pair = models.ForeignKey(EmployeePair, on_delete=models.CASCADE, null=True, blank=True)
     rating = models.IntegerField()
     comment = models.TextField(blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
@@ -10,4 +12,4 @@ class Evaluation(models.Model):
     used = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Eval {self.employee_id} - {self.rating}"
+        return f"Eval {self.employee.name} - {self.rating}"

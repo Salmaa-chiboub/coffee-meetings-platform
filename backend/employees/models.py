@@ -1,4 +1,5 @@
 from django.db import models
+from campaigns.models import Campaign 
 
 class Employee(models.Model):
     name = models.CharField(max_length=100)
@@ -10,7 +11,7 @@ class Employee(models.Model):
 
 class EmployeeAttribute(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
-    campaign_id = models.IntegerField()  # هادشي ممكن يتبدل ب FK من campaign فاش نصاوبوه
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, null=True, blank=True)
     attribute_key = models.CharField(max_length=100)
     attribute_value = models.CharField(max_length=100)
 
