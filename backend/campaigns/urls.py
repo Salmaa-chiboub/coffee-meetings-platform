@@ -1,10 +1,8 @@
-from django.urls import path, include
+# campaigns/urls.py
 from rest_framework.routers import DefaultRouter
 from .views import CampaignViewSet
 
 router = DefaultRouter()
-router.register(r'', CampaignViewSet)
+router.register(r'', CampaignViewSet, basename='campaign')
 
-urlpatterns = [
-    path('', include(router.urls)),
-]
+urlpatterns = router.urls

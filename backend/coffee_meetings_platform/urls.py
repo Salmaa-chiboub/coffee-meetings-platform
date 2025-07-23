@@ -20,10 +20,8 @@ from django.urls import path , include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('users/', include('users.urls')),
+    path('campaigns/', include('campaigns.urls')),  # Correction: campaigns au lieu de compaigns
     path('employees/', include('employees.urls')),
-    path('campaigns/', include('campaigns.urls')),
     path('evaluations/', include('evaluations.urls')),
     path('matching/', include('matching.urls')),
-
-
 ]
