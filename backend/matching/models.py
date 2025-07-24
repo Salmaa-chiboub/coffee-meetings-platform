@@ -5,7 +5,12 @@ from employees.models import Employee
 class CampaignMatchingCriteria(models.Model):
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, null=True, blank=True)
     attribute_key = models.CharField(max_length=100)
-    rule = models.CharField(max_length=20)
+    RULE_CHOICES = [
+        ('same', 'Same'),
+        ('not_same', 'Not Same'),
+    ]
+    rule = models.CharField(max_length=20, choices=RULE_CHOICES)
+
 
 class EmployeePair(models.Model):
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, null=True, blank=True)
