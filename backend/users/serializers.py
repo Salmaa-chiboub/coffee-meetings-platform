@@ -36,7 +36,7 @@ class HRManagerLoginSerializer(serializers.ModelSerializer):
         # 🔐 Generate access token (expire in 15 min)
         access_payload = {
             'user_id': user.id,
-            'exp': datetime.utcnow() + timedelta(minutes=15),
+            'exp': datetime.utcnow() + timedelta(minutes=120),
             'iat': datetime.utcnow(),
         }
         access_token = jwt.encode(access_payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
