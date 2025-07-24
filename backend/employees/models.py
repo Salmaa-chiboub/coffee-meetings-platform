@@ -1,13 +1,18 @@
 from django.db import models
-from campaigns.models import Campaign 
+from campaigns.models import Campaign
 
 class Employee(models.Model):
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     arrival_date = models.DateField()
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return self.name
+
+    def get_attributes_dict(self):
+        """Return employee attributes as a dictionary"""
+        return {attr.attribute_key: attr.attribute_value for attr in self.employeeattribute_set.all()}
 
 class EmployeeAttribute(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
