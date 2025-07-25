@@ -1,3 +1,2 @@
-from django.contrib import admin
-
-# Register your models here.
+# Interface admin supprimée - Les RH utilisent l'API dédiée
+# Pas besoin d'interface admin Django pour les évaluations

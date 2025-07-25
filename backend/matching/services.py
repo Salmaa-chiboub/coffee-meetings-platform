@@ -269,7 +269,7 @@ class EmailNotificationService:
 
     def _send_pair_notification(self, pair: EmployeePair) -> bool:
         """
-        Send email notification to a single employee pair
+        Send email notification to a single employee pair with evaluation links
 
         Args:
             pair: EmployeePair object
@@ -278,26 +278,32 @@ class EmailNotificationService:
             bool: True if email was sent successfully, False otherwise
         """
         try:
+            # Create evaluation tokens for both employees
+            evaluation_tokens = self._create_evaluation_tokens(pair)
+
             # Prepare email context
             context = {
                 'employee1': pair.employee1,
                 'employee2': pair.employee2,
                 'campaign': pair.campaign,
                 'pair_id': pair.id,
+                'evaluation_tokens': evaluation_tokens
             }
 
             # Send email to employee 1
             success1 = self._send_individual_email(
                 recipient=pair.employee1,
                 partner=pair.employee2,
-                context=context
+                context=context,
+                evaluation_token=evaluation_tokens.get(pair.employee1.id)
             )
 
             # Send email to employee 2
             success2 = self._send_individual_email(
                 recipient=pair.employee2,
                 partner=pair.employee1,
-                context=context
+                context=context,
+                evaluation_token=evaluation_tokens.get(pair.employee2.id)
             )
 
             return success1 and success2
@@ -306,14 +312,58 @@ class EmailNotificationService:
             logger.error(f"Error sending pair notification for pair {pair.id}: {str(e)}")
             return False
 
-    def _send_individual_email(self, recipient, partner, context: Dict[str, Any]) -> bool:
+    def _create_evaluation_tokens(self, pair: EmployeePair) -> dict:
         """
-        Send email to an individual employee
+        Create evaluation records with tokens for both employees in the pair
+
+        Args:
+            pair: EmployeePair object
+
+        Returns:
+            dict: Mapping of employee_id to evaluation token
+        """
+        try:
+            from evaluations.models import Evaluation
+            import uuid
+
+            tokens = {}
+
+            # Create evaluation for employee1
+            eval1, created1 = Evaluation.objects.get_or_create(
+                employee=pair.employee1,
+                employee_pair=pair,
+                defaults={'token': uuid.uuid4(), 'used': False}
+            )
+            tokens[pair.employee1.id] = eval1.token
+
+            # Create evaluation for employee2
+            eval2, created2 = Evaluation.objects.get_or_create(
+                employee=pair.employee2,
+                employee_pair=pair,
+                defaults={'token': uuid.uuid4(), 'used': False}
+            )
+            tokens[pair.employee2.id] = eval2.token
+
+            if created1:
+                logger.info(f"Created evaluation token for {pair.employee1.name}")
+            if created2:
+                logger.info(f"Created evaluation token for {pair.employee2.name}")
+
+            return tokens
+
+        except Exception as e:
+            logger.error(f"Error creating evaluation tokens for pair {pair.id}: {str(e)}")
+            return {}
+
+    def _send_individual_email(self, recipient, partner, context: Dict[str, Any], evaluation_token=None) -> bool:
+        """
+        Send email to an individual employee with evaluation link
 
         Args:
             recipient: Employee receiving the email
             partner: Employee they are matched with
             context: Email template context
+            evaluation_token: UUID token for evaluation
 
         Returns:
             bool: True if email was sent successfully, False otherwise
@@ -324,6 +374,7 @@ class EmailNotificationService:
                 **context,
                 'recipient': recipient,
                 'partner': partner,
+                'evaluation_token': evaluation_token
             }
 
             # Email subject
@@ -351,8 +402,16 @@ class EmailNotificationService:
             return False
 
     def _create_html_email(self, context: Dict[str, Any]) -> str:
-        """Create HTML email content"""
+        """Create HTML email content with evaluation link"""
         campaign = context['campaign']
+        evaluation_token = context.get('evaluation_token')
+
+        # Create evaluation URL if token exists
+        evaluation_url = ""
+        if evaluation_token:
+            base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            evaluation_url = f"{base_url}/evaluate/{evaluation_token}"
+
         return f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -381,6 +440,22 @@ class EmailNotificationService:
                     </ol>
                 </div>
 
+                {f'''
+                <div style="background-color: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+                    <h3 style="color: #155724; margin: 0 0 10px 0;">📝 After Your Meeting</h3>
+                    <p style="margin: 5px 0;">Please share your feedback about this coffee meeting:</p>
+                    <p style="margin: 10px 0;">
+                        <a href="{evaluation_url}"
+                           style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                            📝 Evaluate Your Meeting
+                        </a>
+                    </p>
+                    <p style="font-size: 12px; color: #666; margin: 5px 0;">
+                        This link will remain active until you submit your feedback.
+                    </p>
+                </div>
+                ''' if evaluation_token else ''}
+
                 <p style="margin: 20px 0 10px 0; font-size: 14px; color: #666;">
                     Questions? Contact your HR team.
                 </p>
@@ -395,8 +470,24 @@ class EmailNotificationService:
         """
 
     def _create_plain_email(self, context: Dict[str, Any]) -> str:
-        """Create plain text email content"""
+        """Create plain text email content with evaluation link"""
         campaign = context['campaign']
+        evaluation_token = context.get('evaluation_token')
+
+        # Create evaluation URL if token exists
+        evaluation_section = ""
+        if evaluation_token:
+            base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            evaluation_url = f"{base_url}/evaluate/{evaluation_token}"
+            evaluation_section = f"""
+
+📝 AFTER YOUR MEETING:
+Please share your feedback about this coffee meeting:
+{evaluation_url}
+
+This link will remain active until you submit your feedback.
+"""
+
         return f"""
 ☕ Coffee Meeting Match
 
@@ -412,7 +503,7 @@ Email: {context['partner'].email}
 🎯 ACTION REQUIRED:
 1. Contact your partner via email within 48 hours
 2. Schedule your meeting for a mutually convenient time
-3. Meet and connect - office café, coffee shop, or virtual
+3. Meet and connect - office café, coffee shop, or virtual{evaluation_section}
 
 Questions? Contact your HR team.
 

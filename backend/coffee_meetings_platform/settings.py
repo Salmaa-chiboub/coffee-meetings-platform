@@ -207,3 +207,6 @@ SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # Email timeout settings
 EMAIL_TIMEOUT = 30
+
+# Frontend URL for evaluation links
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
