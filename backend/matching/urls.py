@@ -1,20 +1,53 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import CampaignMatchingCriteriaViewSet, EmployeePairViewSet
-from .views import AvailableAttributesView , GeneratePairsView,ConfirmPairsView,SaveMatchingCriteriaView
+from django.urls import path
+from .views import (
+    AvailableAttributesView, SaveMatchingCriteriaView, GeneratePairsView,
+    ConfirmPairsView, MatchingHistoryView, CriteriaHistoryView
+)
 
-
-router = DefaultRouter()
-router.register(r'criteria', CampaignMatchingCriteriaViewSet)  # /matching/criteria/
-router.register(r'pairs', EmployeePairViewSet)  # /matching/pairs/
+# ============================================================================
+# STREAMLINED MATCHING API URLS - WORKFLOW-DRIVEN ENDPOINTS
+# ============================================================================
 
 urlpatterns = [
-    path('', include(router.urls)), # /matching/
-    path('available-attributes/', AvailableAttributesView.as_view(), name='available-attributes'),
-    path('save-criteria/<int:campaign_id>/',  SaveMatchingCriteriaView.as_view(), name='save-matching-criteria'),
-    path('generate-pairs/<int:campaign_id>/', GeneratePairsView.as_view(), name='generate-pairs'),
-    path('confirm-pairs/<int:campaign_id>/', ConfirmPairsView.as_view(), name='confirm-pairs'),
+    # Step 1: Get available attributes for criteria definition
+    path(
+        'campaigns/<int:campaign_id>/available-attributes/',
+        AvailableAttributesView.as_view(),
+        name='matching-available-attributes'
+    ),
 
+    # Step 2: Save matching criteria
+    path(
+        'campaigns/<int:campaign_id>/criteria/',
+        SaveMatchingCriteriaView.as_view(),
+        name='matching-save-criteria'
+    ),
 
+    # Step 3: Generate pairs based on criteria
+    path(
+        'campaigns/<int:campaign_id>/generate-pairs/',
+        GeneratePairsView.as_view(),
+        name='matching-generate-pairs'
+    ),
 
+    # Step 4: Confirm and save selected pairs
+    path(
+        'campaigns/<int:campaign_id>/confirm-pairs/',
+        ConfirmPairsView.as_view(),
+        name='matching-confirm-pairs'
+    ),
+
+    # Step 5: Get complete matching history
+    path(
+        'campaigns/<int:campaign_id>/history/',
+        MatchingHistoryView.as_view(),
+        name='matching-history'
+    ),
+
+    # Step 6: Get criteria history
+    path(
+        'campaigns/<int:campaign_id>/criteria-history/',
+        CriteriaHistoryView.as_view(),
+        name='matching-criteria-history'
+    ),
 ]
