@@ -5,8 +5,8 @@ from matching.models import EmployeePair
 class Evaluation(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)
     employee_pair = models.ForeignKey(EmployeePair, on_delete=models.CASCADE, null=True, blank=True)
-    rating = models.IntegerField()
-    comment = models.TextField(blank=True)
+    rating = models.IntegerField(null=True, blank=True)
+    comment = models.TextField(null=True, blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
     token = models.UUIDField()
     used = models.BooleanField(default=False)

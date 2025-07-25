@@ -16,6 +16,8 @@ from rest_framework.request import Request
 from django.utils import timezone
 from django.db.models import Q
 
+from evaluations.utils import create_evaluations_and_send_emails
+
 
 
 
@@ -218,13 +220,15 @@ class ConfirmPairsView(APIView):
                 continue
 
             # ✅ Save the pair
-            EmployeePair.objects.create(
+            pair = EmployeePair.objects.create(
                 campaign_id=campaign_id,
                 employee1=emp1,
                 employee2=emp2,
-                email_sent=False,
+                email_sent=True,
                 created_at=timezone.now()
             )
+            
+            create_evaluations_and_send_emails(pair)
 
             saved.append({
                 "employee_1_id": emp1.id,
