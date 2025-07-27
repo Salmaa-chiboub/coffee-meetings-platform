@@ -1,0 +1,11 @@
+{
+  "name": "coffee-meetings-platform",
+  "version": "1.0.0",
+  "description": "A Coffee meetings generator platform for HR",
+  "scripts": {
+    "start": "cd frontend && npm start",
+    "frontend": "cd frontend && npm start",
+    "backend": "cd backend && python manage.py runserver"
+  },
+  "workspaces": ["frontend"]
+}
