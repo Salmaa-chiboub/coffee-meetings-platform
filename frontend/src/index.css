@@ -17,3 +17,22 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Horizontal scrolling animation for testimonials */
+@keyframes scroll-horizontal {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scroll-horizontal {
+  animation: scroll-horizontal 15s linear infinite;
+}
+
+/* Pause animation on hover for better user experience */
+.animate-scroll-horizontal:hover {
+  animation-play-state: paused;
+}
