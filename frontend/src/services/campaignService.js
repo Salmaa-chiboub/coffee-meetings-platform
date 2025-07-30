@@ -1,94 +1,72 @@
-import api from './api';
+import { authAPI } from './api';
 
 export const campaignService = {
   // Get all campaigns
   getCampaigns: async (params = {}) => {
     try {
-      const response = await api.get('/campaigns/', { params });
-      return response.data;
+      const result = await authAPI.getCampaigns();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error?.message || 'Failed to fetch campaigns');
+      }
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw error;
     }
   },
 
   // Get campaign by ID
   getCampaign: async (id) => {
     try {
-      const response = await api.get(`/campaigns/${id}/`);
-      return response.data;
+      // For now, we'll use the campaigns list and filter by ID
+      // This can be optimized later with a dedicated API endpoint
+      const campaigns = await campaignService.getCampaigns();
+      const campaign = campaigns.find(c => c.id === parseInt(id));
+      if (!campaign) {
+        throw new Error('Campaign not found');
+      }
+      return campaign;
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw error;
     }
   },
 
   // Create new campaign
   createCampaign: async (campaignData) => {
     try {
-      const response = await api.post('/campaigns/', campaignData);
-      return response.data;
+      const result = await authAPI.createCampaign(campaignData);
+      if (result.success) {
+        return result.data;
+      } else {
+        throw result.error;
+      }
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw error;
     }
   },
 
-  // Update campaign
+  // Update campaign - placeholder for future implementation
   updateCampaign: async (id, campaignData) => {
-    try {
-      const response = await api.put(`/campaigns/${id}/`, campaignData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
+    throw new Error('Update campaign functionality not yet implemented');
   },
 
-  // Delete campaign
+  // Delete campaign - placeholder for future implementation
   deleteCampaign: async (id) => {
-    try {
-      await api.delete(`/campaigns/${id}/`);
-      return true;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
+    throw new Error('Delete campaign functionality not yet implemented');
   },
 
-  // Upload employee data
+  // Upload employee data - placeholder for future implementation
   uploadEmployeeData: async (campaignId, file) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const response = await api.post(
-        `/campaigns/${campaignId}/upload-employees/`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
+    throw new Error('Upload employee data functionality not yet implemented');
   },
 
-  // Get campaign matches
+  // Get campaign matches - placeholder for future implementation
   getCampaignMatches: async (campaignId) => {
-    try {
-      const response = await api.get(`/campaigns/${campaignId}/matches/`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
+    throw new Error('Get campaign matches functionality not yet implemented');
   },
 
-  // Confirm campaign matches
+  // Confirm campaign matches - placeholder for future implementation
   confirmMatches: async (campaignId) => {
-    try {
-      const response = await api.post(`/campaigns/${campaignId}/confirm-matches/`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
+    throw new Error('Confirm matches functionality not yet implemented');
   },
 };

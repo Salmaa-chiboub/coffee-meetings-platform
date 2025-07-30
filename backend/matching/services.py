@@ -86,11 +86,7 @@ class MatchingAlgorithmService:
     
     def _get_campaign_employees(self) -> List[Employee]:
         """Get all employees in the campaign"""
-        return list(Employee.objects.filter(
-            id__in=EmployeeAttribute.objects.filter(campaign_id=self.campaign_id)
-            .values_list('employee_id', flat=True)
-            .distinct()
-        ))
+        return list(Employee.objects.filter(campaign_id=self.campaign_id))
     
     def _get_existing_pairs(self) -> set:
         """Get existing pairs as a set of tuples for fast lookup"""
@@ -104,23 +100,42 @@ class MatchingAlgorithmService:
         return pairs_set
     
     def _generate_with_criteria(self, employees: List[Employee], criteria, existing_pairs: set) -> List[Dict]:
-        """Generate pairs based on matching criteria"""
+        """Generate final pairs based on matching criteria - each employee appears only once"""
+        from random import shuffle
+
         # Get employee attributes
         employee_attributes = self._get_employee_attributes(employees)
-        
-        valid_pairs = []
-        
-        for emp1, emp2 in combinations(employees, 2):
-            # Skip if pair already exists
-            pair_key = (min(emp1.id, emp2.id), max(emp1.id, emp2.id))
-            if pair_key in existing_pairs:
+
+        # Shuffle employees for randomness
+        employees_list = employees.copy()
+        shuffle(employees_list)
+
+        final_pairs = []
+        used_employees = set()
+
+        # Try to pair each unused employee
+        for i, emp1 in enumerate(employees_list):
+            if emp1.id in used_employees:
                 continue
-            
-            # Check if pair matches all criteria
-            if self._pair_matches_criteria(emp1, emp2, employee_attributes, criteria):
-                valid_pairs.append(self._create_pair_dict(emp1, emp2))
-        
-        return valid_pairs
+
+            # Find a compatible partner for emp1
+            for j, emp2 in enumerate(employees_list[i+1:], i+1):
+                if emp2.id in used_employees:
+                    continue
+
+                # Skip if pair already exists
+                pair_key = (min(emp1.id, emp2.id), max(emp1.id, emp2.id))
+                if pair_key in existing_pairs:
+                    continue
+
+                # Check if pair matches all criteria
+                if self._pair_matches_criteria(emp1, emp2, employee_attributes, criteria):
+                    final_pairs.append(self._create_pair_dict(emp1, emp2))
+                    used_employees.add(emp1.id)
+                    used_employees.add(emp2.id)
+                    break
+
+        return final_pairs
     
     def _generate_random_pairs(self, employees: List[Employee], existing_pairs: set) -> List[Dict]:
         """Generate random pairs when no criteria are defined"""
@@ -211,11 +226,9 @@ class MatchingAlgorithmService:
         if generated == 0:
             return "No valid pairs could be generated with the current criteria"
         elif limit and generated < limit:
-            return f"Only {generated} valid pairs found, less than requested limit of {limit}"
-        elif generated == total_possible:
-            return f"All {generated} possible pairs generated"
+            return f"Only {generated} pairs created, less than requested limit of {limit}"
         else:
-            return f"{generated} pairs generated successfully"
+            return f"{generated} final pairs created successfully"
 
 
 class EmailNotificationService:

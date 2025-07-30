@@ -3,9 +3,13 @@ from campaigns.models import Campaign
 
 class Employee(models.Model):
     name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
+    email = models.EmailField()  # Removed unique=True
     arrival_date = models.DateField()
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, null=True, blank=True)
+
+    class Meta:
+        # Unique constraint: same email can't exist twice in the same campaign
+        unique_together = ['email', 'campaign']
 
     def __str__(self):
         return self.name

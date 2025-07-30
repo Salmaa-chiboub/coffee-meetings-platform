@@ -151,6 +151,7 @@ class GeneratePairsView(APIView):
     def get(self, request, campaign_id):
         """Generate employee pairs based on saved criteria"""
         try:
+            # Get the campaign
             campaign = get_object_or_404(Campaign, id=campaign_id)
 
             # Get optional limit parameter
@@ -196,9 +197,12 @@ class ConfirmPairsView(APIView):
         try:
             campaign = get_object_or_404(Campaign, id=campaign_id)
 
+            print(f"DEBUG: Received data for campaign {campaign_id}: {request.data}")
+
             # Validate request data
             request_serializer = PairConfirmationRequestSerializer(data=request.data)
             if not request_serializer.is_valid():
+                print(f"DEBUG: Serializer errors: {request_serializer.errors}")
                 return Response(
                     {'error': 'Invalid request data', 'details': request_serializer.errors},
                     status=status.HTTP_400_BAD_REQUEST

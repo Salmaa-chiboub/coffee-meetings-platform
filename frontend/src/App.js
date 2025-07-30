@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Campaigns from './pages/Campaigns';
+import CampaignWorkflow from './pages/CampaignWorkflow';
 import Employees from './pages/Employees';
 import Settings from './pages/Settings';
 
@@ -60,6 +61,14 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Campaigns />
+                </Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/campaigns/:id/workflow" element={
+              <ProtectedRoute>
+                <Layout>
+                  <CampaignWorkflow />
                 </Layout>
               </ProtectedRoute>
             } />
