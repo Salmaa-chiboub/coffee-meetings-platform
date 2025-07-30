@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDaysIcon, UserGroupIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { CalendarDaysIcon, UserGroupIcon, ClockIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
 const CampaignCard = ({ campaign, onClick }) => {
   // Format dates
@@ -60,11 +60,16 @@ const CampaignCard = ({ campaign, onClick }) => {
     >
       {/* Title */}
       <div className="mb-4">
-        <h3 className="text-xl font-bold text-warmGray-800 mb-3">
-          {campaign.title}
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xl font-bold text-warmGray-800">
+            {campaign.title}
+          </h3>
+          {statusInfo.status === 'completed' && (
+            <CheckCircleIcon className="h-6 w-6 text-green-600" />
+          )}
+        </div>
         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusInfo.bg} ${statusInfo.color}`}>
-          {statusInfo.status.charAt(0).toUpperCase() + statusInfo.status.slice(1)}
+          {statusInfo.status === 'completed' ? 'View History' : statusInfo.status.charAt(0).toUpperCase() + statusInfo.status.slice(1)}
         </span>
       </div>
 

@@ -11,6 +11,9 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Campaigns from './pages/Campaigns';
 import CampaignWorkflow from './pages/CampaignWorkflow';
+import CampaignHistory from './pages/CampaignHistory';
+import CampaignEvaluations from './pages/CampaignEvaluations';
+import PublicEvaluation from './components/evaluation/PublicEvaluation';
 import Employees from './pages/Employees';
 import Settings from './pages/Settings';
 
@@ -39,6 +42,9 @@ function App() {
       <AuthProvider>
         <Router>
           <Routes>
+            {/* Public evaluation route - no authentication required */}
+            <Route path="/evaluation/:token" element={<PublicEvaluation />} />
+
             {/* Default route - redirect based on auth status */}
             <Route path="/" element={<DefaultRoute />} />
 
@@ -69,6 +75,22 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <CampaignWorkflow />
+                </Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/campaigns/:id/history" element={
+              <ProtectedRoute>
+                <Layout>
+                  <CampaignHistory />
+                </Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/campaigns/:id/evaluations" element={
+              <ProtectedRoute>
+                <Layout>
+                  <CampaignEvaluations />
                 </Layout>
               </ProtectedRoute>
             } />

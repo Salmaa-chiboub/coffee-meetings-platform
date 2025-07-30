@@ -20,9 +20,26 @@ const CampaignsList = () => {
     navigate('/campaigns/create');
   };
 
-  const handleCampaignClick = (campaign) => {
-    // Navigate to campaign workflow
-    navigate(`/campaigns/${campaign.id}/workflow`);
+  const handleCampaignClick = async (campaign) => {
+    try {
+      // Check if campaign workflow is completed
+      const { workflowService } = await import('../services/workflowService');
+      const workflowData = await workflowService.getCampaignWorkflowStatus(campaign.id);
+
+      // If step 5 is completed and campaign is finished, go to history page
+      const isCompleted = workflowData.completed_steps.includes(5) &&
+                         workflowData.step_data['5']?.campaign_completed;
+
+      if (isCompleted) {
+        navigate(`/campaigns/${campaign.id}/history`);
+      } else {
+        // Navigate to campaign workflow
+        navigate(`/campaigns/${campaign.id}/workflow`);
+      }
+    } catch (error) {
+      // Fallback to workflow if there's an error
+      navigate(`/campaigns/${campaign.id}/workflow`);
+    }
   };
 
   if (isLoading) {

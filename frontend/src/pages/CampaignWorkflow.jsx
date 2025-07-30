@@ -267,7 +267,7 @@ const CampaignWorkflow = () => {
       </div>
 
       {/* Navigation Buttons */}
-      {!campaignCompleted && (
+      {!campaignCompleted && currentStep < 5 && (
         <div className="flex justify-between items-center">
           <button
             onClick={handlePreviousStep}
