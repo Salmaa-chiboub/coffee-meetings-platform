@@ -1,7 +1,9 @@
 import React from 'react';
-import { CalendarDaysIcon, UserGroupIcon, ClockIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { useNavigate } from 'react-router-dom';
+import { CalendarDaysIcon, UserGroupIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
 const CampaignCard = ({ campaign, onClick }) => {
+  const navigate = useNavigate();
   // Format dates
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -14,16 +16,13 @@ const CampaignCard = ({ campaign, onClick }) => {
 
   // Calculate campaign status
   const getCampaignStatus = () => {
-    const now = new Date();
-    const startDate = new Date(campaign.start_date);
-    const endDate = new Date(campaign.end_date);
+    // Check if campaign is completed via workflow or dates
+    const isWorkflowCompleted = campaign.workflow_completed || campaign.status === 'completed';
 
-    if (now < startDate) {
-      return { status: 'upcoming', color: 'text-blue-600', bg: 'bg-blue-100' };
-    } else if (now >= startDate && now <= endDate) {
-      return { status: 'active', color: 'text-green-600', bg: 'bg-green-100' };
+    if (isWorkflowCompleted) {
+      return { status: 'completed', color: 'text-green-600', bg: 'bg-green-100', label: 'Completed' };
     } else {
-      return { status: 'completed', color: 'text-gray-600', bg: 'bg-gray-100' };
+      return { status: 'active', color: 'text-blue-600', bg: 'bg-blue-100', label: 'Active' };
     }
   };
 
@@ -48,9 +47,7 @@ const CampaignCard = ({ campaign, onClick }) => {
   };
 
   const handleCardClick = () => {
-    if (onClick) {
-      onClick(campaign);
-    }
+    navigate(`/campaigns/${campaign.id}/history`);
   };
 
   return (
@@ -69,7 +66,7 @@ const CampaignCard = ({ campaign, onClick }) => {
           )}
         </div>
         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusInfo.bg} ${statusInfo.color}`}>
-          {statusInfo.status === 'completed' ? 'View History' : statusInfo.status.charAt(0).toUpperCase() + statusInfo.status.slice(1)}
+          {statusInfo.label}
         </span>
       </div>
 
@@ -97,7 +94,7 @@ const CampaignCard = ({ campaign, onClick }) => {
 
         {/* Days info */}
         <div className="flex items-center space-x-3">
-          <ClockIcon className="h-5 w-5 text-warmGray-400" />
+          <CheckCircleIcon className="h-5 w-5 text-warmGray-400" />
           <div>
             <p className="text-xs text-warmGray-500 uppercase tracking-wide">Status</p>
             <p className="text-sm font-medium text-warmGray-800">{getDaysInfo()}</p>
@@ -115,6 +112,7 @@ const CampaignCard = ({ campaign, onClick }) => {
           </div>
         </div>
       </div>
+
 
 
     </div>

@@ -423,7 +423,7 @@ class EmailNotificationService:
         evaluation_url = ""
         if evaluation_token:
             base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-            evaluation_url = f"{base_url}/evaluate/{evaluation_token}"
+            evaluation_url = f"{base_url}/evaluation/{evaluation_token}"
 
         return f"""
         <html>
@@ -491,7 +491,7 @@ class EmailNotificationService:
         evaluation_section = ""
         if evaluation_token:
             base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-            evaluation_url = f"{base_url}/evaluate/{evaluation_token}"
+            evaluation_url = f"{base_url}/evaluation/{evaluation_token}"
             evaluation_section = f"""
 
 📝 AFTER YOUR MEETING:

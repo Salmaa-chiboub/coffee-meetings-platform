@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { evaluationService } from '../services/evaluationService';
+import { SkeletonTitle, SkeletonText, SkeletonButton } from '../components/ui/Skeleton';
 
 // Icône de café personnalisée
 const CoffeeIcon = ({ className }) => (
@@ -144,9 +145,32 @@ const EvaluationModern = () => {
       <div className="min-h-screen relative">
         <BackgroundPattern />
         <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B6F47] mx-auto mb-4"></div>
-            <p className="text-warmGray-600">Loading evaluation form...</p>
+          <div className="max-w-lg w-full space-y-8">
+            {/* Header Skeleton */}
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-warmGray-200 rounded-full mx-auto animate-pulse"></div>
+              <SkeletonTitle size="xl" className="mx-auto" />
+              <SkeletonText lines={1} className="max-w-md mx-auto" />
+            </div>
+
+            {/* Rating Section Skeleton */}
+            <div className="text-center space-y-6">
+              <SkeletonTitle size="medium" className="mx-auto" />
+              <div className="flex justify-center space-x-2">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="w-12 h-12 bg-warmGray-200 rounded-full animate-pulse"></div>
+                ))}
+              </div>
+            </div>
+
+            {/* Comment Section Skeleton */}
+            <div className="space-y-2">
+              <div className="w-48 h-4 bg-warmGray-200 rounded animate-pulse"></div>
+              <div className="w-full h-24 bg-warmGray-200 rounded-lg animate-pulse"></div>
+            </div>
+
+            {/* Button Skeleton */}
+            <SkeletonButton size="large" className="w-full mx-auto" />
           </div>
         </div>
       </div>

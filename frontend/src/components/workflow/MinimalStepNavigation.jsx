@@ -27,42 +27,30 @@ const MinimalStepNavigation = ({
     }
   };
 
-  const handleStepClick = (stepId, status) => {
-    if (campaignCompleted) return;
-    
-    if ((status === 'accessible' || status === 'completed') && onStepClick) {
-      onStepClick(stepId);
-    }
-  };
+  // Removed click functionality - steps are now purely visual
 
   const getStepStyles = (status, stepId) => {
-    const isClickable = !campaignCompleted && (status === 'accessible' || status === 'completed');
-    
     switch (status) {
       case 'completed':
         return {
-          circle: 'bg-green-500 border-green-500 text-white shadow-lg',
-          title: 'text-green-600 font-medium',
-          clickable: isClickable
+          circle: 'bg-gradient-to-br from-green-500 to-green-600 border-green-400 text-white shadow-xl shadow-green-500/30',
+          title: 'text-green-600 font-semibold'
         };
       case 'current':
         return {
-          circle: 'bg-[#E8C4A0] border-[#E8C4A0] text-[#8B6F47] shadow-lg ring-4 ring-[#E8C4A0]/20',
-          title: 'text-[#8B6F47] font-semibold',
-          clickable: false
+          circle: 'bg-gradient-to-br from-[#E8C4A0] to-[#DDB892] border-[#D4A574] text-[#8B6F47] shadow-xl shadow-[#E8C4A0]/40 ring-4 ring-[#E8C4A0]/25',
+          title: 'text-[#8B6F47] font-bold'
         };
       case 'accessible':
         return {
-          circle: 'bg-white border-warmGray-300 text-warmGray-600 hover:border-[#E8C4A0] hover:text-[#8B6F47]',
-          title: 'text-warmGray-600 hover:text-[#8B6F47]',
-          clickable: isClickable
+          circle: 'bg-gradient-to-br from-white to-warmGray-50 border-warmGray-300 text-warmGray-600 shadow-md',
+          title: 'text-warmGray-600 font-medium'
         };
       case 'pending':
       default:
         return {
-          circle: 'bg-warmGray-100 border-warmGray-200 text-warmGray-400',
-          title: 'text-warmGray-400',
-          clickable: false
+          circle: 'bg-gradient-to-br from-warmGray-100 to-warmGray-200 border-warmGray-300 text-warmGray-400 shadow-sm',
+          title: 'text-warmGray-400'
         };
     }
   };
@@ -83,18 +71,25 @@ const MinimalStepNavigation = ({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-warmGray-100 p-4">
-
+    <div className="bg-white rounded-xl shadow-sm border border-warmGray-100 p-6">
       {/* Progress Bar */}
       <div className="relative">
-        {/* Background Line */}
-        <div className="absolute top-5 left-5 right-5 h-0.5 bg-warmGray-200 rounded-full"></div>
-
-        {/* Progress Line */}
+        {/* Background Line - stops before last step */}
         <div
-          className="absolute top-5 left-5 h-0.5 bg-[#E8C4A0] progress-fill rounded-full"
+          className="absolute top-5 h-1 bg-warmGray-200 rounded-full"
           style={{
-            width: `${((Math.max(...completedSteps, currentStep - 1)) / (steps.length - 1)) * 100}%`
+            left: '20px',
+            right: '20px',
+            width: 'calc(100% - 40px - 80px)' // Stops before last circle
+          }}
+        ></div>
+
+        {/* Progress Line - modern gradient */}
+        <div
+          className="absolute top-5 h-1 bg-gradient-to-r from-[#E8C4A0] to-[#DDB892] rounded-full transition-all duration-700 ease-out"
+          style={{
+            left: '20px',
+            width: `${Math.min(((Math.max(...completedSteps, currentStep - 1)) / (steps.length - 1)) * (100 - 8), 100 - 8)}%`
           }}
         />
 
@@ -110,31 +105,32 @@ const MinimalStepNavigation = ({
                 className="flex flex-col items-center space-y-1"
               >
                 {/* Step Circle */}
-                <button
-                  onClick={() => handleStepClick(step.id, status)}
-                  disabled={!styles.clickable}
+                <div
                   className={`
-                    w-10 h-10 rounded-full border-2 flex items-center justify-center
+                    w-12 h-12 rounded-full border-3 flex items-center justify-center
+                    transition-all duration-500 relative
                     step-circle ${status}
                     ${styles.circle}
-                    ${styles.clickable ? 'cursor-pointer' : 'cursor-default'}
                   `}
                 >
                   {status === 'completed' ? (
-                    <CheckIcon className="h-5 w-5" />
+                    <CheckIcon className="h-6 w-6 drop-shadow-sm" />
                   ) : (
-                    <span className="text-xs font-semibold">{step.id}</span>
+                    <span className="text-sm font-bold drop-shadow-sm">{step.id}</span>
                   )}
-                </button>
+
+                  {/* Glow effect for current step */}
+                  {status === 'current' && (
+                    <div className="absolute inset-0 rounded-full bg-[#E8C4A0] opacity-20 animate-pulse"></div>
+                  )}
+                </div>
 
                 {/* Step Title */}
                 <span
                   className={`
-                    text-xs transition-all duration-300
+                    text-xs transition-all duration-300 font-medium
                     ${styles.title}
-                    ${styles.clickable ? 'cursor-pointer' : ''}
                   `}
-                  onClick={() => styles.clickable && handleStepClick(step.id, status)}
                 >
                   {step.title}
                 </span>

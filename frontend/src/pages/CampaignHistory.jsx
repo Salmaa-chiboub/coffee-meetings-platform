@@ -7,10 +7,12 @@ import {
   CheckCircleIcon,
   EnvelopeIcon,
   Cog6ToothIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import { campaignService } from '../services/campaignService';
 import { workflowService } from '../services/workflowService';
+import { SkeletonTitle, SkeletonText, SkeletonCard } from '../components/ui/Skeleton';
 import { matchingService } from '../services/matchingService';
 
 const CampaignHistory = () => {
@@ -109,10 +111,27 @@ const CampaignHistory = () => {
   if (loading) {
     return (
       <div className="p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B6F47]"></div>
+        <div className="max-w-6xl mx-auto space-y-6">
+          {/* Header Skeleton */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-5 h-5 bg-warmGray-200 rounded animate-pulse"></div>
+              <div className="w-32 h-4 bg-warmGray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-6 bg-warmGray-200 rounded animate-pulse"></div>
+                <div className="w-32 h-4 bg-warmGray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="w-32 h-10 bg-warmGray-200 rounded-lg animate-pulse"></div>
+            </div>
           </div>
+
+          {/* Campaign Info Skeleton */}
+          <SkeletonCard />
+
+          {/* Workflow Summary Skeleton */}
+          <SkeletonCard />
         </div>
       </div>
     );
@@ -148,10 +167,20 @@ const CampaignHistory = () => {
             <ArrowLeftIcon className="h-5 w-5" />
             <span>Back to Campaigns</span>
           </button>
-          
-          <div className="flex items-center space-x-2">
-            <CheckCircleIcon className="h-6 w-6 text-green-600" />
-            <span className="text-green-800 font-medium">Campaign Completed</span>
+
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <CheckCircleIcon className="h-6 w-6 text-green-600" />
+              <span className="text-green-800 font-medium">Campaign Completed</span>
+            </div>
+
+            <button
+              onClick={() => navigate(`/campaigns/${campaignId}/feedback`)}
+              className="flex items-center space-x-2 bg-gradient-to-r from-[#E8C4A0] to-[#DDB892] hover:from-[#DDB892] hover:to-[#D4A574] text-[#8B6F47] font-medium py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-sm"
+            >
+              <ChatBubbleLeftRightIcon className="h-5 w-5" />
+              <span>View Feedback</span>
+            </button>
           </div>
         </div>
 
@@ -200,6 +229,8 @@ const CampaignHistory = () => {
               </p>
             </div>
           </div>
+
+
 
           {/* Workflow Steps Summary */}
           <div className="border-t border-warmGray-200 pt-6">

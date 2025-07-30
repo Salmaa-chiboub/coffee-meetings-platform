@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { SkeletonDashboard } from '../components/ui/Skeleton';
 import { dashboardService } from '../services/dashboardService';
 import {
   ChartBarIcon,
@@ -53,14 +54,7 @@ const Dashboard = () => {
 
   // Loading state
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B6F47] mx-auto"></div>
-          <p className="mt-4 text-warmGray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+    return <SkeletonDashboard />;
   }
 
   // Error state

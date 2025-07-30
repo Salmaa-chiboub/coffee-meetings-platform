@@ -4,6 +4,7 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import MinimalStepNavigation from '../components/workflow/MinimalStepNavigation';
 import { workflowService, WORKFLOW_STEPS } from '../services/workflowService';
 import { campaignService } from '../services/campaignService';
+import { SkeletonWorkflow } from '../components/ui/Skeleton';
 import '../styles/workflow-animations.css';
 
 // Lazy load step components
@@ -124,8 +125,13 @@ const CampaignWorkflow = () => {
   const StepLoader = () => (
     <div className="p-8">
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B6F47]"></div>
+        <div className="bg-white rounded-xl border border-warmGray-200 p-8 shadow-md">
+          <div className="text-center space-y-6">
+            <div className="w-16 h-16 bg-warmGray-200 rounded-full mx-auto animate-pulse"></div>
+            <div className="w-64 h-8 bg-warmGray-200 rounded mx-auto animate-pulse"></div>
+            <div className="w-96 h-4 bg-warmGray-200 rounded mx-auto animate-pulse"></div>
+            <div className="w-32 h-10 bg-warmGray-200 rounded mx-auto animate-pulse"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -190,11 +196,7 @@ const CampaignWorkflow = () => {
         </div>
 
         {/* Content Skeleton */}
-        <div className="bg-white rounded-xl shadow-sm border border-warmGray-100 p-8">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B6F47]"></div>
-          </div>
-        </div>
+        <SkeletonWorkflow />
       </div>
     );
   }
@@ -267,12 +269,12 @@ const CampaignWorkflow = () => {
       </div>
 
       {/* Navigation Buttons */}
-      {!campaignCompleted && currentStep < 5 && (
+      {!campaignCompleted && (
         <div className="flex justify-between items-center">
           <button
             onClick={handlePreviousStep}
             disabled={currentStep <= 2}
-            className="flex items-center space-x-2 px-4 py-2 border border-warmGray-300 hover:border-warmGray-400 text-warmGray-600 hover:text-warmGray-800 text-sm rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center space-x-2 px-4 py-2 border border-warmGray-300 hover:border-warmGray-400 text-warmGray-600 hover:text-warmGray-800 text-sm rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             <ArrowLeftIcon className="h-4 w-4" />
             <span>Previous</span>

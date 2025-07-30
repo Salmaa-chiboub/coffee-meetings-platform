@@ -23,7 +23,7 @@ def create_evaluations_and_send_emails(pair):
     # Send email to emp1
     send_mail(
         subject="Evaluation de votre rencontre",
-        message=f"Bonjour {emp1.name}, merci de remplir ce formulaire: http://your-frontend.com/evaluate/{eval1.token}",
+        message=f"Bonjour {emp1.name}, merci de remplir ce formulaire: http://your-frontend.com/evaluation/{eval1.token}",
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[emp1.email],
     )
@@ -31,7 +31,7 @@ def create_evaluations_and_send_emails(pair):
     # Send email to emp2
     send_mail(
         subject="Evaluation de votre rencontre",
-        message=f"Bonjour {emp2.name}, merci de remplir ce formulaire: http://your-frontend.com/evaluate/{eval2.token}",
+        message=f"Bonjour {emp2.name}, merci de remplir ce formulaire: http://your-frontend.com/evaluation/{eval2.token}",
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[emp2.email],
     )

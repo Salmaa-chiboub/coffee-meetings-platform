@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useCampaigns } from '../hooks/useCampaigns';
 import CampaignCard from '../components/campaigns/CampaignCard';
+import { SkeletonCard } from '../components/ui/Skeleton';
 import CampaignCreate from './CampaignCreate';
 
 const CampaignsList = () => {
@@ -44,9 +45,21 @@ const CampaignsList = () => {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B6F47]"></div>
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="w-48 h-8 bg-warmGray-200 rounded-lg animate-pulse"></div>
+          <div className="w-32 h-10 bg-warmGray-200 rounded-lg animate-pulse"></div>
+        </div>
+
+        {/* Search Skeleton */}
+        <div className="w-full h-12 bg-warmGray-200 rounded-lg animate-pulse"></div>
+
+        {/* Cards Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <SkeletonCard key={index} />
+          ))}
         </div>
       </div>
     );

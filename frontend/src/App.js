@@ -13,6 +13,7 @@ import Campaigns from './pages/Campaigns';
 import CampaignWorkflow from './pages/CampaignWorkflow';
 import CampaignHistory from './pages/CampaignHistory';
 import CampaignEvaluations from './pages/CampaignEvaluations';
+import CampaignEvaluationsView from './pages/CampaignEvaluationsView';
 import PublicEvaluation from './components/evaluation/PublicEvaluation';
 import Employees from './pages/Employees';
 import Settings from './pages/Settings';
@@ -91,6 +92,14 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <CampaignEvaluations />
+                </Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/campaigns/:id/feedback" element={
+              <ProtectedRoute>
+                <Layout>
+                  <CampaignEvaluationsView />
                 </Layout>
               </ProtectedRoute>
             } />
