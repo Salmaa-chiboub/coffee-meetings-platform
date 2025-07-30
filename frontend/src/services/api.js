@@ -254,9 +254,29 @@ export const authAPI = {
   getCampaigns: async () => {
     try {
       const response = await apiClient.get('/campaigns/');
+
+      // Enhance campaigns with employee count
+      const campaignsWithCounts = await Promise.all(
+        response.data.map(async (campaign) => {
+          try {
+            const employeesResponse = await apiClient.get(`/campaigns/${campaign.id}/employees/`);
+            return {
+              ...campaign,
+              employees_count: employeesResponse.data.count || 0,
+            };
+          } catch (error) {
+            // If employee count fails, just return campaign without count
+            return {
+              ...campaign,
+              employees_count: 0,
+            };
+          }
+        })
+      );
+
       return {
         success: true,
-        data: response.data,
+        data: campaignsWithCounts,
       };
     } catch (error) {
       console.warn('Campaigns API not available, returning empty data:', error);
@@ -264,6 +284,22 @@ export const authAPI = {
       return {
         success: true,
         data: [],
+      };
+    }
+  },
+
+  // Create campaign
+  createCampaign: async (campaignData) => {
+    try {
+      const response = await apiClient.post('/campaigns/', campaignData);
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Network error occurred' },
       };
     }
   },

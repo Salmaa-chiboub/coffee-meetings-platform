@@ -11,6 +11,11 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Campaigns from './pages/Campaigns';
+import CampaignWorkflow from './pages/CampaignWorkflow';
+import CampaignHistory from './pages/CampaignHistory';
+import CampaignEvaluations from './pages/CampaignEvaluations';
+import CampaignEvaluationsView from './pages/CampaignEvaluationsView';
+import PublicEvaluation from './components/evaluation/PublicEvaluation';
 import Employees from './pages/Employees';
 import Settings from './pages/Settings';
 
@@ -43,8 +48,11 @@ function App() {
       <AuthProvider>
         <Router>
           <Routes>
-            {/* Landing page - public route */}
-            <Route path="/" element={<LandingPage />} />
+            {/* Public evaluation route - no authentication required */}
+            <Route path="/evaluation/:token" element={<PublicEvaluation />} />
+
+            {/* Default route - redirect based on auth status */}
+            <Route path="/" element={<DefaultRoute />} />
 
             {/* Public auth routes - without layout */}
             <Route path="/login" element={<Login />} />
@@ -63,6 +71,38 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Campaigns />
+                </Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/campaigns/:id/workflow" element={
+              <ProtectedRoute>
+                <Layout>
+                  <CampaignWorkflow />
+                </Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/campaigns/:id/history" element={
+              <ProtectedRoute>
+                <Layout>
+                  <CampaignHistory />
+                </Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/campaigns/:id/evaluations" element={
+              <ProtectedRoute>
+                <Layout>
+                  <CampaignEvaluations />
+                </Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/campaigns/:id/feedback" element={
+              <ProtectedRoute>
+                <Layout>
+                  <CampaignEvaluationsView />
                 </Layout>
               </ProtectedRoute>
             } />

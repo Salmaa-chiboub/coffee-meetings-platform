@@ -187,9 +187,13 @@ class ExcelProcessingService:
         if not arrival_date:
             arrival_date = date.today()  # Default to today if not provided
         
-        # Check for duplicate email
-        if Employee.objects.filter(email=email).exists():
-            raise ValidationError(f"Employee with email {email} already exists")
+        # Check for duplicate email in the same campaign
+        if Employee.objects.filter(email=email, campaign=self.campaign).exists():
+            if self.replace_existing:
+                # Delete existing employee in this campaign
+                Employee.objects.filter(email=email, campaign=self.campaign).delete()
+            else:
+                raise ValidationError(f"Employee with email {email} already exists in this campaign")
         
         # Create employee
         employee = Employee.objects.create(

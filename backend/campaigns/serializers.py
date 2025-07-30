@@ -1,7 +1,7 @@
 # campaigns/serializers.py
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .models import Campaign
+from .models import Campaign, CampaignWorkflowState, CampaignWorkflowLog
 
 class CampaignSerializer(serializers.ModelSerializer):
     class Meta:
@@ -50,3 +50,74 @@ class CampaignSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(e.message_dict)
             else:
                 raise serializers.ValidationError({'non_field_errors': [str(e)]})
+
+
+# Workflow Serializers
+class CampaignWorkflowStateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for CampaignWorkflowState
+    """
+    campaign_id = serializers.IntegerField(source='campaign.id', read_only=True)
+    campaign_title = serializers.CharField(source='campaign.title', read_only=True)
+
+    class Meta:
+        model = CampaignWorkflowState
+        fields = [
+            'id',
+            'campaign_id',
+            'campaign_title',
+            'current_step',
+            'completed_steps',
+            'step_data',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class WorkflowStepUpdateSerializer(serializers.Serializer):
+    """
+    Serializer for updating workflow step completion
+    """
+    step = serializers.IntegerField(min_value=1, max_value=5)
+    completed = serializers.BooleanField(default=True)
+    data = serializers.JSONField(required=False, default=dict)
+
+    def validate_step(self, value):
+        """Validate step number"""
+        if value not in [1, 2, 3, 4, 5]:
+            raise serializers.ValidationError("Step must be between 1 and 5")
+        return value
+
+
+class WorkflowValidationSerializer(serializers.Serializer):
+    """
+    Serializer for workflow step validation response
+    """
+    step = serializers.IntegerField()
+    can_access = serializers.BooleanField()
+    is_completed = serializers.BooleanField()
+    errors = serializers.ListField(child=serializers.CharField(), default=list)
+    warnings = serializers.ListField(child=serializers.CharField(), default=list)
+
+
+class CampaignWorkflowLogSerializer(serializers.ModelSerializer):
+    """
+    Serializer for CampaignWorkflowLog
+    """
+    campaign_id = serializers.IntegerField(source='campaign.id', read_only=True)
+    campaign_title = serializers.CharField(source='campaign.title', read_only=True)
+
+    class Meta:
+        model = CampaignWorkflowLog
+        fields = [
+            'id',
+            'campaign_id',
+            'campaign_title',
+            'step_number',
+            'action',
+            'user',
+            'data',
+            'timestamp'
+        ]
+        read_only_fields = ['id', 'timestamp']

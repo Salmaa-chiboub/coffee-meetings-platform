@@ -17,10 +17,15 @@ const getCharacterImage = () => {
 const CharacterIllustration = ({ type = 'login', className = '' }) => {
   const [imageError, setImageError] = useState(false);
   const characterImage = getCharacterImage();
+
+  // Don't show background for evaluation type
+  const showBackground = type !== 'evaluation';
+
   return (
     <div className={`fixed top-0 right-0 w-1/2 h-screen pointer-events-none ${className}`}>
-      {/* Clean Arch Background - Fixed to viewport */}
-      <div className="absolute inset-0 overflow-hidden">
+      {/* Background - Hidden for evaluation type */}
+      {showBackground && (
+        <div className="absolute inset-0 overflow-hidden">
         {/* Main arch shape - rounded top on both sides, straight sides, extends to bottom */}
         <div
           className="absolute bg-peach-200 opacity-50"
@@ -45,6 +50,7 @@ const CharacterIllustration = ({ type = 'login', className = '' }) => {
           }}
         ></div>
       </div>
+      )}
 
       {/* Character Container - Fixed to viewport */}
       <div className="absolute bottom-16 right-21 z-10">
