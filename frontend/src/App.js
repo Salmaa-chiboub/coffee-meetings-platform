@@ -4,7 +4,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import QueryProvider from './contexts/QueryProvider';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/DashboardSimple';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -19,8 +18,8 @@ import PublicEvaluation from './components/evaluation/PublicEvaluation';
 import Employees from './pages/Employees';
 import Settings from './pages/Settings';
 
-// Component to handle dashboard route based on authentication
-const DashboardRoute = () => {
+// Component to handle default route based on authentication
+const DefaultRoute = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -34,12 +33,8 @@ const DashboardRoute = () => {
     );
   }
 
-  // Redirect to login if not authenticated
-  return user ? (
-    <Layout>
-      <Dashboard />
-    </Layout>
-  ) : <Navigate to="/login" replace />;
+  // Redirect based on authentication status
+  return user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
 };
 
 function App() {
@@ -63,7 +58,9 @@ function App() {
             {/* Protected routes - with layout and protection */}
             <Route path="/dashboard" element={
               <ProtectedRoute>
-                <DashboardRoute />
+                <Layout>
+                  <Dashboard />
+                </Layout>
               </ProtectedRoute>
             } />
 
@@ -123,8 +120,8 @@ function App() {
               </ProtectedRoute>
             } />
 
-            {/* Catch all route - redirect to landing page */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Catch all route - redirect to login */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Router>
       </AuthProvider>
