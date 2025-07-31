@@ -149,3 +149,5 @@ docker-compose.override.yml
 # Local configuration
 local_settings.py
 settings_local.py
+
+.config/

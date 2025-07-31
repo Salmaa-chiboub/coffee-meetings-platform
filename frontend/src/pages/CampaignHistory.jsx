@@ -12,7 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { campaignService } from '../services/campaignService';
 import { workflowService } from '../services/workflowService';
-import { SkeletonTitle, SkeletonText, SkeletonCard } from '../components/ui/Skeleton';
+import { SkeletonCampaignHistory } from '../components/ui/Skeleton';
 import { matchingService } from '../services/matchingService';
 
 const CampaignHistory = () => {
@@ -84,7 +84,10 @@ const CampaignHistory = () => {
       } catch (err) {
         setError(err.message || 'Failed to load campaign history');
       } finally {
-        setLoading(false);
+        // Add a small delay to see the skeleton (remove in production)
+        setTimeout(() => {
+          setLoading(false);
+        }, 1000);
       }
     };
 
@@ -109,32 +112,7 @@ const CampaignHistory = () => {
 
 
   if (loading) {
-    return (
-      <div className="p-6">
-        <div className="max-w-6xl mx-auto space-y-6">
-          {/* Header Skeleton */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-5 h-5 bg-warmGray-200 rounded animate-pulse"></div>
-              <div className="w-32 h-4 bg-warmGray-200 rounded animate-pulse"></div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-warmGray-200 rounded animate-pulse"></div>
-                <div className="w-32 h-4 bg-warmGray-200 rounded animate-pulse"></div>
-              </div>
-              <div className="w-32 h-10 bg-warmGray-200 rounded-lg animate-pulse"></div>
-            </div>
-          </div>
-
-          {/* Campaign Info Skeleton */}
-          <SkeletonCard />
-
-          {/* Workflow Summary Skeleton */}
-          <SkeletonCard />
-        </div>
-      </div>
-    );
+    return <SkeletonCampaignHistory />;
   }
 
   if (error) {
