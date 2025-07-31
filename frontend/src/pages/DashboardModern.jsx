@@ -172,10 +172,6 @@ const DashboardModern = () => {
             <div className="text-4xl font-bold text-warmGray-800 mb-3 group-hover:text-peach-600 transition-colors duration-300">
               {dashboardStats?.total_campaigns?.toLocaleString() || '0'}
             </div>
-            <div className="flex items-center text-sm text-green-600">
-              <span className="font-bold">+12%</span>
-              <span className="text-warmGray-500 ml-1 font-medium">vs last month</span>
-            </div>
           </div>
 
           {/* Total Employees */}
@@ -192,10 +188,6 @@ const DashboardModern = () => {
             </div>
             <div className="text-4xl font-bold text-warmGray-800 mb-3 group-hover:text-amber-600 transition-colors duration-300">
               {dashboardStats?.total_employees?.toLocaleString() || '0'}
-            </div>
-            <div className="flex items-center text-sm text-green-600">
-              <span className="font-bold">+8%</span>
-              <span className="text-warmGray-500 ml-1 font-medium">vs last month</span>
             </div>
           </div>
 
@@ -214,10 +206,6 @@ const DashboardModern = () => {
             <div className="text-4xl font-bold text-warmGray-800 mb-3 group-hover:text-orange-600 transition-colors duration-300">
               {dashboardStats?.total_evaluations?.toLocaleString() || '0'}
             </div>
-            <div className="flex items-center text-sm text-green-600">
-              <span className="font-bold">+23%</span>
-              <span className="text-warmGray-500 ml-1 font-medium">vs last month</span>
-            </div>
           </div>
 
           {/* Generated Pairs */}
@@ -235,10 +223,6 @@ const DashboardModern = () => {
             <div className="text-4xl font-bold text-warmGray-800 mb-3 group-hover:text-blue-600 transition-colors duration-300">
               {dashboardStats?.total_pairs?.toLocaleString() || '0'}
             </div>
-            <div className="flex items-center text-sm text-blue-600">
-              <span className="font-bold">+15%</span>
-              <span className="text-warmGray-500 ml-1 font-medium">vs last month</span>
-            </div>
           </div>
 
           {/* Completed Campaigns */}
@@ -255,10 +239,6 @@ const DashboardModern = () => {
             </div>
             <div className="text-4xl font-bold text-warmGray-800 mb-3 group-hover:text-green-600 transition-colors duration-300">
               {dashboardStats?.completed_campaigns?.toLocaleString() || '0'}
-            </div>
-            <div className="flex items-center text-sm text-green-600">
-              <span className="font-bold">+5%</span>
-              <span className="text-warmGray-500 ml-1 font-medium">vs last month</span>
             </div>
           </div>
         </div>

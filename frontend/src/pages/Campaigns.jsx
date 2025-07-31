@@ -33,12 +33,12 @@ const CampaignsList = React.memo(() => {
     }
   }, [debouncedSearchTerm, searchTerm, currentPage]);
 
-  // Prepare query parameters for campaigns
+  // Prepare query parameters for campaigns (sans search - on fait la recherche côté client)
   const queryParams = useMemo(() => ({
     page: currentPage,
     page_size: useVirtualScrolling ? 50 : 12, // More items for virtual scrolling
-    search: debouncedSearchTerm.trim() || undefined,
-  }), [currentPage, debouncedSearchTerm, useVirtualScrolling]);
+    // Pas de paramètre search - on utilise JavaScript côté client pour filtrer
+  }), [currentPage, useVirtualScrolling]);
 
   const { data: campaignsResponse, isLoading, error } = useCampaigns(queryParams);
 
@@ -46,30 +46,42 @@ const CampaignsList = React.memo(() => {
   const campaigns = campaignsResponse?.data || [];
   const pagination = campaignsResponse?.pagination;
 
-  // Optimized search and filtering with performance monitoring
+  // Filtrage et tri côté client avec JavaScript (pas de requêtes HTTP)
   const filteredAndSortedCampaigns = useMemo(() => {
     return performanceMonitor.measure('campaigns-filter-sort', () => {
       let result = campaigns;
 
-      // If we have server-side search, just return campaigns as-is
-      if (pagination) {
-        result = campaigns;
-      } else {
-        // Fallback to client-side filtering for non-paginated responses
+      // Toujours utiliser le filtrage côté client JavaScript
+      if (debouncedSearchTerm.trim()) {
         result = campaigns.filter(campaign =>
           campaign.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
           campaign.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
         );
       }
 
-      // Apply client-side sorting if needed
-      if (sortConfig.length > 0 && !pagination) {
+      // Appliquer le tri côté client
+      if (sortConfig.length > 0) {
         result = sorter.sort(result, sortConfig);
       }
 
       return result;
     });
-  }, [campaigns, debouncedSearchTerm, pagination, sortConfig]);
+  }, [campaigns, debouncedSearchTerm, sortConfig]);
+
+  // Pagination côté client pour les résultats filtrés
+  const pageSize = useVirtualScrolling ? 50 : 12;
+  const totalFilteredItems = filteredAndSortedCampaigns.length;
+  const totalPages = Math.ceil(totalFilteredItems / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedCampaigns = filteredAndSortedCampaigns.slice(startIndex, endIndex);
+
+  // Reset à la page 1 quand on change la recherche
+  useEffect(() => {
+    if (debouncedSearchTerm !== searchTerm) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearchTerm, searchTerm]);
 
   const handleCreateCampaign = useCallback(() => {
     navigate('/campaigns/create');
@@ -214,7 +226,7 @@ const CampaignsList = React.memo(() => {
           </p>
         </div>
 
-        {filteredAndSortedCampaigns.length === 0 ? (
+        {paginatedCampaigns.length === 0 ? (
           <div className="text-center py-12">
             {campaigns.length === 0 ? (
               <div>
@@ -248,7 +260,7 @@ const CampaignsList = React.memo(() => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredAndSortedCampaigns.map((campaign) => (
+            {paginatedCampaigns.map((campaign) => (
               <CampaignCard
                 key={campaign.id}
                 campaign={campaign}
@@ -258,14 +270,14 @@ const CampaignsList = React.memo(() => {
           </div>
         )}
 
-        {/* Pagination */}
-        {pagination && pagination.count > pagination.page_size && (
+        {/* Pagination côté client */}
+        {totalFilteredItems > pageSize && (
           <div className="mt-8">
             <Pagination
               currentPage={currentPage}
-              totalPages={Math.ceil(pagination.count / pagination.page_size)}
-              totalItems={pagination.count}
-              pageSize={pagination.page_size}
+              totalPages={totalPages}
+              totalItems={totalFilteredItems}
+              pageSize={pageSize}
               onPageChange={handlePageChange}
             />
           </div>
