@@ -1,22 +1,29 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarDaysIcon, UserGroupIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
-const CampaignCard = ({ campaign, onClick }) => {
+const CampaignCard = React.memo(({ campaign, onClick }) => {
   const navigate = useNavigate();
-  // Format dates
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
 
-  // Calculate campaign status
-  const getCampaignStatus = () => {
-    // Check if campaign is completed via workflow or dates
+  // Memoize expensive date formatting
+  const formattedDates = useMemo(() => {
+    const formatDate = (dateString) => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    };
+
+    return {
+      startDate: formatDate(campaign.start_date),
+      endDate: formatDate(campaign.end_date)
+    };
+  }, [campaign.start_date, campaign.end_date]);
+
+  // Memoize campaign status calculation
+  const statusInfo = useMemo(() => {
     const isWorkflowCompleted = campaign.workflow_completed || campaign.status === 'completed';
 
     if (isWorkflowCompleted) {
@@ -24,12 +31,10 @@ const CampaignCard = ({ campaign, onClick }) => {
     } else {
       return { status: 'active', color: 'text-blue-600', bg: 'bg-blue-100', label: 'Active' };
     }
-  };
+  }, [campaign.workflow_completed, campaign.status]);
 
-  const statusInfo = getCampaignStatus();
-
-  // Calculate days remaining or elapsed
-  const getDaysInfo = () => {
+  // Memoize days calculation
+  const daysInfo = useMemo(() => {
     const now = new Date();
     const startDate = new Date(campaign.start_date);
     const endDate = new Date(campaign.end_date);
@@ -44,11 +49,18 @@ const CampaignCard = ({ campaign, onClick }) => {
       const daysAgo = Math.ceil((now - endDate) / (1000 * 60 * 60 * 24));
       return `Ended ${daysAgo} day${daysAgo !== 1 ? 's' : ''} ago`;
     }
-  };
+  }, [campaign.start_date, campaign.end_date]);
 
-  const handleCardClick = () => {
-    navigate(`/campaigns/${campaign.id}/history`);
-  };
+  // Memoize click handler
+  const handleCardClick = useCallback(() => {
+    // Use the onClick prop passed from parent (Campaigns.jsx) which has proper routing logic
+    if (onClick) {
+      onClick(campaign);
+    } else {
+      // Fallback to workflow page if no onClick handler provided
+      navigate(`/campaigns/${campaign.id}/workflow`);
+    }
+  }, [onClick, campaign, navigate]);
 
   return (
     <div
@@ -87,7 +99,7 @@ const CampaignCard = ({ campaign, onClick }) => {
           <div>
             <p className="text-xs text-warmGray-500 uppercase tracking-wide">Duration</p>
             <p className="text-sm font-medium text-warmGray-800">
-              {formatDate(campaign.start_date)} - {formatDate(campaign.end_date)}
+              {formattedDates.startDate} - {formattedDates.endDate}
             </p>
           </div>
         </div>
@@ -97,7 +109,7 @@ const CampaignCard = ({ campaign, onClick }) => {
           <CheckCircleIcon className="h-5 w-5 text-warmGray-400" />
           <div>
             <p className="text-xs text-warmGray-500 uppercase tracking-wide">Status</p>
-            <p className="text-sm font-medium text-warmGray-800">{getDaysInfo()}</p>
+            <p className="text-sm font-medium text-warmGray-800">{daysInfo}</p>
           </div>
         </div>
 
@@ -117,6 +129,6 @@ const CampaignCard = ({ campaign, onClick }) => {
 
     </div>
   );
-};
+});
 
 export default CampaignCard;

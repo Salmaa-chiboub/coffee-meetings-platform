@@ -11,11 +11,18 @@ export const campaignKeys = {
   matches: (id) => [...campaignKeys.detail(id), 'matches'],
 };
 
-// Get all campaigns
+// Get all campaigns with enhanced caching and pagination support
 export const useCampaigns = (params = {}) => {
   return useQuery({
     queryKey: campaignKeys.list(params),
     queryFn: () => campaignService.getCampaigns(params),
+    // Enhanced caching for campaigns list
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 15 * 60 * 1000, // 15 minutes
+    // Keep previous data while fetching new data (for pagination)
+    keepPreviousData: true,
+    // Refetch on mount only if data is stale
+    refetchOnMount: 'stale',
   });
 };
 

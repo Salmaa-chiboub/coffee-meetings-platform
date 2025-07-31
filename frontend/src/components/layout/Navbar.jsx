@@ -147,7 +147,7 @@ const Navbar = () => {
                       </div>
                       <div className="flex-1">
                         <h4 className="font-semibold text-warmGray-800 group-hover:text-peach-700 transition-colors duration-200">{solution.title}</h4>
-                        <p className="text-sm text-warmGray-600 mt-1 leading-relaxed">{solution.description}</p>
+                        <p className="text-sm text-warmGray-600 mt-0.5 leading-relaxed">{solution.description}</p>
                       </div>
                     </button>
                   ))}

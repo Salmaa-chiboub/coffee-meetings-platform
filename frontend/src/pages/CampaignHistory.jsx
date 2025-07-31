@@ -163,7 +163,7 @@ const CampaignHistory = () => {
         </div>
 
         {/* Campaign Overview Card */}
-        <div className="bg-white rounded-xl border border-warmGray-200 p-8 shadow-md">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-warmGray-100/50 p-8 shadow-md hover:shadow-lg transition-all duration-300">
           <div className="text-center mb-6">
             <h1 className="text-3xl font-bold text-warmGray-800 mb-2">
               {campaign?.title}
@@ -251,7 +251,7 @@ const CampaignHistory = () => {
 
         {/* Pairs Details */}
         {pairsData && pairsData.pairs && pairsData.pairs.length > 0 && (
-          <div className="bg-white rounded-xl border border-warmGray-200 p-6 shadow-md">
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-warmGray-100/50 p-6 shadow-md hover:shadow-lg transition-all duration-300">
             <h3 className="text-lg font-semibold text-warmGray-800 mb-4">
               Generated Pairs ({pairsData.pairs.length})
             </h3>
@@ -259,7 +259,7 @@ const CampaignHistory = () => {
               {pairsData.pairs.map((pair, index) => {
                 console.log(`🔍 DEBUG: Pair ${index + 1} structure:`, pair);
                 return (
-                <div key={index} className="bg-warmGray-50 border border-warmGray-200 rounded-lg p-4">
+                <div key={index} className="bg-warmGray-50/70 backdrop-blur-sm border border-warmGray-100/50 rounded-lg p-4 hover:bg-warmGray-50/90 transition-all duration-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="w-6 h-6 bg-gradient-to-r from-[#E8C4A0] to-[#DDB892] rounded-full flex items-center justify-center">
@@ -308,7 +308,7 @@ const CampaignHistory = () => {
 
         {/* Applied Criteria */}
         {pairsData?.criteria_used && pairsData.criteria_used.length > 0 && (
-          <div className="bg-white rounded-xl border border-warmGray-200 p-6 shadow-md">
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-warmGray-100/50 p-6 shadow-md hover:shadow-lg transition-all duration-300">
             <h3 className="text-lg font-semibold text-warmGray-800 mb-4">Applied Matching Criteria</h3>
             <div className="flex flex-wrap gap-2">
               {pairsData.criteria_used.map((criteria, index) => (

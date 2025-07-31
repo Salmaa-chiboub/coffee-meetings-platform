@@ -13,7 +13,7 @@ const DashboardSimple = () => {
           <h1 className="text-4xl font-bold text-warmGray-800">
             Employee Coffee Meeting Dashboard
           </h1>
-          <p className="text-warmGray-600 mt-2">
+          <p className="text-warmGray-600 mt-0.5">
             Welcome back, {user?.name || 'User'}! Organize and track coffee meetings between your employees.
           </p>
         </div>

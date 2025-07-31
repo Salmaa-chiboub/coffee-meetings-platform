@@ -85,8 +85,10 @@ class MatchingAlgorithmService:
         }
     
     def _get_campaign_employees(self) -> List[Employee]:
-        """Get all employees in the campaign"""
-        return list(Employee.objects.filter(campaign_id=self.campaign_id))
+        """Get all employees in the campaign with optimized query"""
+        return list(Employee.objects.filter(campaign_id=self.campaign_id)
+                   .select_related('campaign')
+                   .prefetch_related('employeeattribute_set'))
     
     def _get_existing_pairs(self) -> set:
         """Get existing pairs as a set of tuples for fast lookup"""
@@ -100,11 +102,17 @@ class MatchingAlgorithmService:
         return pairs_set
     
     def _generate_with_criteria(self, employees: List[Employee], criteria, existing_pairs: set) -> List[Dict]:
-        """Generate final pairs based on matching criteria - each employee appears only once"""
+        """Generate final pairs based on matching criteria - optimized algorithm"""
         from random import shuffle
+        import time
 
-        # Get employee attributes
+        start_time = time.time()
+
+        # Get employee attributes once (optimized with prefetch)
         employee_attributes = self._get_employee_attributes(employees)
+
+        # Pre-compile criteria for faster matching
+        compiled_criteria = list(criteria.values('attribute_key', 'rule'))
 
         # Shuffle employees for randomness
         employees_list = employees.copy()
@@ -113,92 +121,145 @@ class MatchingAlgorithmService:
         final_pairs = []
         used_employees = set()
 
-        # Try to pair each unused employee
+        # Create a lookup for faster employee access
+        employee_lookup = {emp.id: emp for emp in employees_list}
+
+        # Try to pair each unused employee with optimized matching
         for i, emp1 in enumerate(employees_list):
             if emp1.id in used_employees:
                 continue
 
             # Find a compatible partner for emp1
-            for j, emp2 in enumerate(employees_list[i+1:], i+1):
+            for j in range(i + 1, len(employees_list)):
+                emp2 = employees_list[j]
+
                 if emp2.id in used_employees:
                     continue
 
-                # Skip if pair already exists
+                # Skip if pair already exists (fast lookup)
                 pair_key = (min(emp1.id, emp2.id), max(emp1.id, emp2.id))
                 if pair_key in existing_pairs:
                     continue
 
-                # Check if pair matches all criteria
-                if self._pair_matches_criteria(emp1, emp2, employee_attributes, criteria):
+                # Check if pair matches all criteria (optimized)
+                if self._pair_matches_criteria_optimized(emp1, emp2, employee_attributes, compiled_criteria):
                     final_pairs.append(self._create_pair_dict(emp1, emp2))
                     used_employees.add(emp1.id)
                     used_employees.add(emp2.id)
                     break
 
+        # Log performance metrics
+        elapsed_time = time.time() - start_time
+        logger.info(f"Matching algorithm completed in {elapsed_time:.3f}s for {len(employees)} employees, generated {len(final_pairs)} pairs")
+
         return final_pairs
     
     def _generate_random_pairs(self, employees: List[Employee], existing_pairs: set) -> List[Dict]:
-        """Generate random pairs when no criteria are defined"""
+        """Generate random pairs when no criteria are defined - optimized algorithm"""
         from random import shuffle
-        
+        import time
+
+        start_time = time.time()
+
         employees_list = employees.copy()
         shuffle(employees_list)
-        
+
         valid_pairs = []
         used_employees = set()
-        
+
+        # Optimized pairing with performance tracking
         for i in range(len(employees_list)):
             if employees_list[i].id in used_employees:
                 continue
-                
+
             for j in range(i + 1, len(employees_list)):
                 if employees_list[j].id in used_employees:
                     continue
-                
+
                 emp1, emp2 = employees_list[i], employees_list[j]
                 pair_key = (min(emp1.id, emp2.id), max(emp1.id, emp2.id))
-                
+
                 if pair_key not in existing_pairs:
                     valid_pairs.append(self._create_pair_dict(emp1, emp2))
                     used_employees.add(emp1.id)
                     used_employees.add(emp2.id)
                     break
-        
+
+        # Log performance metrics
+        elapsed_time = time.time() - start_time
+        logger.info(f"Random pairing completed in {elapsed_time:.3f}s for {len(employees)} employees, generated {len(valid_pairs)} pairs")
+
         return valid_pairs
     
     def _get_employee_attributes(self, employees: List[Employee]) -> Dict[int, Dict[str, str]]:
-        """Get attributes for all employees as a nested dictionary"""
+        """Get attributes for all employees with optimized query and caching"""
+        # Use prefetched attributes if available
         employee_attributes = {}
         for emp in employees:
-            employee_attributes[emp.id] = {
-                attr.attribute_key: attr.attribute_value
-                for attr in EmployeeAttribute.objects.filter(
-                    employee=emp, campaign_id=self.campaign_id
-                )
-            }
+            if hasattr(emp, '_prefetched_objects_cache') and 'employeeattribute_set' in emp._prefetched_objects_cache:
+                # Use prefetched data (much faster)
+                employee_attributes[emp.id] = {
+                    attr.attribute_key: attr.attribute_value
+                    for attr in emp.employeeattribute_set.all()
+                }
+            else:
+                # Fallback to direct query (less efficient but still works)
+                employee_attributes[emp.id] = emp.get_attributes_dict()
+
         return employee_attributes
     
-    def _pair_matches_criteria(self, emp1: Employee, emp2: Employee, 
+    def _pair_matches_criteria(self, emp1: Employee, emp2: Employee,
                               employee_attributes: Dict, criteria) -> bool:
-        """Check if a pair matches all criteria"""
+        """Check if a pair matches all criteria (legacy method)"""
         attrs1 = employee_attributes.get(emp1.id, {})
         attrs2 = employee_attributes.get(emp2.id, {})
-        
+
         for criterion in criteria:
             key = criterion.attribute_key
             rule = criterion.rule
             val1 = attrs1.get(key)
             val2 = attrs2.get(key)
-            
+
             # Skip if either employee doesn't have this attribute
             if val1 is None or val2 is None:
                 continue
-            
+
             if rule == 'same' and val1 != val2:
                 return False
             elif rule == 'not_same' and val1 == val2:
                 return False
-        
+
+        return True
+
+    def _pair_matches_criteria_optimized(self, emp1: Employee, emp2: Employee,
+                                       employee_attributes: Dict, compiled_criteria: List[Dict]) -> bool:
+        """Optimized criteria matching with pre-compiled criteria"""
+        attrs1 = employee_attributes.get(emp1.id, {})
+        attrs2 = employee_attributes.get(emp2.id, {})
+
+        # Fast path: if no criteria, all pairs match
+        if not compiled_criteria:
+            return True
+
+        # Check each criterion efficiently
+        for criterion in compiled_criteria:
+            key = criterion['attribute_key']
+            rule = criterion['rule']
+            val1 = attrs1.get(key)
+            val2 = attrs2.get(key)
+
+            # Skip if either employee doesn't have this attribute
+            if val1 is None or val2 is None:
+                continue
+
+            # Fast comparison without string operations
+            if rule == 'same':
+                if val1 != val2:
+                    return False
+            elif rule == 'not_same':
+                if val1 == val2:
+                    return False
+
         return True
     
     def _create_pair_dict(self, emp1: Employee, emp2: Employee) -> Dict:

@@ -1,13 +1,23 @@
 # campaigns/serializers.py
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Count, Prefetch
 from .models import Campaign, CampaignWorkflowState, CampaignWorkflowLog
 
 class CampaignSerializer(serializers.ModelSerializer):
+    employee_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Campaign
         fields = '__all__'
         read_only_fields = ['created_at', 'hr_manager']
+
+    def get_employee_count(self, obj):
+        """Get employee count efficiently"""
+        # Use prefetched count if available, otherwise query
+        if hasattr(obj, 'employee_count'):
+            return obj.employee_count
+        return getattr(obj, '_employee_count', 0)
 
     def validate(self, data):
         """Validation personnalisée pour les dates"""

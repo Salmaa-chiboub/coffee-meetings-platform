@@ -1,41 +1,30 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import QueryProvider from './contexts/QueryProvider';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import Dashboard from './pages/DashboardSimple';
+import { SkeletonDashboard, SkeletonCard } from './components/ui/Skeleton';
+
+// Eager load critical components (auth pages)
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import Campaigns from './pages/Campaigns';
-import CampaignWorkflow from './pages/CampaignWorkflow';
-import CampaignHistory from './pages/CampaignHistory';
-import CampaignEvaluations from './pages/CampaignEvaluations';
-import CampaignEvaluationsView from './pages/CampaignEvaluationsView';
+import LandingPage from './pages/LandingPage';
 import PublicEvaluation from './components/evaluation/PublicEvaluation';
-import Employees from './pages/Employees';
-import Settings from './pages/Settings';
 
-// Component to handle default route based on authentication
-const DefaultRoute = () => {
-  const { user, loading } = useAuth();
+// Lazy load heavy components for code splitting
+const Dashboard = lazy(() => import('./pages/DashboardModern'));
+const Campaigns = lazy(() => import('./pages/Campaigns'));
+const CampaignWorkflow = lazy(() => import('./pages/CampaignWorkflow'));
+const CampaignHistory = lazy(() => import('./pages/CampaignHistory'));
+const CampaignEvaluations = lazy(() => import('./pages/CampaignEvaluations'));
+const CampaignEvaluationsView = lazy(() => import('./pages/CampaignEvaluationsView'));
+const Employees = lazy(() => import('./pages/Employees'));
+const Settings = lazy(() => import('./pages/Settings'));
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B6F47] mx-auto"></div>
-          <p className="mt-4 text-warmGray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
-  // Redirect based on authentication status
-  return user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
-};
 
 function App() {
   return (
@@ -46,8 +35,8 @@ function App() {
             {/* Public evaluation route - no authentication required */}
             <Route path="/evaluation/:token" element={<PublicEvaluation />} />
 
-            {/* Default route - redirect based on auth status */}
-            <Route path="/" element={<DefaultRoute />} />
+            {/* Landing page as default route */}
+            <Route path="/" element={<LandingPage />} />
 
             {/* Public auth routes - without layout */}
             <Route path="/login" element={<Login />} />
@@ -59,7 +48,9 @@ function App() {
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Layout>
-                  <Dashboard />
+                  <Suspense fallback={<SkeletonDashboard />}>
+                    <Dashboard />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             } />
@@ -67,7 +58,17 @@ function App() {
             <Route path="/campaigns/*" element={
               <ProtectedRoute>
                 <Layout>
-                  <Campaigns />
+                  <Suspense fallback={
+                    <div className="max-w-7xl mx-auto p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <SkeletonCard key={i} />
+                        ))}
+                      </div>
+                    </div>
+                  }>
+                    <Campaigns />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             } />
@@ -75,7 +76,9 @@ function App() {
             <Route path="/campaigns/:id/workflow" element={
               <ProtectedRoute>
                 <Layout>
-                  <CampaignWorkflow />
+                  <Suspense fallback={<SkeletonDashboard />}>
+                    <CampaignWorkflow />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             } />
@@ -83,7 +86,9 @@ function App() {
             <Route path="/campaigns/:id/history" element={
               <ProtectedRoute>
                 <Layout>
-                  <CampaignHistory />
+                  <Suspense fallback={<SkeletonDashboard />}>
+                    <CampaignHistory />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             } />
@@ -91,7 +96,9 @@ function App() {
             <Route path="/campaigns/:id/evaluations" element={
               <ProtectedRoute>
                 <Layout>
-                  <CampaignEvaluations />
+                  <Suspense fallback={<SkeletonDashboard />}>
+                    <CampaignEvaluations />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             } />
@@ -99,7 +106,9 @@ function App() {
             <Route path="/campaigns/:id/feedback" element={
               <ProtectedRoute>
                 <Layout>
-                  <CampaignEvaluationsView />
+                  <Suspense fallback={<SkeletonDashboard />}>
+                    <CampaignEvaluationsView />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             } />
@@ -107,7 +116,9 @@ function App() {
             <Route path="/employees/*" element={
               <ProtectedRoute>
                 <Layout>
-                  <Employees />
+                  <Suspense fallback={<SkeletonDashboard />}>
+                    <Employees />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             } />
@@ -115,7 +126,9 @@ function App() {
             <Route path="/settings" element={
               <ProtectedRoute>
                 <Layout>
-                  <Settings />
+                  <Suspense fallback={<SkeletonDashboard />}>
+                    <Settings />
+                  </Suspense>
                 </Layout>
               </ProtectedRoute>
             } />

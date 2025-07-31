@@ -9,9 +9,11 @@ import {
   InformationCircleIcon,
   DocumentTextIcon
 } from '@heroicons/react/24/outline';
-import * as XLSX from 'xlsx';
 import { employeeService } from '../../services/employeeService';
 import { WORKFLOW_STEPS } from '../../services/workflowService';
+
+// Lazy load XLSX library only when needed for better bundle size
+const loadXLSX = () => import('xlsx');
 
 const ExcelUpload = ({ campaignId, onComplete, onError }) => {
   const [file, setFile] = useState(null);
@@ -116,10 +118,13 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
     }
   };
 
-  // Download Excel template
+  // Download Excel template with lazy loaded XLSX
   const downloadTemplate = async () => {
     try {
       setDownloadingTemplate(true);
+
+      // Lazy load XLSX library
+      const XLSX = await loadXLSX();
 
       // Créer les données du template
       const templateData = [

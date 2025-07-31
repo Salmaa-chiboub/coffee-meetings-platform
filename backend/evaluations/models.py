@@ -11,5 +11,15 @@ class Evaluation(models.Model):
     token = models.UUIDField()
     used = models.BooleanField(default=False)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['employee_pair', 'used']),
+            models.Index(fields=['employee', 'submitted_at']),
+            models.Index(fields=['token']),
+            models.Index(fields=['used', 'submitted_at']),
+            models.Index(fields=['rating']),
+        ]
+        ordering = ['-submitted_at']
+
     def __str__(self):
         return f"Eval {self.employee.name} - {self.rating}"

@@ -1,193 +1,116 @@
-import { authAPI } from './api';
+import axios from 'axios';
+
+// Create a simple API client for dashboard
+const API_BASE_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:8000';
+
+const dashboardAPI = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 30000, // Increased timeout to 30 seconds for dashboard operations
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add auth token to requests
+dashboardAPI.interceptors.request.use((config) => {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Add response interceptor for authentication errors
+dashboardAPI.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle 401 errors by redirecting to login
+    if (error.response?.status === 401) {
+      console.log('❌ Dashboard API: Authentication failed, redirecting to login');
+
+      // Clear tokens
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+
+      // Dispatch logout event
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+
+      // Redirect to login if not already there
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export const dashboardService = {
-  // Get comprehensive dashboard data
-  getDashboardData: async () => {
+  // Get recent evaluations for dashboard
+  getRecentEvaluations: async (limit = 4) => {
     try {
-      const campaignsResult = await authAPI.getCampaigns();
-
-      if (campaignsResult.success) {
-        return {
-          success: true,
-          data: {
-            campaigns: campaignsResult.data
-          }
-        };
-      } else {
-        throw new Error('Failed to fetch dashboard data');
-      }
+      const response = await dashboardAPI.get(`/dashboard/recent-evaluations/?limit=${limit}`);
+      return {
+        success: true,
+        data: response.data.data
+      };
     } catch (error) {
+      console.error('Error fetching recent evaluations:', error);
       return {
         success: false,
-        error: error.message || 'Failed to fetch dashboard data'
+        error: error.response?.data?.error || error.message || 'Failed to fetch recent evaluations'
       };
     }
   },
 
-  // Get campaigns with statistics
-  getCampaignsWithStats: async () => {
+  // Get rating distribution data
+  getRatingDistribution: async () => {
     try {
-      const result = await authAPI.getCampaigns();
-      
-      if (result.success) {
-        // Enhance campaigns with additional statistics
-        const campaignsWithStats = result.data.map((campaign) => {
-          // For now, return campaigns without additional stats since API methods may not exist
-          return {
-            ...campaign,
-            employees_count: 0,
-            statistics: null
-          };
-        });
-
-        return {
-          success: true,
-          data: campaignsWithStats
-        };
-      } else {
-        throw new Error(result.error?.message || 'Failed to fetch campaigns');
-      }
+      const response = await dashboardAPI.get('/dashboard/rating-distribution/');
+      return {
+        success: true,
+        data: response.data.data
+      };
     } catch (error) {
+      console.error('Error fetching rating distribution:', error);
       return {
         success: false,
-        error: error.message || 'Failed to fetch campaigns with statistics'
+        error: error.response?.data?.error || error.message || 'Failed to fetch rating distribution'
       };
     }
   },
 
-  // Get evaluation statistics across all campaigns
+  // Get evaluation trends over time
+  getEvaluationTrends: async (period = '6months') => {
+    try {
+      const response = await dashboardAPI.get(`/dashboard/evaluation-trends/?period=${period}`);
+      return {
+        success: true,
+        data: response.data.data
+      };
+    } catch (error) {
+      console.error('Error fetching evaluation trends:', error);
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to fetch evaluation trends'
+      };
+    }
+  },
+
+  // Get overall dashboard statistics
   getOverallEvaluationStats: async () => {
     try {
-      const campaignsResult = await authAPI.getCampaigns();
-
-      if (!campaignsResult.success) {
-        // Return mock data if campaigns can't be fetched
-        return {
-          success: true,
-          data: {
-            total_campaigns: 0,
-            total_evaluations: 0,
-            total_pairs: 0,
-            overall_average_rating: 0,
-            overall_response_rate: 0,
-            active_campaigns: 0,
-            upcoming_campaigns: 0,
-            completed_campaigns: 0
-          }
-        };
-      }
-
-      const campaigns = campaignsResult.data || [];
-
-      // Calculate basic stats from campaigns data
-      const now = new Date();
-      const activeCampaigns = campaigns.filter(c => {
-        if (!c.start_date || !c.end_date) return false;
-        const startDate = new Date(c.start_date);
-        const endDate = new Date(c.end_date);
-        return startDate <= now && now <= endDate;
-      }).length;
-
-      const upcomingCampaigns = campaigns.filter(c => {
-        if (!c.start_date) return false;
-        const startDate = new Date(c.start_date);
-        return startDate > now;
-      }).length;
-
-      const completedCampaigns = campaigns.filter(c => {
-        if (!c.end_date) return false;
-        const endDate = new Date(c.end_date);
-        return endDate < now;
-      }).length;
-
+      const response = await dashboardAPI.get('/dashboard/statistics/');
       return {
         success: true,
-        data: {
-          total_campaigns: campaigns.length,
-          total_evaluations: campaigns.length * 5, // Mock data
-          total_pairs: campaigns.length * 10, // Mock data
-          overall_average_rating: 4.2, // Mock data
-          overall_response_rate: 78.5, // Mock data
-          active_campaigns: activeCampaigns,
-          upcoming_campaigns: upcomingCampaigns,
-          completed_campaigns: completedCampaigns
-        }
+        data: response.data.data
       };
     } catch (error) {
+      console.error('Error fetching dashboard statistics:', error);
       return {
-        success: true, // Return success with empty data instead of failing
-        data: {
-          total_campaigns: 0,
-          total_evaluations: 0,
-          total_pairs: 0,
-          overall_average_rating: 0,
-          overall_response_rate: 0,
-          active_campaigns: 0,
-          upcoming_campaigns: 0,
-          completed_campaigns: 0
-        }
-      };
-    }
-  },
-
-  // Get recent activity data
-  getRecentActivity: async () => {
-    try {
-      const campaignsResult = await authAPI.getCampaigns();
-
-      if (!campaignsResult.success) {
-        // Return empty activity if campaigns can't be fetched
-        return {
-          success: true,
-          data: []
-        };
-      }
-
-      const campaigns = campaignsResult.data || [];
-      const recentActivity = [];
-
-      // Get recent campaigns (last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      campaigns.forEach(campaign => {
-        if (campaign.created_at) {
-          const createdDate = new Date(campaign.created_at);
-          if (createdDate >= thirtyDaysAgo) {
-            recentActivity.push({
-              type: 'campaign_created',
-              title: `Campaign "${campaign.title || campaign.name || 'Untitled'}" created`,
-              date: campaign.created_at,
-              campaign_id: campaign.id
-            });
-          }
-        }
-
-        // Check if campaign started recently
-        if (campaign.start_date) {
-          const startDate = new Date(campaign.start_date);
-          if (startDate >= thirtyDaysAgo && startDate <= new Date()) {
-            recentActivity.push({
-              type: 'campaign_started',
-              title: `Campaign "${campaign.title || campaign.name || 'Untitled'}" started`,
-              date: campaign.start_date,
-              campaign_id: campaign.id
-            });
-          }
-        }
-      });
-
-      // Sort by date (most recent first)
-      recentActivity.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-      return {
-        success: true,
-        data: recentActivity.slice(0, 10) // Return last 10 activities
-      };
-    } catch (error) {
-      return {
-        success: true, // Return success with empty data instead of failing
-        data: []
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to fetch dashboard statistics'
       };
     }
   }
