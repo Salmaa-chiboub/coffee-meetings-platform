@@ -81,7 +81,8 @@ export const campaignService = {
   // Get completed campaigns with enhanced data for history view
   getCompletedCampaigns: async () => {
     try {
-      const campaigns = await campaignService.getCampaigns();
+      const campaignsResponse = await campaignService.getCampaigns();
+      const campaigns = campaignsResponse.data || [];
 
       // Fetch workflow state for each campaign and filter completed ones
       const campaignsWithWorkflow = await Promise.all(
