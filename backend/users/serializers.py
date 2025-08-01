@@ -33,10 +33,10 @@ class HRManagerLoginSerializer(serializers.ModelSerializer):
         if not check_password(password, user.password_hash):
             raise serializers.ValidationError("Email ou mot de passe incorrect.")
 
-        # 🔐 Generate access token (expire in 15 min)
+        # 🔐 Generate access token (expire in 7 days)
         access_payload = {
             'user_id': user.id,
-            'exp': datetime.utcnow() + timedelta(minutes=120),
+            'exp': datetime.utcnow() + timedelta(days=7),
             'iat': datetime.utcnow(),
         }
         access_token = jwt.encode(access_payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
@@ -94,19 +94,20 @@ class HRManagerRegisterSerializer(serializers.ModelSerializer):
         validated_data['password_hash'] = make_password(password)
         user = HRManager.objects.create(**validated_data)
 
-        # Création token d'accès
+        # Création token d'accès (7 days)
         payload = {
             'user_id': user.id,
-            'exp': datetime.utcnow() + timedelta(seconds=settings.JWT_EXP_DELTA_SECONDS),
+            'exp': datetime.utcnow() + timedelta(days=7),  # 7 days access token
             'iat': datetime.utcnow(),
         }
         token = jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
-        # Création refresh token (exemple durée plus longue)
+        # Création refresh token (30 days)
         refresh_payload = {
             'user_id': user.id,
-            'exp': datetime.utcnow() + timedelta(days=7),  # refresh token valide 7 jours
+            'exp': datetime.utcnow() + timedelta(days=30),  # refresh token valide 30 jours
             'iat': datetime.utcnow(),
+            'type': 'refresh'
         }
         refresh_token = jwt.encode(refresh_payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 

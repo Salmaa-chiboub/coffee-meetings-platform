@@ -71,7 +71,7 @@ const CampaignCreate = () => {
         <h1 className="text-4xl font-bold text-warmGray-800">
           Create New Campaign
         </h1>
-        <p className="text-warmGray-600 mt-2">
+        <p className="text-warmGray-600 mt-0.5">
           Set up a new coffee meeting campaign for your employees
         </p>
       </div>

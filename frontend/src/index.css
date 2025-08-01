@@ -2,19 +2,152 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Canvas-like shimmer animation for skeleton loaders */
+/* Enhanced Chart Animations */
+@keyframes slideIn {
+  from {
+    width: 0%;
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 1s ease-out both;
+}
+
+.animate-drawLine {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawLine 2s ease-out forwards;
+}
+
+.animate-fadeInPoint {
+  animation: fadeInPoint 0.5s ease-out forwards;
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 1s ease-out forwards;
+}
+
+@keyframes drawLine {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fadeInPoint {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Modern skeleton animations */
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
   }
   100% {
     transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes skeleton-wave {
+  0% {
+    transform: translateX(-100%) scale(1);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(100%) scale(1.1);
+    opacity: 0;
+  }
+}
+
+@keyframes skeleton-breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.8;
+  }
+}
+
+@keyframes skeleton-float {
+  0%, 100% {
+    transform: translateY(0px);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-2px);
+    opacity: 0.9;
   }
 }
 
 .animate-shimmer {
-  animation: shimmer 2s infinite;
+  animation: shimmer 2.5s infinite ease-in-out;
 }
+
+.animate-skeleton-pulse {
+  animation: skeleton-pulse 2s infinite ease-in-out;
+}
+
+.animate-skeleton-wave {
+  animation: skeleton-wave 3s infinite ease-in-out;
+}
+
+.animate-skeleton-breathe {
+  animation: skeleton-breathe 4s infinite ease-in-out;
+}
+
+.animate-skeleton-float {
+  animation: skeleton-float 3s infinite ease-in-out;
+}
+
+/* Staggered animation delays for natural loading effect */
+.skeleton-delay-100 { animation-delay: 0.1s; }
+.skeleton-delay-200 { animation-delay: 0.2s; }
+.skeleton-delay-300 { animation-delay: 0.3s; }
+.skeleton-delay-400 { animation-delay: 0.4s; }
+.skeleton-delay-500 { animation-delay: 0.5s; }
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 

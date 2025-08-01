@@ -77,7 +77,7 @@ const LandingIllustration = ({ className = '' }) => {
               <div className="text-6xl mb-4">
                 ☕
               </div>
-              <h3 className="text-lg font-bold text-warmGray-800 mb-2">
+              <h3 className="text-lg font-bold text-warmGray-800 mb-1">
                 Coffee Connections
               </h3>
               <p className="text-sm text-warmGray-600 max-w-xs leading-relaxed mb-4">

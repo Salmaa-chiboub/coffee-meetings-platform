@@ -11,6 +11,15 @@ class Campaign(models.Model):
     hr_manager = models.ForeignKey(HRManager, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['hr_manager', 'created_at']),
+            models.Index(fields=['start_date', 'end_date']),
+            models.Index(fields=['hr_manager', 'start_date']),
+            models.Index(fields=['created_at']),
+        ]
+        ordering = ['-created_at']
+
     def __str__(self):
         return self.title
 

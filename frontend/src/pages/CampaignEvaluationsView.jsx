@@ -231,7 +231,7 @@ const CampaignEvaluationsView = () => {
                     </div>
                   )}
                   
-                  {evaluation.comment && (
+                  {evaluation.comment && evaluation.comment.trim().length > 0 && (
                     <div className="bg-white rounded-lg p-4 border border-warmGray-200">
                       <p className="text-warmGray-700 text-sm leading-relaxed italic">
                         "{evaluation.comment}"

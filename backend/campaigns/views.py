@@ -3,6 +3,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -14,13 +15,24 @@ from .serializers import (
 )
 from .permissions import IsCampaignOwner
 
+
+class CampaignPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class CampaignViewSet(viewsets.ModelViewSet):
     serializer_class = CampaignSerializer
     permission_classes = [permissions.IsAuthenticated, IsCampaignOwner]
+    pagination_class = CampaignPagination
 
     def get_queryset(self):
-        """Filtrer les campagnes pour ne montrer que celles du HR manager connecté"""
-        return Campaign.objects.filter(hr_manager=self.request.user)
+        """Filtrer les campagnes pour ne montrer que celles du HR manager connecté avec optimisations"""
+        from django.db.models import Count
+        return Campaign.objects.filter(hr_manager=self.request.user)\
+                              .select_related('hr_manager')\
+                              .annotate(employee_count=Count('employee'))\
+                              .order_by('-created_at')
 
     def perform_create(self, serializer):
         """Associer automatiquement le hr_manager connecté à la campagne"""

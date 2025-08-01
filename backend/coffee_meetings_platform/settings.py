@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'campaigns',
     'matching',
     'evaluations',
+    'dashboard',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -91,7 +92,110 @@ WSGI_APPLICATION = 'coffee_meetings_platform.wsgi.application'
 
 
 DATABASES = {
-    'default': dj_database_url.config(default=config("DATABASE_URL"))
+    'default': dj_database_url.config(
+        default=config("DATABASE_URL"),
+        conn_max_age=600,  # Connection pooling - keep connections alive for 10 minutes
+        conn_health_checks=True,  # Enable connection health checks
+    )
+}
+
+# Database optimization settings
+if 'postgresql' in DATABASES['default']['ENGINE']:
+    DATABASES['default'].update({
+        'OPTIONS': {
+            'connect_timeout': 10,
+            'options': '-c default_transaction_isolation=read_committed'
+        }
+    })
+
+# Database connection pooling for production
+if not DEBUG:
+    DATABASES['default']['CONN_MAX_AGE'] = 600
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+
+
+# Cache Configuration for Performance
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'coffee-meetings-cache',
+        'TIMEOUT': 300,  # 5 minutes default timeout
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+            'CULL_FREQUENCY': 3,
+        }
+    }
+}
+
+# Use Redis for production caching if available
+if not DEBUG:
+    try:
+        import redis
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+                'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
+                'TIMEOUT': 300,
+                'OPTIONS': {
+                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                    'CONNECTION_POOL_KWARGS': {
+                        'max_connections': 50,
+                        'retry_on_timeout': True,
+                    }
+                }
+            }
+        }
+    except ImportError:
+        pass  # Fall back to local memory cache
+
+
+# Performance Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'performance': {
+            'format': '[PERF] {asctime} {name} {levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+            'level': 'WARNING',  # Seulement les warnings et erreurs dans la console
+        },
+        'performance_file': {
+            'class': 'logging.FileHandler',
+            'filename': 'logs/performance.log',
+            'formatter': 'performance',
+        },
+    },
+    'loggers': {
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'WARNING',  # Désactiver les logs DEBUG et INFO
+            'propagate': False,
+        },
+        'utils.cache_utils': {
+            'handlers': ['console', 'performance_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'matching.services': {
+            'handlers': ['console', 'performance_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',  # Désactiver les logs DEBUG et INFO globalement
+    },
 }
 
 
@@ -152,18 +256,19 @@ REST_FRAMEWORK = {
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),     # 1h
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),        # 7 jours
-    'ROTATE_REFRESH_TOKENS': False,
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),         # 7 days (1 week)
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),       # 30 days
+    'ROTATE_REFRESH_TOKENS': True,                      # Rotate refresh tokens for security
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'UPDATE_LAST_LOGIN': True,                          # Update last login on token refresh
 }
 
 
 
-JWT_SECRET_KEY = config('JWT_SECRET_KEY') 
+JWT_SECRET_KEY = config('JWT_SECRET_KEY')
 JWT_ALGORITHM = 'HS256'
-JWT_EXP_DELTA_SECONDS = 3600  
+JWT_EXP_DELTA_SECONDS = 7 * 24 * 3600  # 7 days in seconds (604800)
 
 
 

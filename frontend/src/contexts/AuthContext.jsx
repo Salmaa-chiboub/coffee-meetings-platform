@@ -17,11 +17,36 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check if user is logged in on app start
-    const currentUser = authService.getCurrentUser();
-    if (currentUser && authService.isAuthenticated()) {
-      setUser(currentUser);
-    }
-    setLoading(false);
+    const initializeAuth = async () => {
+      try {
+        const currentUser = authService.getCurrentUser();
+        if (currentUser && authService.isAuthenticated()) {
+          setUser(currentUser);
+        } else {
+          // Clear any invalid tokens
+          authService.logout();
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        authService.logout();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Listen for automatic logout events from API interceptor
+    const handleAutoLogout = () => {
+      console.log('🔄 Received auto-logout event');
+      setUser(null);
+    };
+
+    window.addEventListener('auth:logout', handleAutoLogout);
+
+    return () => {
+      window.removeEventListener('auth:logout', handleAutoLogout);
+    };
   }, []);
 
   const login = async (credentials) => {

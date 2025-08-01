@@ -33,47 +33,88 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle token refresh
+// Response interceptor to handle token refresh and automatic logout
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
+    // Handle 401 Unauthorized errors
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
         const refreshToken = localStorage.getItem('refresh_token');
-        if (refreshToken) {
-          console.log('🔄 Access token expired, refreshing...');
+        const accessToken = localStorage.getItem('access_token');
 
-          const response = await axios.post(`${API_BASE_URL}/users/token/refresh/`, {
-            refresh: refreshToken,
-          });
-
-          const { access } = response.data;
-          localStorage.setItem('access_token', access);
-
-          console.log('✅ Token refreshed successfully');
-
-          // Retry original request with new token
-          originalRequest.headers.Authorization = `Bearer ${access}`;
-          return apiClient(originalRequest);
+        // If no refresh token or access token, immediately logout
+        if (!refreshToken || !accessToken) {
+          console.log('❌ No tokens found, redirecting to login');
+          handleAuthenticationFailure();
+          return Promise.reject(error);
         }
+
+        console.log('🔄 Access token expired, attempting refresh...');
+
+        // Attempt to refresh the token
+        const response = await axios.post(`${API_BASE_URL}/users/token/refresh/`, {
+          refresh: refreshToken,
+        });
+
+        const { access, refresh: newRefreshToken } = response.data;
+
+        // Store new tokens
+        localStorage.setItem('access_token', access);
+        if (newRefreshToken) {
+          localStorage.setItem('refresh_token', newRefreshToken);
+        }
+
+        console.log('✅ Token refreshed successfully');
+
+        // Retry original request with new token
+        originalRequest.headers.Authorization = `Bearer ${access}`;
+        return apiClient(originalRequest);
+
       } catch (refreshError) {
-        // Refresh failed, redirect to login
-        console.log('❌ Token refresh failed, logging out');
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        console.log('❌ Token refresh failed:', refreshError.response?.data || refreshError.message);
+
+        // Check if refresh token is also expired or invalid
+        if (refreshError.response?.status === 401) {
+          console.log('❌ Refresh token expired, logging out');
+        }
+
+        handleAuthenticationFailure();
         return Promise.reject(refreshError);
       }
+    }
+
+    // Handle other authentication errors
+    if (error.response?.status === 403) {
+      console.log('❌ Access forbidden, insufficient permissions');
     }
 
     return Promise.reject(error);
   }
 );
+
+// Helper function to handle authentication failures
+const handleAuthenticationFailure = () => {
+  console.log('🔄 Handling authentication failure...');
+
+  // Clear all authentication data
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user');
+  localStorage.removeItem('authToken'); // Legacy token
+
+  // Dispatch custom event for auth context to handle
+  window.dispatchEvent(new CustomEvent('auth:logout'));
+
+  // Redirect to login page
+  if (window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+};
 
 // API Methods
 export const authAPI = {
@@ -250,40 +291,56 @@ export const authAPI = {
     return Promise.resolve({ success: true });
   },
 
-  // Get campaigns
-  getCampaigns: async () => {
+  // Get campaigns with pagination and optimized fetching
+  getCampaigns: async (params = {}) => {
     try {
-      const response = await apiClient.get('/campaigns/');
+      // Build query parameters
+      const queryParams = new URLSearchParams();
+      if (params.page) queryParams.append('page', params.page);
+      if (params.page_size) queryParams.append('page_size', params.page_size);
+      if (params.search) queryParams.append('search', params.search);
+      if (params.status) queryParams.append('status', params.status);
 
-      // Enhance campaigns with employee count
-      const campaignsWithCounts = await Promise.all(
-        response.data.map(async (campaign) => {
-          try {
-            const employeesResponse = await apiClient.get(`/campaigns/${campaign.id}/employees/`);
-            return {
-              ...campaign,
-              employees_count: employeesResponse.data.count || 0,
-            };
-          } catch (error) {
-            // If employee count fails, just return campaign without count
-            return {
-              ...campaign,
-              employees_count: 0,
-            };
+      const queryString = queryParams.toString();
+      const url = `/campaigns/${queryString ? `?${queryString}` : ''}`;
+
+      const response = await apiClient.get(url);
+
+      // For paginated responses, return the full response structure
+      if (response.data.results) {
+        return {
+          success: true,
+          data: response.data.results,
+          pagination: {
+            count: response.data.count,
+            next: response.data.next,
+            previous: response.data.previous,
+            page_size: params.page_size || 20,
+            current_page: params.page || 1
           }
-        })
-      );
+        };
+      }
 
+      // For non-paginated responses (backward compatibility)
+      // Only enhance with employee count for small datasets to avoid N+1 queries
+      const campaigns = Array.isArray(response.data) ? response.data : [];
+
+      // Le backend renvoie déjà employee_count via l'annotation dans le ViewSet
+      // Pas besoin de faire des appels supplémentaires
       return {
         success: true,
-        data: campaignsWithCounts,
+        data: campaigns.map(campaign => ({
+          ...campaign,
+          // Assurer la compatibilité avec les deux noms de champs
+          employees_count: campaign.employee_count || campaign.employees_count || 0,
+        })),
       };
     } catch (error) {
       console.warn('Campaigns API not available, returning empty data:', error);
-      // Return empty data instead of failing to prevent dashboard crash
       return {
         success: true,
         data: [],
+        pagination: null
       };
     }
   },
@@ -437,18 +494,65 @@ export const authAPI = {
 export const tokenUtils = {
   getAccessToken: () => localStorage.getItem('access_token'),
   getRefreshToken: () => localStorage.getItem('refresh_token'),
+
   setTokens: (accessToken, refreshToken) => {
-    localStorage.setItem('access_token', accessToken);
-    localStorage.setItem('refresh_token', refreshToken);
+    if (accessToken) {
+      localStorage.setItem('access_token', accessToken);
+    }
+    if (refreshToken) {
+      localStorage.setItem('refresh_token', refreshToken);
+    }
   },
+
   clearTokens: () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
+    localStorage.removeItem('authToken'); // Legacy token
   },
+
   isAuthenticated: () => {
-    const token = localStorage.getItem('access_token');
-    return !!token;
+    const accessToken = localStorage.getItem('access_token');
+    const refreshToken = localStorage.getItem('refresh_token');
+
+    // Must have both tokens to be considered authenticated
+    return !!(accessToken && refreshToken);
+  },
+
+  // Check if token is expired (basic check without decoding)
+  isTokenExpired: (token) => {
+    if (!token) return true;
+
+    try {
+      // Basic JWT structure check
+      const parts = token.split('.');
+      if (parts.length !== 3) return true;
+
+      // Decode payload (without verification)
+      const payload = JSON.parse(atob(parts[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+
+      return payload.exp < currentTime;
+    } catch (error) {
+      console.error('Error checking token expiration:', error);
+      return true; // Assume expired if we can't parse
+    }
+  },
+
+  // Get token expiration time
+  getTokenExpiration: (token) => {
+    if (!token) return null;
+
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+
+      const payload = JSON.parse(atob(parts[1]));
+      return payload.exp ? new Date(payload.exp * 1000) : null;
+    } catch (error) {
+      console.error('Error getting token expiration:', error);
+      return null;
+    }
   },
 };
 

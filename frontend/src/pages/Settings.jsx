@@ -208,7 +208,7 @@ const Settings = () => {
           <h1 className="text-4xl font-bold text-warmGray-800">
             Profile & Settings
           </h1>
-          <p className="text-warmGray-600 mt-2">
+          <p className="text-warmGray-600 mt-0.5">
             Manage your account information and security settings
           </p>
         </div>
@@ -313,7 +313,7 @@ const Settings = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                         </svg>
                       </div>
-                      <p className="text-xs text-warmGray-500 mt-2 ml-6">Email address cannot be modified for security</p>
+                      <p className="text-xs text-warmGray-500 mt-0.5 ml-6">Email address cannot be modified for security</p>
                     </div>
                     <div className="md:col-span-2 xl:col-span-1 relative">
                       <input

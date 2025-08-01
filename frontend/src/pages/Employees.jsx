@@ -10,7 +10,7 @@ const Employees = () => {
           <h1 className="text-4xl font-bold text-warmGray-800">
             Employee Management
           </h1>
-          <p className="text-warmGray-600 mt-2">
+          <p className="text-warmGray-600 mt-0.5">
             Manage employees who will participate in coffee meetings
           </p>
         </div>

@@ -5,13 +5,18 @@ export const campaignService = {
   // Get all campaigns
   getCampaigns: async (params = {}) => {
     try {
-      const result = await authAPI.getCampaigns();
+      const result = await authAPI.getCampaigns(params);
       if (result.success) {
-        return result.data;
+        // Return the full result structure including pagination
+        return {
+          data: result.data,
+          pagination: result.pagination
+        };
       } else {
         throw new Error(result.error?.message || 'Failed to fetch campaigns');
       }
     } catch (error) {
+      console.error('Error fetching campaigns:', error);
       throw error;
     }
   },
@@ -21,13 +26,15 @@ export const campaignService = {
     try {
       // For now, we'll use the campaigns list and filter by ID
       // This can be optimized later with a dedicated API endpoint
-      const campaigns = await campaignService.getCampaigns();
+      const campaignsResponse = await campaignService.getCampaigns();
+      const campaigns = campaignsResponse.data || [];
       const campaign = campaigns.find(c => c.id === parseInt(id));
       if (!campaign) {
         throw new Error('Campaign not found');
       }
       return campaign;
     } catch (error) {
+      console.error('Error fetching campaign:', error);
       throw error;
     }
   },

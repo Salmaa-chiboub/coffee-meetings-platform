@@ -237,7 +237,7 @@ const CampaignWorkflow = () => {
             <h1 className="text-xl font-bold text-warmGray-800">
               {campaign.title}
             </h1>
-            <div className="flex items-center space-x-4 text-xs text-warmGray-500 mt-1">
+            <div className="flex items-center space-x-4 text-xs text-warmGray-500 mt-0.5">
               <span>{new Date(campaign.start_date).toLocaleDateString()}</span>
               <span>→</span>
               <span>{new Date(campaign.end_date).toLocaleDateString()}</span>
