@@ -90,14 +90,14 @@ const ParticipationChart = ({ campaigns }) => {
     );
   }
 
-  // Chart dimensions
-  const margin = { top: 20, right: 20, bottom: 60, left: 60 };
+  // Chart dimensions with enhanced spacing for text clarity
+  const margin = { top: 50, right: 60, bottom: 100, left: 100 };
   const chartWidth = dimensions.width - margin.left - margin.right;
   const chartHeight = dimensions.height - margin.top - margin.bottom;
 
-  // Scales
+  // Scales with enhanced spacing for text clarity
   const maxParticipants = Math.max(...chartData.map(d => d.totalParticipants));
-  const barWidth = Math.max(20, chartWidth / chartData.length - 10);
+  const barWidth = Math.max(40, chartWidth / chartData.length - 30);
 
   const xScale = (index) => index * (chartWidth / chartData.length) + (chartWidth / chartData.length - barWidth) / 2;
   const yScale = (value) => chartHeight - (value / maxParticipants) * chartHeight;
@@ -111,23 +111,38 @@ const ParticipationChart = ({ campaigns }) => {
         height={dimensions.height}
         className="overflow-visible"
       >
-        {/* Simple gradient definitions */}
+        {/* Baby blue and baby orange pastel gradients */}
         <defs>
-          <linearGradient id="simpleParticipationGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#E8D5F0" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#D5E8F0" stopOpacity="0.8" />
+          <linearGradient id="participationGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#E6F3FF" stopOpacity="0.85" />
+            <stop offset="50%" stopColor="#D1E7FF" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#BDDCFF" stopOpacity="0.85" />
           </linearGradient>
 
-          <linearGradient id="simplePairsGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#F0E8D5" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#E8F0D5" stopOpacity="0.8" />
+          <linearGradient id="pairsGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#FFF0E6" stopOpacity="0.85" />
+            <stop offset="50%" stopColor="#FFE4D1" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#FFD8BD" stopOpacity="0.85" />
           </linearGradient>
+
+          <filter id="barShadow">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.08"/>
+          </filter>
         </defs>
 
         {/* Chart area */}
         <g transform={`translate(${margin.left}, ${margin.top})`}>
-          {/* Simple grid lines */}
-          {[0, 0.5, 1].map((ratio, index) => {
+          {/* Clean background with soft colors */}
+          <rect
+            width={chartWidth}
+            height={chartHeight}
+            fill="#fcfcfd"
+            opacity="0.4"
+            rx="12"
+          />
+
+          {/* Clear grid lines with better contrast */}
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => {
             const y = chartHeight * (1 - ratio);
             return (
               <g key={index}>
@@ -136,14 +151,15 @@ const ParticipationChart = ({ campaigns }) => {
                   y1={y}
                   x2={chartWidth}
                   y2={y}
-                  stroke="#f9fafb"
+                  stroke="#e2e8f0"
                   strokeWidth="1"
+                  opacity={ratio === 0 ? "0.7" : "0.3"}
                 />
                 <text
-                  x="-8"
-                  y={y + 3}
+                  x={-20}
+                  y={y + 5}
                   textAnchor="end"
-                  className="text-xs fill-warmGray-400"
+                  className="text-sm font-semibold fill-slate-600"
                 >
                   {Math.round(maxParticipants * ratio)}
                 </text>
@@ -161,62 +177,81 @@ const ParticipationChart = ({ campaigns }) => {
 
             return (
               <g key={data.monthKey}>
-                {/* Simple participant bar */}
+                {/* Soft pastel participant bar with better spacing */}
                 <rect
                   x={x}
                   y={participantY}
-                  width={barWidth * 0.42}
+                  width={barWidth * 0.38}
                   height={participantHeight}
-                  fill="url(#simpleParticipationGradient)"
-                  rx="4"
-                  className="transition-all duration-300 ease-out cursor-pointer"
+                  fill="url(#participationGradient)"
+                  rx="8"
+                  filter="url(#barShadow)"
+                  className="transition-all duration-500 ease-out cursor-pointer hover:opacity-85"
                   onMouseEnter={() => setHoveredBar({ type: 'participants', index, data })}
                   onMouseLeave={() => setHoveredBar(null)}
                 />
 
-                {/* Simple pairs bar */}
+                {/* Soft pastel pairs bar with clear separation */}
                 <rect
-                  x={x + barWidth * 0.48}
+                  x={x + barWidth * 0.52}
                   y={pairY}
-                  width={barWidth * 0.42}
+                  width={barWidth * 0.38}
                   height={pairHeight}
-                  fill="url(#simplePairsGradient)"
-                  rx="4"
-                  className="transition-all duration-300 ease-out cursor-pointer"
+                  fill="url(#pairsGradient)"
+                  rx="8"
+                  filter="url(#barShadow)"
+                  className="transition-all duration-500 ease-out cursor-pointer hover:opacity-85"
                   onMouseEnter={() => setHoveredBar({ type: 'pairs', index, data })}
                   onMouseLeave={() => setHoveredBar(null)}
                 />
 
-                {/* Simple month label */}
+                {/* Clear, well-spaced month labels with high contrast */}
                 <text
                   x={x + barWidth / 2}
-                  y={chartHeight + 16}
+                  y={chartHeight + 25}
                   textAnchor="middle"
-                  className="text-xs fill-warmGray-500"
+                  className="text-base font-bold fill-slate-700"
                 >
                   {format(data.month, 'MMM')}
                 </text>
+                <text
+                  x={x + barWidth / 2}
+                  y={chartHeight + 42}
+                  textAnchor="middle"
+                  className="text-sm font-medium fill-slate-500"
+                >
+                  {format(data.month, 'yyyy')}
+                </text>
 
-                {/* Simple hover tooltip */}
+                {/* Clear, non-overlapping tooltip */}
                 {hoveredBar && hoveredBar.index === index && (
                   <g>
                     <rect
-                      x={x - 5}
-                      y={participantY - 25}
-                      width={barWidth + 10}
-                      height="20"
-                      fill="rgba(0,0,0,0.75)"
-                      rx="3"
+                      x={x - 15}
+                      y={participantY - 55}
+                      width={barWidth + 30}
+                      height="42"
+                      fill="rgba(51, 65, 85, 0.96)"
+                      rx="10"
+                      filter="url(#barShadow)"
                     />
                     <text
                       x={x + barWidth / 2}
-                      y={participantY - 12}
+                      y={participantY - 35}
                       textAnchor="middle"
-                      className="text-xs fill-white font-medium"
+                      className="text-base fill-white font-bold"
+                    >
+                      {hoveredBar.type === 'participants' ? 'Participants' : 'Coffee Pairs'}
+                    </text>
+                    <text
+                      x={x + barWidth / 2}
+                      y={participantY - 20}
+                      textAnchor="middle"
+                      className="text-sm fill-slate-200 font-medium"
                     >
                       {hoveredBar.type === 'participants'
                         ? `${data.totalParticipants} people`
-                        : `${data.totalPairs} pairs`
+                        : `${data.totalPairs} pairs formed`
                       }
                     </text>
                   </g>
@@ -245,24 +280,24 @@ const ParticipationChart = ({ campaigns }) => {
           />
         </g>
 
-        {/* Simple Legend */}
-        <g transform={`translate(${margin.left}, ${dimensions.height - 30})`}>
-          <rect x="0" y="0" width="10" height="10" fill="url(#simpleParticipationGradient)" rx="2" />
-          <text x="15" y="8" className="text-xs fill-warmGray-600">Participants</text>
+        {/* Clear, well-spaced legend with high contrast */}
+        <g transform={`translate(${margin.left - 40}, ${dimensions.height - 40})`}>
+          <rect x="0" y="0" width="20" height="14" fill="url(#participationGradient)" rx="6" />
+          <text x="28" y="11" className="text-base font-bold fill-slate-700">Total Participants</text>
 
-          <rect x="85" y="0" width="10" height="10" fill="url(#simplePairsGradient)" rx="2" />
-          <text x="100" y="8" className="text-xs fill-warmGray-600">Pairs</text>
+          <rect x="200" y="0" width="20" height="14" fill="url(#pairsGradient)" rx="6" />
+          <text x="228" y="11" className="text-base font-bold fill-slate-700">Coffee Pairs Formed</text>
         </g>
 
         {/* Simple Y-axis label */}
         <text
-          x="18"
+          x="55"
           y={dimensions.height / 2}
           textAnchor="middle"
-          className="text-xs fill-warmGray-500"
-          transform={`rotate(-90, 18, ${dimensions.height / 2})`}
+          className="text-xs fill-slate-500"
+          transform={`rotate(-90, 55, ${dimensions.height / 2})`}
         >
-          Count
+          Participants
         </text>
       </svg>
 

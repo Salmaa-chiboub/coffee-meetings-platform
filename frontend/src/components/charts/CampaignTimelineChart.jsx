@@ -5,6 +5,7 @@ const CampaignTimelineChart = ({ campaigns }) => {
   const svgRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [animationProgress, setAnimationProgress] = useState(0);
+  const [hoveredCampaign, setHoveredCampaign] = useState(null);
 
   // Update dimensions on resize
   useEffect(() => {
@@ -66,11 +67,11 @@ const CampaignTimelineChart = ({ campaigns }) => {
   const maxDate = timelineData[timelineData.length - 1].endDate;
   const totalDays = differenceInDays(maxDate, minDate);
 
-  // Chart dimensions
-  const margin = { top: 40, right: 40, bottom: 60, left: 120 };
+  // Chart dimensions with enhanced spacing for text clarity and timeline axis
+  const margin = { top: 60, right: 80, bottom: 120, left: 160 };
   const chartWidth = dimensions.width - margin.left - margin.right;
   const chartHeight = dimensions.height - margin.top - margin.bottom;
-  const barHeight = Math.max(20, Math.min(40, chartHeight / timelineData.length - 10));
+  const barHeight = Math.max(28, Math.min(40, chartHeight / timelineData.length - 25));
 
   // Scale functions
   const xScale = (date) => {
@@ -78,7 +79,7 @@ const CampaignTimelineChart = ({ campaigns }) => {
     return (daysDiff / totalDays) * chartWidth;
   };
 
-  const yScale = (index) => index * (barHeight + 10) + barHeight / 2;
+  const yScale = (index) => index * (barHeight + 30) + barHeight / 2;
 
   return (
     <div className="w-full">
@@ -88,23 +89,24 @@ const CampaignTimelineChart = ({ campaigns }) => {
         height={dimensions.height}
         className="overflow-visible"
       >
-        {/* Simple gradient definitions */}
+        {/* Pastel purple-blue gradient definition */}
         <defs>
-          <linearGradient id="simpleTimelineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#F7E6D3" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#E6D3F7" stopOpacity="0.8" />
+          <linearGradient id="timelineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#E8E6FF" stopOpacity="0.8" />
+            <stop offset="50%" stopColor="#D4C4F0" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#C4D4FF" stopOpacity="0.8" />
           </linearGradient>
         </defs>
 
         {/* Chart area */}
         <g transform={`translate(${margin.left}, ${margin.top})`}>
-          {/* Simple background */}
+          {/* Simple clean background */}
           <rect
             width={chartWidth}
             height={chartHeight}
-            fill="#fafafa"
-            opacity="0.5"
-            rx="4"
+            fill="#fafbfc"
+            opacity="0.3"
+            rx="8"
           />
 
           {/* Timeline bars */}
@@ -122,34 +124,34 @@ const CampaignTimelineChart = ({ campaigns }) => {
                   y={y}
                   width={width * progress}
                   height={barHeight}
-                  fill="url(#simpleTimelineGradient)"
-                  rx="6"
+                  fill="url(#timelineGradient)"
+                  rx="4"
                   className="transition-all duration-300 ease-out"
                 />
 
-                {/* Simple campaign label */}
+                {/* Simple campaign title */}
                 <text
-                  x={-10}
-                  y={yScale(index) + 4}
+                  x={-15}
+                  y={yScale(index) + 5}
                   textAnchor="end"
-                  className="text-xs font-medium fill-warmGray-700"
+                  className="text-sm font-medium fill-slate-600"
                   style={{ opacity: progress }}
                 >
-                  {campaign.title.length > 18
-                    ? `${campaign.title.substring(0, 18)}...`
+                  {campaign.title.length > 20
+                    ? `${campaign.title.substring(0, 20)}...`
                     : campaign.title
                   }
                 </text>
 
-                {/* Simple duration label */}
+                {/* Simple data label */}
                 <text
                   x={x + width / 2}
-                  y={y + barHeight + 12}
+                  y={y + barHeight + 18}
                   textAnchor="middle"
-                  className="text-xs fill-warmGray-500"
-                  style={{ opacity: progress * 0.7 }}
+                  className="text-xs font-medium fill-slate-500"
+                  style={{ opacity: progress }}
                 >
-                  {campaign.duration}d • {campaign.employees_count || 0} people
+                  {campaign.duration} days
                 </text>
 
                 {/* Simple start/end markers */}
@@ -157,61 +159,122 @@ const CampaignTimelineChart = ({ campaigns }) => {
                   cx={x}
                   cy={yScale(index)}
                   r="3"
-                  fill="#D4B5A0"
-                  className="transition-opacity duration-300 ease-out"
-                  style={{ opacity: progress * 0.8 }}
+                  fill="#D4C4F0"
+                  className="transition-all duration-300 ease-out"
+                  style={{ opacity: progress }}
                 />
                 <circle
                   cx={x + width}
                   cy={yScale(index)}
                   r="3"
-                  fill="#B5A0D4"
-                  className="transition-opacity duration-300 ease-out"
-                  style={{ opacity: progress * 0.8 }}
+                  fill="#C4D4FF"
+                  className="transition-all duration-300 ease-out"
+                  style={{ opacity: progress }}
+                />
+
+                {/* Hover tooltip for detailed dates */}
+                {hoveredCampaign === campaign.id && (
+                  <g>
+                    <rect
+                      x={x + width / 2 - 60}
+                      y={y - 45}
+                      width="120"
+                      height="35"
+                      fill="rgba(51, 65, 85, 0.95)"
+                      rx="8"
+                    />
+                    <text
+                      x={x + width / 2}
+                      y={y - 30}
+                      textAnchor="middle"
+                      className="text-xs fill-white font-medium"
+                    >
+                      {format(parseISO(campaign.start_date), 'MMM dd, yyyy')}
+                    </text>
+                    <text
+                      x={x + width / 2}
+                      y={y - 18}
+                      textAnchor="middle"
+                      className="text-xs fill-slate-200"
+                    >
+                      to {format(parseISO(campaign.end_date), 'MMM dd, yyyy')}
+                    </text>
+                  </g>
+                )}
+
+                {/* Interactive area for hover */}
+                <rect
+                  x={x - 10}
+                  y={y - 10}
+                  width={width + 20}
+                  height={barHeight + 20}
+                  fill="transparent"
+                  onMouseEnter={() => setHoveredCampaign(campaign.id)}
+                  onMouseLeave={() => setHoveredCampaign(null)}
+                  style={{ cursor: 'pointer' }}
                 />
               </g>
             );
           })}
 
-          {/* Simple X-axis */}
+          {/* Timeline axis with quarterly markers */}
           <line
             x1="0"
-            y1={chartHeight}
+            y1={chartHeight + 20}
             x2={chartWidth}
-            y2={chartHeight}
+            y2={chartHeight + 20}
             stroke="#e5e7eb"
-            strokeWidth="1"
+            strokeWidth="2"
           />
 
-          {/* Simplified X-axis labels */}
-          {[0, 0.5, 1].map((ratio, index) => {
-            const x = chartWidth * ratio;
-            const date = new Date(minDate.getTime() + totalDays * ratio * 24 * 60 * 60 * 1000);
+          {/* Quarterly date markers */}
+          {(() => {
+            const quarters = [];
+            const startDate = new Date(Math.min(...timelineData.map(d => new Date(d.start_date))));
+            const endDate = new Date(Math.max(...timelineData.map(d => new Date(d.end_date))));
 
-            return (
-              <text
-                key={index}
-                x={x}
-                y={chartHeight + 18}
-                textAnchor="middle"
-                className="text-xs fill-warmGray-500"
-              >
-                {format(date, 'MMM yyyy')}
-              </text>
-            );
-          })}
+            // Generate quarterly markers
+            let currentDate = new Date(startDate.getFullYear(), Math.floor(startDate.getMonth() / 3) * 3, 1);
+            while (currentDate <= endDate) {
+              const x = xScale(currentDate);
+              const quarter = Math.floor(currentDate.getMonth() / 3) + 1;
+              const year = currentDate.getFullYear();
+
+              quarters.push(
+                <g key={`quarter-${year}-${quarter}`}>
+                  <line
+                    x1={x}
+                    y1={chartHeight + 15}
+                    x2={x}
+                    y2={chartHeight + 25}
+                    stroke="#94a3b8"
+                    strokeWidth="1"
+                  />
+                  <text
+                    x={x}
+                    y={chartHeight + 40}
+                    textAnchor="middle"
+                    className="text-xs fill-slate-500 font-medium"
+                  >
+                    Q{quarter} {year}
+                  </text>
+                </g>
+              );
+
+              // Move to next quarter
+              currentDate.setMonth(currentDate.getMonth() + 3);
+            }
+
+            return quarters;
+          })()}
+
+
         </g>
 
-        {/* Simple Legend */}
-        <g transform={`translate(${margin.left}, 15)`}>
-          <circle cx="0" cy="0" r="3" fill="#D4B5A0" />
-          <text x="10" y="4" className="text-xs fill-warmGray-600">Start</text>
-
-          <circle cx="50" cy="0" r="3" fill="#B5A0D4" />
-          <text x="60" y="4" className="text-xs fill-warmGray-600">End</text>
-
-          <rect x="90" y="-3" width="16" height="6" fill="url(#simpleTimelineGradient)" rx="3" />
-          <text x="112" y="4" className="text-xs fill-warmGray-600">Duration</text>
+        {/* Simple legend */}
+        <g transform={`translate(${margin.left}, 20)`}>
+          <rect x="0" y="-3" width="20" height="8" fill="url(#timelineGradient)" rx="4" />
+          <text x="28" y="4" className="text-sm font-medium fill-slate-600">Campaign Duration</text>
         </g>
       </svg>
 

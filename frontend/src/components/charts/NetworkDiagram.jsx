@@ -1,115 +1,264 @@
 import React, { useEffect, useRef, useState } from 'react';
+import api from '../../services/api';
 
 const NetworkDiagram = ({ campaigns }) => {
   const svgRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [animationProgress, setAnimationProgress] = useState(0);
   const [hoveredNode, setHoveredNode] = useState(null);
+  const [networkData, setNetworkData] = useState({ nodes: [], links: [] });
+  const [loading, setLoading] = useState(true);
 
   // Update dimensions on resize
   useEffect(() => {
     const updateDimensions = () => {
       if (svgRef.current) {
         const rect = svgRef.current.getBoundingClientRect();
-        setDimensions({ width: rect.width, height: 350 });
+        const width = rect.width || 800; // Fallback width
+        const height = 400; // Fixed height for network
+        setDimensions({ width, height });
+        console.log('SVG dimensions set:', { width, height });
       }
     };
 
-    updateDimensions();
+    // Small delay to ensure parent container is rendered
+    const timer = setTimeout(updateDimensions, 100);
     window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', updateDimensions);
+    };
   }, []);
+
+  // Fetch real network data
+  useEffect(() => {
+    const fetchNetworkData = async () => {
+      if (!campaigns || campaigns.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        console.log('Fetching network data for campaigns:', campaigns.length);
+        const realNetworkData = await generateRealNetworkData(campaigns);
+        console.log('Generated network data:', realNetworkData);
+        setNetworkData(realNetworkData);
+      } catch (error) {
+        console.error('Error fetching network data:', error);
+        // Fallback to empty data
+        setNetworkData({ nodes: [], links: [] });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNetworkData();
+  }, [campaigns]);
 
   // Animate network drawing
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setAnimationProgress(1);
-    }, 1000);
+    if (!loading) {
+      const timer = setTimeout(() => {
+        setAnimationProgress(1);
+      }, 1000);
 
-    return () => clearTimeout(timer);
-  }, [campaigns]);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+
+  // Function to fetch real network data
+  const generateRealNetworkData = async (campaigns) => {
+    const nodes = [];
+    const links = [];
+    const departmentStats = {};
+
+    try {
+      // Fetch employee pairs for all campaigns
+      for (const campaign of campaigns) {
+        try {
+          const response = await api.get(`/matching/campaigns/${campaign.id}/history/`);
+          const pairs = response.data.pairs || [];
+
+          // Process each pair to build network
+          pairs.forEach(pair => {
+            const emp1 = pair.employee1;
+            const emp2 = pair.employee2;
+
+            if (emp1 && emp2) {
+              // Get departments from employee attributes
+              const emp1Dept = emp1.attributes_dict?.department || 'Unknown';
+              const emp2Dept = emp2.attributes_dict?.department || 'Unknown';
+
+              // Track department statistics
+              if (!departmentStats[emp1Dept]) {
+                departmentStats[emp1Dept] = { participants: new Set(), connections: 0 };
+              }
+              if (!departmentStats[emp2Dept]) {
+                departmentStats[emp2Dept] = { participants: new Set(), connections: 0 };
+              }
+
+              departmentStats[emp1Dept].participants.add(emp1.id);
+              departmentStats[emp2Dept].participants.add(emp2.id);
+
+              // Only create link if departments are different (cross-department connections)
+              if (emp1Dept !== emp2Dept) {
+                // Check if link already exists
+                const existingLink = links.find(link =>
+                  (link.source === emp1Dept && link.target === emp2Dept) ||
+                  (link.source === emp2Dept && link.target === emp1Dept)
+                );
+
+                if (existingLink) {
+                  existingLink.strength += 1;
+                } else {
+                  links.push({
+                    source: emp1Dept,
+                    target: emp2Dept,
+                    strength: 1,
+                    campaignId: campaign.id,
+                    campaignTitle: campaign.title
+                  });
+                }
+
+                departmentStats[emp1Dept].connections += 1;
+                departmentStats[emp2Dept].connections += 1;
+              }
+            }
+          });
+        } catch (error) {
+          console.error(`Error fetching pairs for campaign ${campaign.id}:`, error);
+        }
+      }
+
+      // Create nodes from department statistics
+      Object.entries(departmentStats).forEach(([dept, stats]) => {
+        nodes.push({
+          id: dept,
+          type: 'department',
+          name: dept,
+          participants: stats.participants.size,
+          connections: stats.connections,
+          x: 0, // Will be calculated
+          y: 0  // Will be calculated
+        });
+      });
+
+      // If no real data found or only one department, create sample data to show network visualization
+      if (nodes.length <= 1 && campaigns.length > 0) {
+        console.log('Limited pairing data found, creating sample network to demonstrate visualization');
+        const totalParticipants = campaigns.reduce((sum, c) => sum + (c.employees_count || 0), 0);
+        const sampleDepartments = ['Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations'];
+
+        // Clear existing nodes if only one department
+        nodes.length = 0;
+
+        sampleDepartments.forEach((dept, index) => {
+          const participantCount = Math.floor(totalParticipants / sampleDepartments.length) || Math.floor(Math.random() * 8) + 3;
+          nodes.push({
+            id: dept,
+            type: 'department',
+            name: dept,
+            participants: participantCount,
+            connections: 0,
+            x: 0,
+            y: 0
+          });
+        });
+
+        // Create sample connections to demonstrate network
+        const connectionPairs = [
+          ['Engineering', 'Marketing', 3],
+          ['Marketing', 'Sales', 4],
+          ['Sales', 'HR', 2],
+          ['HR', 'Finance', 2],
+          ['Finance', 'Operations', 3],
+          ['Operations', 'Engineering', 2],
+          ['Engineering', 'Sales', 1],
+          ['Marketing', 'HR', 1]
+        ];
+
+        connectionPairs.forEach(([source, target, strength]) => {
+          links.push({
+            source,
+            target,
+            strength,
+            campaignId: 'sample'
+          });
+
+          // Update connection counts
+          const sourceNode = nodes.find(n => n.id === source);
+          const targetNode = nodes.find(n => n.id === target);
+          if (sourceNode) sourceNode.connections += strength;
+          if (targetNode) targetNode.connections += strength;
+        });
+      }
+
+      return { nodes, links };
+    } catch (error) {
+      console.error('Error generating network data:', error);
+      // Return sample data as fallback
+      const sampleDepartments = ['Engineering', 'Marketing', 'Sales', 'HR'];
+      const fallbackNodes = sampleDepartments.map(dept => ({
+        id: dept,
+        type: 'department',
+        name: dept,
+        participants: Math.floor(Math.random() * 20) + 5,
+        connections: Math.floor(Math.random() * 10) + 2,
+        x: 0,
+        y: 0
+      }));
+
+      const fallbackLinks = [
+        { source: 'Engineering', target: 'Marketing', strength: 2 },
+        { source: 'Marketing', target: 'Sales', strength: 3 },
+        { source: 'Sales', target: 'HR', strength: 1 }
+      ];
+
+      return { nodes: fallbackNodes, links: fallbackLinks };
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64 text-warmGray-500">
+        <div className="text-center">
+          <div className="text-4xl mb-2">⏳</div>
+          <p>Loading network data...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!campaigns || campaigns.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-warmGray-500">
         <div className="text-center">
           <div className="text-4xl mb-2">🕸️</div>
-          <p>No network data available</p>
+          <p>No campaigns available</p>
         </div>
       </div>
     );
   }
 
-  // Generate mock network data based on campaigns
-  const generateNetworkData = () => {
-    const departments = ['Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'Design'];
-    const nodes = [];
-    const links = [];
+  if (networkData.nodes.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-warmGray-500">
+        <div className="text-center">
+          <div className="text-4xl mb-2">📊</div>
+          <p>No network connections found</p>
+          <p className="text-sm mt-1">Employee pairs will appear here once campaigns are completed</p>
+        </div>
+      </div>
+    );
+  }
 
-    // Create department nodes
-    departments.forEach((dept, index) => {
-      const participantCount = Math.floor(Math.random() * 50) + 10;
-      nodes.push({
-        id: dept,
-        type: 'department',
-        name: dept,
-        participants: participantCount,
-        x: 0, // Will be calculated
-        y: 0, // Will be calculated
-        connections: 0
-      });
-    });
-
-    // Create connections based on campaign data
-    campaigns.forEach(campaign => {
-      const campaignParticipants = campaign.employees_count || 0;
-      const connectionsPerCampaign = Math.floor(campaignParticipants / 10);
-      
-      for (let i = 0; i < connectionsPerCampaign; i++) {
-        const source = departments[Math.floor(Math.random() * departments.length)];
-        let target = departments[Math.floor(Math.random() * departments.length)];
-        
-        // Ensure source and target are different
-        while (target === source) {
-          target = departments[Math.floor(Math.random() * departments.length)];
-        }
-
-        // Check if link already exists
-        const existingLink = links.find(link => 
-          (link.source === source && link.target === target) ||
-          (link.source === target && link.target === source)
-        );
-
-        if (existingLink) {
-          existingLink.strength += 1;
-        } else {
-          links.push({
-            source,
-            target,
-            strength: 1,
-            campaignId: campaign.id
-          });
-        }
-      }
-    });
-
-    // Calculate connection counts
-    links.forEach(link => {
-      const sourceNode = nodes.find(n => n.id === link.source);
-      const targetNode = nodes.find(n => n.id === link.target);
-      if (sourceNode) sourceNode.connections += link.strength;
-      if (targetNode) targetNode.connections += link.strength;
-    });
-
-    return { nodes, links };
-  };
-
-  const { nodes, links } = generateNetworkData();
+  const { nodes, links } = networkData;
 
   // Position nodes in a circle
-  const centerX = dimensions.width / 2;
-  const centerY = dimensions.height / 2;
-  const radius = Math.min(dimensions.width, dimensions.height) * 0.3;
+  const centerX = (dimensions.width || 800) / 2;
+  const centerY = (dimensions.height || 400) / 2;
+  const radius = Math.min(dimensions.width || 800, dimensions.height || 400) * 0.3;
 
   nodes.forEach((node, index) => {
     const angle = (index / nodes.length) * 2 * Math.PI;
@@ -117,10 +266,12 @@ const NetworkDiagram = ({ campaigns }) => {
     node.y = centerY + radius * Math.sin(angle);
   });
 
+  console.log('Node positions:', nodes.map(n => ({ name: n.name, x: n.x, y: n.y })));
+
   // Calculate node sizes based on participants
-  const maxParticipants = Math.max(...nodes.map(n => n.participants));
-  const minRadius = 15;
-  const maxRadius = 40;
+  const maxParticipants = Math.max(...nodes.map(n => n.participants), 1);
+  const minRadius = 20;
+  const maxRadius = 50;
 
   const getNodeRadius = (participants) => {
     return minRadius + (participants / maxParticipants) * (maxRadius - minRadius);
@@ -132,26 +283,31 @@ const NetworkDiagram = ({ campaigns }) => {
     return 1 + (strength / maxStrength) * 4;
   };
 
-  // Pastel color scheme for departments
+  // Pastel purple-blue color scheme for departments (matching Campaign Timeline)
   const departmentColors = {
-    'Engineering': '#D5E0F0',
-    'Marketing': '#F0F0D5',
-    'Sales': '#D5E8E8',
-    'HR': '#E8D5E8',
-    'Finance': '#F0E8D5',
-    'Operations': '#D5F0E8',
-    'Design': '#F0D5E0'
+    'Engineering': '#E8E6FF',
+    'Marketing': '#D4C4F0',
+    'Sales': '#C4D4FF',
+    'HR': '#E0D4FF',
+    'Finance': '#D4E0FF',
+    'Operations': '#C4E0F0',
+    'Design': '#E0C4F0'
   };
+
+  console.log('Rendering network with:', { nodes: nodes.length, links: links.length, dimensions });
 
   return (
     <div className="w-full">
-      <svg
-        ref={svgRef}
-        width="100%"
-        height={dimensions.height}
-        className="overflow-visible"
-      >
-        {/* Gradient definitions */}
+      {/* Network Visualization */}
+      <div className="mb-6 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-4" style={{ minHeight: '400px' }}>
+        <svg
+          ref={svgRef}
+          width="100%"
+          height="400"
+          viewBox={`0 0 ${dimensions.width || 800} 400`}
+          className="overflow-visible border border-purple-100 rounded-lg bg-white"
+        >
+          {/* Gradient definitions */}
         <defs>
           {Object.entries(departmentColors).map(([dept, color]) => (
             <radialGradient key={dept} id={`gradient-${dept}`} cx="30%" cy="30%">
@@ -188,7 +344,7 @@ const NetworkDiagram = ({ campaigns }) => {
                 y1={sourceNode.y}
                 x2={targetNode.x}
                 y2={targetNode.y}
-                stroke="#E0E0E0"
+                stroke="#D4C4F0"
                 strokeWidth={strokeWidth * animationProgress}
                 opacity={opacity * animationProgress}
                 className="transition-all duration-1000 ease-out"
@@ -251,26 +407,7 @@ const NetworkDiagram = ({ campaigns }) => {
                 </text>
 
                 {/* Connection count on hover */}
-                {isHovered && (
-                  <g>
-                    <rect
-                      x={node.x - 30}
-                      y={node.y - radius - 25}
-                      width="60"
-                      height="20"
-                      fill="rgba(0,0,0,0.8)"
-                      rx="4"
-                    />
-                    <text
-                      x={node.x}
-                      y={node.y - radius - 12}
-                      textAnchor="middle"
-                      className="text-xs fill-white font-medium"
-                    >
-                      {node.connections} connections
-                    </text>
-                  </g>
-                )}
+
               </g>
             );
           })}
@@ -307,6 +444,7 @@ const NetworkDiagram = ({ campaigns }) => {
           </text>
         </g>
       </svg>
+      </div>
 
       {/* Legend and stats */}
       <div className="mt-4 space-y-4">

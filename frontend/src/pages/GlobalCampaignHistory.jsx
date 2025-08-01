@@ -331,21 +331,25 @@ const GlobalCampaignHistory = () => {
         <AnimatedSection delay={200}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Campaign Timeline Chart */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold text-warmGray-800 mb-4 flex items-center">
-                <ChartPieIcon className="h-5 w-5 mr-2 text-peach-600" />
+            <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-warmGray-100/50 p-8 hover:shadow-xl transition-all duration-300">
+              <h3 className="text-xl font-bold text-warmGray-800 mb-6 flex items-center">
+                <ChartPieIcon className="h-6 w-6 mr-3 text-[#E8C4A0]" />
                 Campaign Timeline
               </h3>
-              <CampaignTimelineChart campaigns={filteredCampaigns} />
+              <div className="h-96">
+                <CampaignTimelineChart campaigns={filteredCampaigns} />
+              </div>
             </div>
 
             {/* Participation Chart */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold text-warmGray-800 mb-4 flex items-center">
-                <ArrowTrendingUpIcon className="h-5 w-5 mr-2 text-blue-600" />
+            <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-warmGray-100/50 p-8 hover:shadow-xl transition-all duration-300">
+              <h3 className="text-xl font-bold text-warmGray-800 mb-6 flex items-center">
+                <ArrowTrendingUpIcon className="h-6 w-6 mr-3 text-[#BDDCFF]" />
                 Participation Trends
               </h3>
-              <ParticipationChart campaigns={filteredCampaigns} />
+              <div className="h-96">
+                <ParticipationChart campaigns={filteredCampaigns} />
+              </div>
             </div>
           </div>
         </AnimatedSection>
