@@ -6,6 +6,7 @@ from .models import Campaign, CampaignWorkflowState, CampaignWorkflowLog
 
 class CampaignSerializer(serializers.ModelSerializer):
     employee_count = serializers.SerializerMethodField()
+    employees_count = serializers.SerializerMethodField()  # Alias pour compatibilité frontend
 
     class Meta:
         model = Campaign
@@ -14,10 +15,17 @@ class CampaignSerializer(serializers.ModelSerializer):
 
     def get_employee_count(self, obj):
         """Get employee count efficiently"""
-        # Use prefetched count if available, otherwise query
+        # Use annotated count if available (from ViewSet annotation)
         if hasattr(obj, 'employee_count'):
             return obj.employee_count
-        return getattr(obj, '_employee_count', 0)
+
+        # Fallback: count employees directly
+        from employees.models import Employee
+        return Employee.objects.filter(campaign=obj).count()
+
+    def get_employees_count(self, obj):
+        """Alias pour get_employee_count pour compatibilité frontend"""
+        return self.get_employee_count(obj)
 
     def validate(self, data):
         """Validation personnalisée pour les dates"""

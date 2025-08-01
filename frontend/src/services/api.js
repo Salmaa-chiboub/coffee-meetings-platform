@@ -325,39 +325,16 @@ export const authAPI = {
       // Only enhance with employee count for small datasets to avoid N+1 queries
       const campaigns = Array.isArray(response.data) ? response.data : [];
 
-      if (campaigns.length <= 10) {
-        // For small datasets, enhance with employee count
-        const campaignsWithCounts = await Promise.all(
-          campaigns.map(async (campaign) => {
-            try {
-              const employeesResponse = await apiClient.get(`/campaigns/${campaign.id}/employees/`);
-              return {
-                ...campaign,
-                employees_count: employeesResponse.data.count || 0,
-              };
-            } catch (error) {
-              return {
-                ...campaign,
-                employees_count: 0,
-              };
-            }
-          })
-        );
-
-        return {
-          success: true,
-          data: campaignsWithCounts,
-        };
-      } else {
-        // For large datasets, return without employee counts to avoid performance issues
-        return {
-          success: true,
-          data: campaigns.map(campaign => ({
-            ...campaign,
-            employees_count: 0, // Will be loaded separately if needed
-          })),
-        };
-      }
+      // Le backend renvoie déjà employee_count via l'annotation dans le ViewSet
+      // Pas besoin de faire des appels supplémentaires
+      return {
+        success: true,
+        data: campaigns.map(campaign => ({
+          ...campaign,
+          // Assurer la compatibilité avec les deux noms de champs
+          employees_count: campaign.employee_count || campaign.employees_count || 0,
+        })),
+      };
     } catch (error) {
       console.warn('Campaigns API not available, returning empty data:', error);
       return {

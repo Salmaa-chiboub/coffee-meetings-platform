@@ -9,8 +9,8 @@ const Pagination = React.memo(({
   onPageChange,
   className = '' 
 }) => {
-  // Don't render if there's only one page or no items
-  if (totalPages <= 1 || totalItems === 0) {
+  // Don't render if there are no items or only one page
+  if (totalItems === 0 || totalPages <= 1) {
     return null;
   }
 

@@ -33,12 +33,12 @@ const CampaignsList = React.memo(() => {
     }
   }, [debouncedSearchTerm, searchTerm, currentPage]);
 
-  // Prepare query parameters for campaigns (sans search - on fait la recherche côté client)
+  // Prepare query parameters for campaigns - charger toutes les campagnes pour pagination côté client
   const queryParams = useMemo(() => ({
-    page: currentPage,
-    page_size: useVirtualScrolling ? 50 : 12, // More items for virtual scrolling
+    page: 1, // Toujours page 1 pour récupérer toutes les données
+    page_size: 1000, // Grande taille pour récupérer toutes les campagnes
     // Pas de paramètre search - on utilise JavaScript côté client pour filtrer
-  }), [currentPage, useVirtualScrolling]);
+  }), []);
 
   const { data: campaignsResponse, isLoading, error } = useCampaigns(queryParams);
 
@@ -69,7 +69,7 @@ const CampaignsList = React.memo(() => {
   }, [campaigns, debouncedSearchTerm, sortConfig]);
 
   // Pagination côté client pour les résultats filtrés
-  const pageSize = useVirtualScrolling ? 50 : 12;
+  const pageSize = useVirtualScrolling ? 50 : 6;
   const totalFilteredItems = filteredAndSortedCampaigns.length;
   const totalPages = Math.ceil(totalFilteredItems / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
@@ -164,22 +164,33 @@ const CampaignsList = React.memo(() => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      {/* Top horizontal card with search and add button */}
+    <div className="max-w-7xl mx-auto space-y-4">
+      {/* Title and description at the top */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-warmGray-800">
+          Coffee Meeting Campaigns
+        </h1>
+        <p className="text-warmGray-600 mt-0.5">
+          Manage your coffee meeting campaigns and track employee participation
+        </p>
+      </div>
+
+      {/* Campaign listing card */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
-        <div className="flex items-center justify-between">
+        {/* Search and add button inside the card */}
+        <div className="flex items-center justify-between mb-6">
           {/* Search bar on the left */}
-          <div className="flex-1 max-w-md">
+          <div className="flex-1 max-w-sm">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <MagnifyingGlassIcon className="h-5 w-5 text-warmGray-400" />
+                <MagnifyingGlassIcon className="h-4 w-4 text-warmGray-400" />
               </div>
               <input
                 type="text"
                 placeholder="Search campaigns..."
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="w-full pl-12 pr-4 py-4 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-warmGray-600 transition-all duration-200"
+                className="w-full pl-12 pr-4 py-2 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-warmGray-600 transition-all duration-200 text-sm"
               />
               <label className="absolute -top-3 left-6 bg-white px-2 text-sm font-medium text-warmGray-600">
                 Search Campaigns
@@ -188,12 +199,12 @@ const CampaignsList = React.memo(() => {
           </div>
 
           {/* Performance controls and Add Campaign button */}
-          <div className="ml-6 flex items-center gap-3">
+          <div className="ml-4 flex items-center gap-2">
             {/* Virtual scrolling toggle for large datasets */}
             {filteredAndSortedCampaigns.length > 20 && (
               <button
                 onClick={toggleVirtualScrolling}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
                   useVirtualScrolling
                     ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -212,18 +223,6 @@ const CampaignsList = React.memo(() => {
               <span>Add Campaign</span>
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* Campaign listing card */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-warmGray-800">
-            Coffee Meeting Campaigns
-          </h1>
-          <p className="text-warmGray-600 mt-0.5">
-            Manage your coffee meeting campaigns and track employee participation
-          </p>
         </div>
 
         {paginatedCampaigns.length === 0 ? (
@@ -270,8 +269,8 @@ const CampaignsList = React.memo(() => {
           </div>
         )}
 
-        {/* Pagination côté client */}
-        {totalFilteredItems > pageSize && (
+        {/* Pagination côté client - affichée si nécessaire */}
+        {totalPages > 1 && (
           <div className="mt-8">
             <Pagination
               currentPage={currentPage}
