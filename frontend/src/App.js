@@ -6,19 +6,14 @@ import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { SkeletonDashboard, SkeletonCard } from './components/ui/Skeleton';
 
-// Eager load critical components (auth pages)
+// Eager load critical components (auth pages and public pages)
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import Campaigns from './pages/Campaigns';
-import CampaignWorkflow from './pages/CampaignWorkflow';
-import CampaignHistory from './pages/CampaignHistory';
-import GlobalCampaignHistory from './pages/GlobalCampaignHistory';
-import CampaignEvaluations from './pages/CampaignEvaluations';
-import CampaignEvaluationsView from './pages/CampaignEvaluationsView';
 import LandingPage from './pages/LandingPage';
 import PublicEvaluation from './components/evaluation/PublicEvaluation';
+import GlobalCampaignHistory from './pages/GlobalCampaignHistory';
 
 // Lazy load heavy components for code splitting
 const Dashboard = lazy(() => import('./pages/DashboardModern'));
