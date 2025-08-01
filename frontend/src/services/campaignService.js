@@ -134,17 +134,48 @@ export const campaignService = {
 
       const campaignsToShow = completedCampaigns;
 
-      // Enhance with mock statistics for demo purposes
-      return campaignsToShow.map(campaign => ({
-        ...campaign,
-        avg_rating: parseFloat(campaign.avg_rating || (Math.random() * 2 + 3).toFixed(1)), // Ensure it's a number
-        pairs_count: campaign.pairs_count || Math.floor((campaign.employees_count || 0) / 2),
-        success_rate: Math.floor(Math.random() * 20 + 80), // Random success rate 80-100%
-        feedback_count: Math.floor(Math.random() * (campaign.employees_count || 0) * 0.8),
-        // Mark as completed for demo purposes
-        status: 'completed',
-        completion_date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(), // Random date in last 30 days
-      }));
+      // Enhance with real feedback data by fetching evaluation statistics for each campaign
+      const campaignsWithRatings = await Promise.all(
+        campaignsToShow.map(async (campaign) => {
+          try {
+            // Fetch real evaluation statistics for this campaign using the API service
+            const result = await authAPI.getCampaignStatistics(campaign.id);
+
+            let evaluationStats = null;
+            if (result.success && result.data) {
+              evaluationStats = result.data.statistics;
+            }
+
+            const estimatedPairs = Math.floor((campaign.employees_count || 0) / 2);
+            const hasRealFeedback = evaluationStats && evaluationStats.average_rating !== null;
+
+            return {
+              ...campaign,
+              avg_rating: hasRealFeedback ? evaluationStats.average_rating : null,
+              pairs_count: evaluationStats ? evaluationStats.total_pairs : estimatedPairs,
+              success_rate: hasRealFeedback ? evaluationStats.response_rate : null,
+              feedback_count: evaluationStats ? evaluationStats.evaluations_submitted : 0,
+              // Mark as completed for demo purposes
+              status: 'completed',
+              completion_date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+            };
+          } catch (error) {
+            // Fallback to basic data without ratings if API call fails
+            const estimatedPairs = Math.floor((campaign.employees_count || 0) / 2);
+            return {
+              ...campaign,
+              avg_rating: null,
+              pairs_count: estimatedPairs,
+              success_rate: null,
+              feedback_count: 0,
+              status: 'completed',
+              completion_date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+            };
+          }
+        })
+      );
+
+      return campaignsWithRatings;
     } catch (error) {
       throw error;
     }

@@ -9,26 +9,35 @@ const NetworkDiagram = ({ campaigns }) => {
   const [networkData, setNetworkData] = useState({ nodes: [], links: [] });
   const [loading, setLoading] = useState(true);
 
-  // Update dimensions on resize
+  // Update dimensions on resize and container changes
   useEffect(() => {
     const updateDimensions = () => {
-      if (svgRef.current) {
-        const rect = svgRef.current.getBoundingClientRect();
-        const width = rect.width || 800; // Fallback width
+      if (svgRef.current && svgRef.current.parentElement) {
+        const parentRect = svgRef.current.parentElement.getBoundingClientRect();
+        const width = Math.max(400, parentRect.width - 40); // Min width with padding
         const height = 400; // Fixed height for network
         setDimensions({ width, height });
         console.log('SVG dimensions set:', { width, height });
       }
     };
 
-    // Small delay to ensure parent container is rendered
+    // Use ResizeObserver for better responsiveness
+    const resizeObserver = new ResizeObserver(() => {
+      updateDimensions();
+    });
+
+    if (svgRef.current && svgRef.current.parentElement) {
+      resizeObserver.observe(svgRef.current.parentElement);
+    }
+
+    // Initial update with delay to ensure parent is rendered
     const timer = setTimeout(updateDimensions, 100);
-    window.addEventListener('resize', updateDimensions);
+
     return () => {
+      resizeObserver.disconnect();
       clearTimeout(timer);
-      window.removeEventListener('resize', updateDimensions);
     };
-  }, []);
+  }, [campaigns]); // Re-run when campaigns change
 
   // Fetch real network data
   useEffect(() => {

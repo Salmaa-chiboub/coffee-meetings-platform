@@ -7,19 +7,33 @@ const CampaignTimelineChart = ({ campaigns }) => {
   const [animationProgress, setAnimationProgress] = useState(0);
   const [hoveredCampaign, setHoveredCampaign] = useState(null);
 
-  // Update dimensions on resize
+  // Update dimensions on resize and container changes
   useEffect(() => {
     const updateDimensions = () => {
-      if (svgRef.current) {
-        const rect = svgRef.current.getBoundingClientRect();
-        setDimensions({ width: rect.width, height: 300 });
+      if (svgRef.current && svgRef.current.parentElement) {
+        const parentRect = svgRef.current.parentElement.getBoundingClientRect();
+        const width = Math.max(400, parentRect.width - 40); // Min width with padding
+        setDimensions({ width, height: 300 });
       }
     };
 
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
-  }, []);
+    // Use ResizeObserver for better responsiveness
+    const resizeObserver = new ResizeObserver(() => {
+      updateDimensions();
+    });
+
+    if (svgRef.current && svgRef.current.parentElement) {
+      resizeObserver.observe(svgRef.current.parentElement);
+    }
+
+    // Initial update with delay to ensure parent is rendered
+    const timer = setTimeout(updateDimensions, 100);
+
+    return () => {
+      resizeObserver.disconnect();
+      clearTimeout(timer);
+    };
+  }, [campaigns]); // Re-run when campaigns change
 
   // Simple, smooth animation
   useEffect(() => {
@@ -67,11 +81,16 @@ const CampaignTimelineChart = ({ campaigns }) => {
   const maxDate = timelineData[timelineData.length - 1].endDate;
   const totalDays = differenceInDays(maxDate, minDate);
 
-  // Chart dimensions with enhanced spacing for text clarity and timeline axis
-  const margin = { top: 60, right: 80, bottom: 120, left: 160 };
+  // Chart dimensions with responsive margins - move left when sidebar is open
+  const margin = {
+    top: 60,
+    right: 80,
+    bottom: 80, // Reduced since we removed quarterly text
+    left: dimensions.width < 600 ? 120 : 160 // Smaller left margin when sidebar is open
+  };
   const chartWidth = dimensions.width - margin.left - margin.right;
   const chartHeight = dimensions.height - margin.top - margin.bottom;
-  const barHeight = Math.max(28, Math.min(40, chartHeight / timelineData.length - 25));
+  const barHeight = Math.round(Math.max(28, Math.min(40, chartHeight / timelineData.length - 25)));
 
   // Scale functions
   const xScale = (date) => {
@@ -111,9 +130,10 @@ const CampaignTimelineChart = ({ campaigns }) => {
 
           {/* Timeline bars */}
           {timelineData.map((campaign, index) => {
-            const x = xScale(campaign.startDate);
-            const width = xScale(campaign.endDate) - x;
-            const y = yScale(index) - barHeight / 2;
+            const x = Math.round(xScale(campaign.startDate));
+            const rawWidth = Math.round(xScale(campaign.endDate)) - x;
+            const width = Math.max(20, rawWidth); // Ensure minimum width for consistent shape
+            const y = Math.round(yScale(index) - barHeight / 2);
             const progress = animationProgress;
 
             return (
@@ -122,11 +142,12 @@ const CampaignTimelineChart = ({ campaigns }) => {
                 <rect
                   x={x}
                   y={y}
-                  width={width * progress}
+                  width={width}
                   height={barHeight}
                   fill="url(#timelineGradient)"
                   rx="4"
                   className="transition-all duration-300 ease-out"
+                  style={{ opacity: progress }}
                 />
 
                 {/* Simple campaign title */}
@@ -250,14 +271,7 @@ const CampaignTimelineChart = ({ campaigns }) => {
                     stroke="#94a3b8"
                     strokeWidth="1"
                   />
-                  <text
-                    x={x}
-                    y={chartHeight + 40}
-                    textAnchor="middle"
-                    className="text-xs fill-slate-500 font-medium"
-                  >
-                    Q{quarter} {year}
-                  </text>
+
                 </g>
               );
 
@@ -271,10 +285,16 @@ const CampaignTimelineChart = ({ campaigns }) => {
 
         </g>
 
-        {/* Simple legend */}
+        {/* Responsive legend */}
         <g transform={`translate(${margin.left}, 20)`}>
           <rect x="0" y="-3" width="20" height="8" fill="url(#timelineGradient)" rx="4" />
-          <text x="28" y="4" className="text-sm font-medium fill-slate-600">Campaign Duration</text>
+          <text
+            x="28"
+            y="4"
+            className={`font-medium fill-slate-600 ${dimensions.width < 600 ? 'text-xs' : 'text-sm'}`}
+          >
+            {dimensions.width < 500 ? 'Duration' : 'Campaign Duration'}
+          </text>
         </g>
       </svg>
 
@@ -284,19 +304,25 @@ const CampaignTimelineChart = ({ campaigns }) => {
           <div className="text-lg font-bold text-warmGray-800">
             {timelineData.length}
           </div>
-          <div className="text-xs text-warmGray-600">Total Campaigns</div>
+          <div className="text-xs text-warmGray-600">
+            {dimensions.width < 500 ? 'Campaigns' : 'Total Campaigns'}
+          </div>
         </div>
         <div className="bg-warmGray-50 rounded-lg p-3">
           <div className="text-lg font-bold text-warmGray-800">
             {Math.round(timelineData.reduce((sum, c) => sum + c.duration, 0) / timelineData.length)}
           </div>
-          <div className="text-xs text-warmGray-600">Avg Duration (days)</div>
+          <div className="text-xs text-warmGray-600">
+            {dimensions.width < 500 ? 'Avg Duration' : 'Avg Duration (days)'}
+          </div>
         </div>
         <div className="bg-warmGray-50 rounded-lg p-3">
           <div className="text-lg font-bold text-warmGray-800">
             {Math.round(totalDays / 30)}
           </div>
-          <div className="text-xs text-warmGray-600">Timeline Span (months)</div>
+          <div className="text-xs text-warmGray-600">
+            {dimensions.width < 500 ? 'Timeline Span' : 'Timeline Span (months)'}
+          </div>
         </div>
       </div>
     </div>

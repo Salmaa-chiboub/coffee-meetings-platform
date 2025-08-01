@@ -8,19 +8,33 @@ const ParticipationChart = ({ campaigns }) => {
   const [animationProgress, setAnimationProgress] = useState(0);
   const [hoveredBar, setHoveredBar] = useState(null);
 
-  // Update dimensions on resize
+  // Update dimensions on resize and container changes
   useEffect(() => {
     const updateDimensions = () => {
-      if (svgRef.current) {
-        const rect = svgRef.current.getBoundingClientRect();
-        setDimensions({ width: rect.width, height: 280 });
+      if (svgRef.current && svgRef.current.parentElement) {
+        const parentRect = svgRef.current.parentElement.getBoundingClientRect();
+        const width = Math.max(400, parentRect.width - 40); // Min width with padding
+        setDimensions({ width, height: 280 });
       }
     };
 
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
-  }, []);
+    // Use ResizeObserver for better responsiveness
+    const resizeObserver = new ResizeObserver(() => {
+      updateDimensions();
+    });
+
+    if (svgRef.current && svgRef.current.parentElement) {
+      resizeObserver.observe(svgRef.current.parentElement);
+    }
+
+    // Initial update with delay to ensure parent is rendered
+    const timer = setTimeout(updateDimensions, 100);
+
+    return () => {
+      resizeObserver.disconnect();
+      clearTimeout(timer);
+    };
+  }, [campaigns]); // Re-run when campaigns change
 
   // Simple, smooth animation
   useEffect(() => {
@@ -90,8 +104,8 @@ const ParticipationChart = ({ campaigns }) => {
     );
   }
 
-  // Chart dimensions with enhanced spacing for text clarity
-  const margin = { top: 50, right: 60, bottom: 100, left: 100 };
+  // Chart dimensions with enhanced spacing for text clarity - aligned with Campaign Timeline
+  const margin = { top: 80, right: 60, bottom: 100, left: 100 };
   const chartWidth = dimensions.width - margin.left - margin.right;
   const chartHeight = dimensions.height - margin.top - margin.bottom;
 
@@ -223,38 +237,19 @@ const ParticipationChart = ({ campaigns }) => {
                   {format(data.month, 'yyyy')}
                 </text>
 
-                {/* Clear, non-overlapping tooltip */}
+                {/* Simple text-only tooltip */}
                 {hoveredBar && hoveredBar.index === index && (
-                  <g>
-                    <rect
-                      x={x - 15}
-                      y={participantY - 55}
-                      width={barWidth + 30}
-                      height="42"
-                      fill="rgba(51, 65, 85, 0.96)"
-                      rx="10"
-                      filter="url(#barShadow)"
-                    />
-                    <text
-                      x={x + barWidth / 2}
-                      y={participantY - 35}
-                      textAnchor="middle"
-                      className="text-base fill-white font-bold"
-                    >
-                      {hoveredBar.type === 'participants' ? 'Participants' : 'Coffee Pairs'}
-                    </text>
-                    <text
-                      x={x + barWidth / 2}
-                      y={participantY - 20}
-                      textAnchor="middle"
-                      className="text-sm fill-slate-200 font-medium"
-                    >
-                      {hoveredBar.type === 'participants'
-                        ? `${data.totalParticipants} people`
-                        : `${data.totalPairs} pairs formed`
-                      }
-                    </text>
-                  </g>
+                  <text
+                    x={x + barWidth / 2}
+                    y={participantY - 25}
+                    textAnchor="middle"
+                    className="text-lg font-bold fill-slate-700"
+                  >
+                    {hoveredBar.type === 'participants'
+                      ? data.totalParticipants
+                      : data.totalPairs
+                    }
+                  </text>
                 )}
               </g>
             );
@@ -280,13 +275,32 @@ const ParticipationChart = ({ campaigns }) => {
           />
         </g>
 
-        {/* Clear, well-spaced legend with high contrast */}
+        {/* Responsive legend with adaptive text size */}
         <g transform={`translate(${margin.left - 40}, ${dimensions.height - 40})`}>
           <rect x="0" y="0" width="20" height="14" fill="url(#participationGradient)" rx="6" />
-          <text x="28" y="11" className="text-base font-bold fill-slate-700">Total Participants</text>
+          <text
+            x="28"
+            y="11"
+            className={`font-bold fill-slate-700 ${dimensions.width < 600 ? 'text-sm' : 'text-base'}`}
+          >
+            {dimensions.width < 500 ? 'Participants' : 'Total Participants'}
+          </text>
 
-          <rect x="200" y="0" width="20" height="14" fill="url(#pairsGradient)" rx="6" />
-          <text x="228" y="11" className="text-base font-bold fill-slate-700">Coffee Pairs Formed</text>
+          <rect
+            x={dimensions.width < 600 ? "150" : "200"}
+            y="0"
+            width="20"
+            height="14"
+            fill="url(#pairsGradient)"
+            rx="6"
+          />
+          <text
+            x={dimensions.width < 600 ? "178" : "228"}
+            y="11"
+            className={`font-bold fill-slate-700 ${dimensions.width < 600 ? 'text-sm' : 'text-base'}`}
+          >
+            {dimensions.width < 500 ? 'Coffee Pairs' : 'Coffee Pairs Formed'}
+          </text>
         </g>
 
         {/* Simple Y-axis label */}
@@ -301,8 +315,8 @@ const ParticipationChart = ({ campaigns }) => {
         </text>
       </svg>
 
-      {/* Summary stats */}
-      <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+      {/* Summary stats - moved down to align with Campaign Timeline */}
+      <div className="mt-8 grid grid-cols-3 gap-4 text-center">
         <div className="bg-blue-50 rounded-lg p-3">
           <div className="text-lg font-bold text-blue-800">
             <CountUp 
@@ -310,7 +324,9 @@ const ParticipationChart = ({ campaigns }) => {
               duration={2000}
             />
           </div>
-          <div className="text-xs text-blue-600">Total Participants</div>
+          <div className="text-xs text-blue-600">
+            {dimensions.width < 500 ? 'Participants' : 'Total Participants'}
+          </div>
         </div>
         <div className="bg-green-50 rounded-lg p-3">
           <div className="text-lg font-bold text-green-800">

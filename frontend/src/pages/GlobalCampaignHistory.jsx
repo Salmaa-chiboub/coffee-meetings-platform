@@ -103,12 +103,13 @@ const GlobalCampaignHistory = () => {
     const totalParticipants = campaignsList.reduce((sum, campaign) => sum + (campaign.employees_count || 0), 0);
     const totalPairs = campaignsList.reduce((sum, campaign) => sum + (campaign.pairs_count || 0), 0);
 
-    // Safely calculate average rating
-    const avgRating = totalCampaigns > 0
-      ? campaignsList.reduce((sum, campaign) => {
-          const rating = parseFloat(campaign.avg_rating) || 0;
+    // Safely calculate average rating - only include campaigns with real ratings
+    const campaignsWithRatings = campaignsList.filter(campaign => campaign.avg_rating && campaign.avg_rating !== null);
+    const avgRating = campaignsWithRatings.length > 0
+      ? campaignsWithRatings.reduce((sum, campaign) => {
+          const rating = parseFloat(campaign.avg_rating);
           return sum + rating;
-        }, 0) / totalCampaigns
+        }, 0) / campaignsWithRatings.length
       : 0;
 
     // Calculate average success rate
@@ -270,7 +271,11 @@ const GlobalCampaignHistory = () => {
                 </div>
                 <p className="text-sm font-medium text-warmGray-600 mb-1">Avg Rating</p>
                 <p className="text-3xl font-bold text-warmGray-800">
-                  <CountUp end={parseFloat(overallStats.avgRating)} duration={2000} suffix="/5" />
+                  {parseFloat(overallStats.avgRating) > 0 ? (
+                    <CountUp end={parseFloat(overallStats.avgRating)} duration={2000} suffix="/5" />
+                  ) : (
+                    <span className="text-2xl text-warmGray-400">No Ratings</span>
+                  )}
                 </p>
               </div>
 
@@ -432,9 +437,13 @@ const GlobalCampaignHistory = () => {
                         </div>
                         <div>
                           <div className="text-2xl font-bold text-warmGray-800">
-                            {campaign.avg_rating ? campaign.avg_rating.toFixed(1) : 'N/A'}
+                            {campaign.avg_rating ? campaign.avg_rating.toFixed(1) : (
+                              <span className="text-lg text-warmGray-400">No Rating</span>
+                            )}
                           </div>
-                          <div className="text-xs text-warmGray-500">Rating</div>
+                          <div className="text-xs text-warmGray-500">
+                            {campaign.avg_rating ? 'Rating' : 'No Feedback'}
+                          </div>
                         </div>
                       </div>
                     </div>

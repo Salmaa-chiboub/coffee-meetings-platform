@@ -179,12 +179,13 @@ const DownloadDropdown = ({
           {/* Dropdown menu */}
           <div
             ref={dropdownRef}
-            className="absolute w-80 max-w-[calc(100vw-20px)] bg-white rounded-xl shadow-2xl border-2 border-peach-200 animate-in fade-in-0 zoom-in-95 duration-200"
+            className="absolute w-80 max-w-[calc(100vw-20px)] bg-white rounded-xl shadow-2xl border-2 border-peach-200 opacity-0 animate-fade-in"
             style={{
               top: `${dropdownPosition.top}px`,
               left: `${Math.max(10, Math.min(dropdownPosition.left, window.innerWidth - 330))}px`,
               maxHeight: '400px',
-              overflowY: 'auto'
+              overflowY: 'auto',
+              animation: 'fadeIn 200ms ease-out forwards'
             }}
           >
             {/* Header */}
