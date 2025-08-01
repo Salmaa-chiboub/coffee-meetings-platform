@@ -12,6 +12,7 @@ import ResetPassword from './pages/ResetPassword';
 import Campaigns from './pages/Campaigns';
 import CampaignWorkflow from './pages/CampaignWorkflow';
 import CampaignHistory from './pages/CampaignHistory';
+import GlobalCampaignHistory from './pages/GlobalCampaignHistory';
 import CampaignEvaluations from './pages/CampaignEvaluations';
 import CampaignEvaluationsView from './pages/CampaignEvaluationsView';
 import PublicEvaluation from './components/evaluation/PublicEvaluation';
@@ -76,6 +77,14 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <CampaignWorkflow />
+                </Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/campaigns/history" element={
+              <ProtectedRoute>
+                <Layout>
+                  <GlobalCampaignHistory />
                 </Layout>
               </ProtectedRoute>
             } />

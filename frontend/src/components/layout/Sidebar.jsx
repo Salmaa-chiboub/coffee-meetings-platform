@@ -13,7 +13,8 @@ import {
   ChevronRightIcon,
   PlusIcon,
   ClockIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 
 const Sidebar = () => {
@@ -105,6 +106,13 @@ const Sidebar = () => {
           icon: CheckCircleIcon,
           path: '/campaigns/completed',
           active: location.pathname === '/campaigns/completed'
+        },
+        {
+          id: 'campaign-history',
+          label: 'Campaign History',
+          icon: DocumentTextIcon,
+          path: '/campaigns/history',
+          active: location.pathname === '/campaigns/history'
         }
       ]
     },

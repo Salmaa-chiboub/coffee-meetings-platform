@@ -1,18 +1,18 @@
 import React from 'react';
 import useScrollAnimation from '../../hooks/useScrollAnimation';
 
-const AnimatedSection = ({ 
-  children, 
-  className = '', 
+const AnimatedSection = ({
+  children,
+  className = '',
   animation = 'fadeInUp',
   delay = 0,
-  duration = 600,
-  ...props 
+  duration = 300,
+  ...props
 }) => {
-  const [ref, isVisible] = useScrollAnimation({ 
-    threshold: 0.1, 
+  const [ref, isVisible] = useScrollAnimation({
+    threshold: 0.15,
     triggerOnce: true,
-    delay 
+    delay
   });
 
   const getAnimationClasses = () => {
@@ -29,9 +29,9 @@ const AnimatedSection = ({
       
       case 'fadeInUp':
         return `${baseClasses} ${durationClass} ${
-          isVisible 
-            ? 'opacity-100 translate-y-0' 
-            : 'opacity-0 translate-y-8'
+          isVisible
+            ? 'opacity-100 translate-y-0'
+            : 'opacity-0 translate-y-4'
         }`;
       
       case 'fadeInDown':
