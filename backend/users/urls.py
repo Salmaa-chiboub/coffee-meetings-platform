@@ -3,6 +3,7 @@ from .views import (
     HRManagerLoginView,
     HRManagerRegisterView,
     HRManagerProfileView,
+    ProfilePictureUploadView,
     PasswordResetRequestView,
     PasswordResetConfirmView,
     ChangePasswordView
@@ -17,6 +18,7 @@ urlpatterns = [
     path('register/', HRManagerRegisterView.as_view(), name='hr-register'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('profile/', HRManagerProfileView.as_view(), name='hr-profile'),
+    path('profile/picture/', ProfilePictureUploadView.as_view(), name='profile-picture-upload'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('password-reset-request/', PasswordResetRequestView.as_view(), name='password-reset-request'),
     path('password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),

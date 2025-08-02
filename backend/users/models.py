@@ -1,8 +1,18 @@
 from django.db import models
 from django.utils import timezone
 import uuid
+import os
 
 # Create your models here.
+
+
+def profile_picture_upload_path(instance, filename):
+    """Generate upload path for profile pictures"""
+    # Get file extension
+    ext = filename.split('.')[-1]
+    # Create filename: hr_manager_{id}_{timestamp}.{ext}
+    filename = f'hr_manager_{instance.id}_{int(timezone.now().timestamp())}.{ext}'
+    return os.path.join('profile_pictures', filename)
 
 
 class HRManager(models.Model):
@@ -10,6 +20,12 @@ class HRManager(models.Model):
     email = models.EmailField(unique=True)
     password_hash = models.TextField()
     company_name = models.CharField(max_length=255)
+    profile_picture = models.ImageField(
+        upload_to=profile_picture_upload_path,
+        null=True,
+        blank=True,
+        help_text="Profile picture (JPG, PNG, WebP supported)"
+    )
 
     def __str__(self):
         return self.name

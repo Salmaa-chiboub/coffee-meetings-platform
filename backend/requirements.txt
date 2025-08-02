@@ -14,3 +14,4 @@ pandas==2.2.3
 openpyxl==3.1.5
 xlrd==2.0.1
 django-filter==24.3
+Pillow==10.4.0

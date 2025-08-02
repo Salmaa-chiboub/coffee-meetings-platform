@@ -50,10 +50,21 @@ class HRManagerLoginSerializer(serializers.ModelSerializer):
         }
         refresh_token = jwt.encode(refresh_payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
+        # Get profile picture URL if it exists
+        profile_picture_url = None
+        if user.profile_picture:
+            request = self.context.get('request')
+            if request:
+                profile_picture_url = request.build_absolute_uri(user.profile_picture.url)
+            else:
+                # Fallback if no request context (settings is already imported at top)
+                profile_picture_url = f"{settings.MEDIA_URL}{user.profile_picture}"
+
         return {
             'user_id': user.id,
             'name': user.name,
             'email': user.email,
+            'profile_picture_url': profile_picture_url,
             'access_token': access_token,
             'refresh_token': refresh_token
         }
@@ -118,10 +129,47 @@ class HRManagerRegisterSerializer(serializers.ModelSerializer):
         return user
     
 class HRManagerProfileSerializer(serializers.ModelSerializer):
+    profile_picture_url = serializers.SerializerMethodField()
+
     class Meta:
         model = HRManager
-        fields = ['id', 'name', 'email', 'company_name']
-        read_only_fields = ['id']  # Email non modifiable
+        fields = ['id', 'name', 'email', 'company_name', 'profile_picture', 'profile_picture_url']
+        read_only_fields = ['id', 'profile_picture_url']  # Email non modifiable
+
+    def get_profile_picture_url(self, obj):
+        """Get the full URL for the profile picture"""
+        if obj.profile_picture:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.profile_picture.url)
+            return obj.profile_picture.url
+        return None
+
+
+class ProfilePictureUploadSerializer(serializers.ModelSerializer):
+    """Serializer for profile picture upload"""
+
+    class Meta:
+        model = HRManager
+        fields = ['profile_picture']
+
+    def validate_profile_picture(self, value):
+        """Validate uploaded profile picture"""
+        if not value:
+            raise serializers.ValidationError("Profile picture is required")
+
+        # Check file size (5MB limit)
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Profile picture must be less than 5MB")
+
+        # Check file type
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+        if value.content_type not in allowed_types:
+            raise serializers.ValidationError(
+                "Profile picture must be a JPG, PNG, or WebP image"
+            )
+
+        return value
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):

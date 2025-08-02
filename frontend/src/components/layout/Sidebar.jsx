@@ -236,8 +236,59 @@ const Sidebar = () => {
           isExpanded ? 'lg:w-80' : 'lg:w-20'
         }`}
       >
-        {/* Header - Enhanced */}
+        {/* Header - Enhanced with Logo */}
         <div className="flex items-center justify-between p-4 border-b border-warmGray-200">
+          {/* Logo Section */}
+          {isExpanded && (
+            <div className="flex items-center space-x-3">
+              {/* Coffee Cup Logo */}
+              <div className="flex items-center justify-center w-10 h-10 bg-[#E8C4A0] rounded-xl shadow-sm">
+                <svg
+                  className="w-6 h-6 text-[#8B6F47]"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M17 8h1a4 4 0 1 1 0 8h-1" />
+                  <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" />
+                  <line x1="6" x2="6" y1="2" y2="4" />
+                  <line x1="10" x2="10" y1="2" y2="4" />
+                  <line x1="14" x2="14" y1="2" y2="4" />
+                </svg>
+              </div>
+
+              {/* Platform Title */}
+              <div className="flex flex-col">
+                <h1 className="text-xl font-bold text-warmGray-800 leading-tight">
+                  CoffeeMeet
+                </h1>
+                <p className="text-xs text-warmGray-500 leading-tight">
+                  Employee Coffee Meeting Platform
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Collapsed Logo */}
+          {!isExpanded && (
+            <div className="flex items-center justify-center w-10 h-10 bg-[#E8C4A0] rounded-xl shadow-sm mx-auto">
+              <svg
+                className="w-6 h-6 text-[#8B6F47]"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M17 8h1a4 4 0 1 1 0 8h-1" />
+                <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" />
+                <line x1="6" x2="6" y1="2" y2="4" />
+                <line x1="10" x2="10" y1="2" y2="4" />
+                <line x1="14" x2="14" y1="2" y2="4" />
+              </svg>
+            </div>
+          )}
+
           {/* Desktop collapse toggle */}
           <button
             onClick={toggleExpanded}

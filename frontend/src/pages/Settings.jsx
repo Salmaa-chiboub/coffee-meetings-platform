@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../services/api';
+import ProfilePictureUpload from '../components/ui/ProfilePictureUpload';
 import {
   CogIcon,
   UserIcon,
@@ -20,6 +21,7 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingPicture, setIsUploadingPicture] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [showPasswords, setShowPasswords] = useState({
     current: false,
@@ -200,6 +202,66 @@ const Settings = () => {
     }
   };
 
+  // Handle profile picture upload
+  const handleProfilePictureUpload = async (file) => {
+    setIsUploadingPicture(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const result = await authAPI.uploadProfilePicture(file);
+
+      if (result.success) {
+        // Update user context with new data
+        updateUser(result.data);
+        setMessage({
+          type: 'success',
+          text: 'Profile picture updated successfully!'
+        });
+        return result;
+      } else {
+        throw new Error(result.message || 'Failed to upload profile picture');
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error.message || 'Failed to upload profile picture. Please try again.'
+      });
+      throw error;
+    } finally {
+      setIsUploadingPicture(false);
+    }
+  };
+
+  // Handle profile picture delete
+  const handleProfilePictureDelete = async () => {
+    setIsUploadingPicture(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const result = await authAPI.deleteProfilePicture();
+
+      if (result.success) {
+        // Update user context with new data
+        updateUser(result.data);
+        setMessage({
+          type: 'success',
+          text: 'Profile picture removed successfully!'
+        });
+        return result;
+      } else {
+        throw new Error(result.message || 'Failed to delete profile picture');
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error.message || 'Failed to delete profile picture. Please try again.'
+      });
+      throw error;
+    } finally {
+      setIsUploadingPicture(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
@@ -268,12 +330,22 @@ const Settings = () => {
                 {!isEditing && (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="flex items-center space-x-2 bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-2 px-4 rounded-lg transition-colors"
+                    className="flex items-center space-x-1.5 bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-1.5 px-3 rounded-md transition-all duration-200 text-sm shadow-sm hover:shadow-md"
                   >
-                    <PencilIcon className="w-4 h-4" />
+                    <PencilIcon className="w-3.5 h-3.5" />
                     <span>Edit Profile</span>
                   </button>
                 )}
+              </div>
+
+              {/* Profile Picture Upload Section */}
+              <div className="mb-8 p-6 bg-cream rounded-xl border border-warmGray-200">
+                <ProfilePictureUpload
+                  currentPicture={user?.profile_picture_url}
+                  onUpload={handleProfilePictureUpload}
+                  onDelete={handleProfilePictureDelete}
+                  isLoading={isUploadingPicture}
+                />
               </div>
 
               {isEditing ? (
@@ -336,15 +408,15 @@ const Settings = () => {
                     </div>
                   </div>
 
-                  <div className="flex space-x-4">
+                  <div className="flex space-x-3">
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-4 px-8 rounded-full transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                      className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-2 px-4 rounded-md transition-all duration-200 text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#E8C4A0] focus:ring-offset-2"
                     >
                       {isLoading ? (
                         <div className="flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#8B6F47] mr-2"></div>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#8B6F47] mr-2"></div>
                           Saving...
                         </div>
                       ) : (
@@ -361,7 +433,7 @@ const Settings = () => {
                           company_name: user?.company_name || ''
                         });
                       }}
-                      className="bg-warmGray-200 hover:bg-warmGray-300 text-warmGray-700 font-medium py-4 px-8 rounded-full transition-all duration-200 transform hover:scale-[1.02]"
+                      className="bg-warmGray-100 hover:bg-warmGray-200 text-warmGray-700 font-medium py-2 px-4 rounded-md transition-all duration-200 text-sm shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-warmGray-300 focus:ring-offset-2"
                     >
                       Cancel
                     </button>
@@ -373,24 +445,24 @@ const Settings = () => {
                     <label className="block text-sm font-medium text-warmGray-600 mb-3">
                       Full Name
                     </label>
-                    <div className="p-6 bg-warmGray-50 rounded-xl border border-warmGray-200 shadow-sm">
-                      <p className="text-warmGray-800 font-medium text-lg">{user?.name || 'N/A'}</p>
+                    <div className="p-4 bg-warmGray-50 rounded-lg border border-warmGray-200 shadow-sm">
+                      <p className="text-warmGray-800 font-medium text-base">{user?.name || 'N/A'}</p>
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-warmGray-600 mb-3">
                       Email Address
                     </label>
-                    <div className="p-6 bg-warmGray-50 rounded-xl border border-warmGray-200 shadow-sm">
-                      <p className="text-warmGray-800 font-medium text-lg break-all">{user?.email || 'N/A'}</p>
+                    <div className="p-4 bg-warmGray-50 rounded-lg border border-warmGray-200 shadow-sm">
+                      <p className="text-warmGray-800 font-medium text-base break-all">{user?.email || 'N/A'}</p>
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-warmGray-600 mb-3">
                       Company Name
                     </label>
-                    <div className="p-6 bg-warmGray-50 rounded-xl border border-warmGray-200 shadow-sm">
-                      <p className="text-warmGray-800 font-medium text-lg">{user?.company_name || 'N/A'}</p>
+                    <div className="p-4 bg-warmGray-50 rounded-lg border border-warmGray-200 shadow-sm">
+                      <p className="text-warmGray-800 font-medium text-base">{user?.company_name || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
@@ -510,11 +582,11 @@ const Settings = () => {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-4 px-8 rounded-full transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-2 px-4 rounded-md transition-all duration-200 text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#E8C4A0] focus:ring-offset-2"
                   >
                     {isLoading ? (
                       <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#8B6F47] mr-2"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#8B6F47] mr-2"></div>
                         Changing Password...
                       </div>
                     ) : (
@@ -525,14 +597,16 @@ const Settings = () => {
               </div>
 
               {/* Forgot Password Section */}
-              <div className="bg-blue-50 rounded-lg p-8 border border-blue-200">
-                <h3 className="text-lg font-semibold text-warmGray-800 mb-3 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 7.89a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+              <div className="bg-gradient-to-br from-orange-50 to-peach-50 rounded-lg p-8 border border-orange-200/50 shadow-sm">
+                <h3 className="text-lg font-semibold text-orange-800 mb-3 flex items-center">
+                  <div className="w-6 h-6 mr-3 bg-orange-100 rounded-md flex items-center justify-center">
+                    <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 7.89a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
                   Forgot Your Password?
                 </h3>
-                <p className="text-warmGray-600 mb-6 leading-relaxed">
+                <p className="text-orange-700/80 mb-6 leading-relaxed">
                   If you can't remember your current password, you can request a password reset email.
                   We'll send you a secure link to reset your password.
                 </p>
@@ -540,7 +614,7 @@ const Settings = () => {
                   <button
                     onClick={handleForgotPassword}
                     disabled={isLoading}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                    className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-md transition-all duration-200 text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2"
                   >
                     {isLoading ? (
                       <>
@@ -556,8 +630,8 @@ const Settings = () => {
                       </>
                     )}
                   </button>
-                  <span className="text-sm text-warmGray-500">
-                    Email will be sent to: <strong>{user?.email}</strong>
+                  <span className="text-sm text-orange-600/70">
+                    Email will be sent to: <strong className="text-orange-700">{user?.email}</strong>
                   </span>
                 </div>
               </div>

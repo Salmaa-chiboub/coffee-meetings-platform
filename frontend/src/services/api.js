@@ -488,6 +488,50 @@ export const authAPI = {
       };
     }
   },
+
+  // Upload profile picture
+  uploadProfilePicture: async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('profile_picture', file);
+
+      const response = await apiClient.post('/users/profile/picture/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Failed to upload profile picture' },
+        message: error.response?.data?.message || 'Failed to upload profile picture',
+      };
+    }
+  },
+
+  // Delete profile picture
+  deleteProfilePicture: async () => {
+    try {
+      const response = await apiClient.delete('/users/profile/picture/');
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Failed to delete profile picture' },
+        message: error.response?.data?.message || 'Failed to delete profile picture',
+      };
+    }
+  },
 };
 
 // Token management utilities
