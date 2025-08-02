@@ -21,6 +21,7 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState({ campaigns: [], employees: [], total: 0 });
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
 
@@ -61,6 +62,15 @@ const Header = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, []);
+
+  // Update current time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, []);
 
   // Handle keyboard shortcuts
@@ -180,8 +190,33 @@ const Header = () => {
             )}
           </div>
 
-          {/* Right Side - User Profile Dropdown */}
-          <div className="relative" ref={dropdownRef}>
+          {/* Right Side - Time & User Profile */}
+          <div className="flex items-center space-x-4">
+            {/* Brilliant Time Text */}
+            <div className="hidden sm:block text-right group">
+              <div className="relative overflow-hidden">
+                {/* Brilliant time text with shimmer effect */}
+                <div className="relative text-sm font-bold bg-gradient-to-r from-[#8B6F47] via-[#D4A574] via-[#F5E6D3] via-[#D4A574] to-[#8B6F47] bg-clip-text text-transparent bg-[length:200%_100%] animate-pulse group-hover:animate-none group-hover:bg-gradient-to-r group-hover:from-[#6B5537] group-hover:via-[#E8C4A0] group-hover:via-white group-hover:via-[#E8C4A0] group-hover:to-[#6B5537] transition-all duration-300">
+                  {currentTime.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                  })}
+                </div>
+
+                {/* Subtle glow effect */}
+                <div className="absolute inset-0 text-sm font-bold text-[#E8C4A0]/20 blur-sm group-hover:text-[#E8C4A0]/40 transition-all duration-300">
+                  {currentTime.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* User Profile Dropdown */}
+            <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="group flex items-center space-x-2 rounded-xl px-2 sm:px-3 py-1.5 transition-all duration-300 cursor-pointer shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#E8C4A0] focus:ring-offset-2 transform hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-[#E8C4A0]/60 to-cream/70 hover:from-[#E8C4A0]/70 hover:to-cream/80 border border-[#E8C4A0]/40 backdrop-blur-sm"
@@ -271,6 +306,7 @@ const Header = () => {
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>
