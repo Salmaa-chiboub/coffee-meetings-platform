@@ -140,8 +140,8 @@ const DashboardModern = () => {
   }
 
   return (
-    <div className="min-h-screen bg-cream p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-cream p-2 lg:p-3">
+      <div className="max-w-7xl mx-auto space-y-4 lg:space-y-6">
         
         {/* En-tête */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">

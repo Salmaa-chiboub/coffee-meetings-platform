@@ -214,6 +214,115 @@ class CampaignWorkflowValidationView(APIView):
             )
 
 
+class CompletedCampaignsView(APIView):
+    """
+    Optimized endpoint for completed campaigns with pagination
+    GET /campaigns/completed/
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Get completed campaigns with pagination and optimized queries"""
+        try:
+            # Get pagination parameters
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 10))
+            offset = (page - 1) * page_size
+
+            # Get campaigns for the authenticated HR manager with optimized query
+            campaigns_query = Campaign.objects.filter(
+                hr_manager=request.user,
+                workflow_state__completed_steps__contains=[5]  # Only completed campaigns
+            ).select_related(
+                'hr_manager',
+                'workflow_state'
+            ).prefetch_related(
+                'employeepair_set',
+                'employeepair_set__evaluation_set'
+            ).order_by('-created_at')
+
+            # Get total count for pagination
+            total_count = campaigns_query.count()
+
+            # Apply pagination
+            campaigns = campaigns_query[offset:offset + page_size]
+
+            # Calculate statistics for paginated campaigns
+            completed_campaigns = []
+            for campaign in campaigns:
+                campaign_data = self._calculate_campaign_statistics_optimized(campaign)
+                completed_campaigns.append(campaign_data)
+
+            # Calculate pagination info
+            has_next = offset + page_size < total_count
+            has_previous = page > 1
+
+            return Response({
+                'success': True,
+                'campaigns': completed_campaigns,
+                'pagination': {
+                    'current_page': page,
+                    'page_size': page_size,
+                    'total_count': total_count,
+                    'total_pages': (total_count + page_size - 1) // page_size,
+                    'has_next': has_next,
+                    'has_previous': has_previous
+                }
+            })
+
+        except Exception as e:
+            return Response({
+                'error': 'Failed to fetch completed campaigns',
+                'details': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _calculate_campaign_statistics_optimized(self, campaign):
+        """Calculate campaign statistics with optimized queries"""
+        from matching.models import EmployeePair
+        from evaluations.models import Evaluation
+        from employees.models import Employee
+        from django.db.models import Count, Avg
+
+        # Use prefetched data when possible
+        pairs = campaign.employeepair_set.all()
+        total_pairs = len(pairs)
+
+        # Get participants count
+        participants_count = Employee.objects.filter(campaign=campaign).count()
+
+        # Get evaluations data
+        evaluations = []
+        for pair in pairs:
+            evaluations.extend(pair.evaluation_set.all())
+
+        total_evaluations = len([e for e in evaluations if e.used])
+        avg_rating = sum(e.rating for e in evaluations if e.used and e.rating) / max(1, len([e for e in evaluations if e.used and e.rating]))
+
+        # Get completion date from workflow
+        completion_date = None
+        if hasattr(campaign, 'workflow_state') and campaign.workflow_state:
+            step_5_data = campaign.workflow_state.step_data.get('5', {})
+            completion_date = step_5_data.get('completion_date')
+
+        if not completion_date:
+            completion_date = campaign.end_date
+
+        return {
+            'id': campaign.id,
+            'title': campaign.title,
+            'description': campaign.description,
+            'start_date': campaign.start_date,
+            'end_date': campaign.end_date,
+            'created_at': campaign.created_at,
+            'completion_date': completion_date,
+            'participants_count': participants_count,
+            'total_pairs': total_pairs,
+            'total_evaluations': total_evaluations,
+            'average_rating': round(avg_rating, 2) if avg_rating else None,
+            'total_criteria': 0  # Can be calculated if needed
+        }
+
+
 class CampaignWorkflowResetView(APIView):
     """
     Reset workflow from a specific step
