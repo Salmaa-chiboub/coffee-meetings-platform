@@ -83,15 +83,56 @@ export const campaignService = {
   // Get completed campaigns with real data and optimized performance
   getCompletedCampaignsWithDetails: async (page = 1, pageSize = 10) => {
     try {
-      // Get campaigns from API with optimized page size
-      const response = await createCachedCall(
-        '/campaigns/',
-        { page_size: Math.min(50, pageSize * 5) }, // Cache larger batches
-        () => apiClient.get('/campaigns/', {
-          params: { page_size: Math.min(50, pageSize * 5) }
-        }),
-        CACHE_CONFIGS.campaigns
-      );
+      console.log('Fetching completed campaigns with details...', { page, pageSize });
+      
+      // Get campaigns from API with optimized page size and criteria included
+      const response = await apiClient.get('/campaigns/completed/', {
+        params: { 
+          page,
+          page_size: pageSize,
+          include_criteria: true
+        }
+      });
+
+      console.log('API Response:', response.data);
+
+      // If the response has the expected format with campaigns and pagination
+      if (response.data && response.data.campaigns) {
+        return {
+          success: true,
+          campaigns: response.data.campaigns,
+          pagination: response.data.pagination
+        };
+      }
+
+      // If we got a direct array of campaigns (legacy format)
+      if (Array.isArray(response.data)) {
+        return {
+          success: true,
+          campaigns: response.data,
+          pagination: {
+            current_page: page,
+            page_size: pageSize,
+            total_count: response.data.length,
+            has_next: false,
+            has_previous: page > 1
+          }
+        };
+      }
+
+      // Default error case
+      console.warn('Unexpected response format:', response.data);
+      return {
+        success: false,
+        campaigns: [],
+        pagination: {
+          current_page: page,
+          page_size: pageSize,
+          total_count: 0,
+          has_next: false,
+          has_previous: false
+        }
+      };
 
       const allCampaigns = response.data?.results || response.data || [];
 
@@ -170,14 +211,15 @@ export const campaignService = {
                 average_rating = stats.average_rating;
               }
 
+              // All data is now included in the campaign response
               return {
                 ...campaign,
                 participants_count,
                 total_pairs,
                 total_evaluations,
                 average_rating,
-                total_criteria: 0, // Will be enhanced later if needed
-                completion_date: campaign.end_date
+                total_criteria: campaign.total_criteria || 0,
+                completion_date: campaign.completion_date || campaign.end_date
               };
             }
             return null;
