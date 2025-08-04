@@ -13,12 +13,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
-def campaign_cache_key(user_id, campaign_id=None):
-    """Génère une clé de cache unique par utilisateur/campagne"""
-    return f"campaign_data:{user_id}:{campaign_id or 'all'}"
-
-
 class PerformanceCache:
     """
     High-performance caching utility with automatic invalidation
@@ -61,12 +55,6 @@ class PerformanceCache:
         cache.delete(key)
         logger.debug(f"Cache DELETE for key: {key}")
     
-    def delete_pattern(self, pattern: str) -> None:
-        """Delete all keys matching a pattern"""
-        if hasattr(cache, 'delete_pattern'):
-            cache.delete_pattern(pattern)
-            logger.debug(f"Cache DELETE PATTERN for pattern: {pattern}")
-    
     def get_stats(self) -> Dict[str, int]:
         """Get cache performance statistics"""
         total = self.hit_count + self.miss_count
@@ -78,90 +66,39 @@ class PerformanceCache:
             'hit_rate': round(hit_rate, 2)
         }
 
-
 # Global cache instance
 performance_cache = PerformanceCache()
 
-
-def cached_result(timeout: int = 300, key_prefix: str | Callable = 'cached'):
-    """
-    Decorator for caching function results
-    Parameters:
-        timeout: Cache timeout in seconds
-        key_prefix: String prefix or callable that takes the request object and returns a prefix
-    """
-    def decorator(func: Callable) -> Callable:
+def cached_result(timeout=None, key_prefix=None):
+    """Decorator for caching function results with DRF response handling"""
+    def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # Get the request object from args (self and request for view methods)
-            request = args[1] if len(args) > 1 else None
-            
-            # Generate the prefix
+            # Générer la clé de cache
             if callable(key_prefix):
-                prefix = key_prefix(request)
+                cache_key = key_prefix(*args, **kwargs)
             else:
-                prefix = str(key_prefix)
-            
-            # Generate cache key using consistent key generation
-            key_data = {
-                'args': args[2:] if len(args) > 2 else [],  # Skip self and request
-                'kwargs': kwargs
-            }
-            key_string = json.dumps(key_data, sort_keys=True, default=str)
-            key_hash = hashlib.md5(key_string.encode()).hexdigest()
-            cache_key = f"{prefix}:{func.__name__}:{key_hash}"
-            
-            # Try to get from cache
-            result = performance_cache.get(cache_key)
-            if result is not None:
-                return result
-            
-            # Execute function and cache result
-            start_time = time.time()
+                prefix = key_prefix or func.__name__
+                cache_key = performance_cache.get_cache_key(prefix, *args, **kwargs)
+
+            # Tenter de récupérer depuis le cache
+            cached_value = performance_cache.get(cache_key)
+            if cached_value is not None:
+                return cached_value
+
+            # Exécuter la fonction si pas en cache
             result = func(*args, **kwargs)
-            execution_time = time.time() - start_time
             
-            # Cache the result
-            performance_cache.set(cache_key, result, timeout)
+            # Si c'est une Response DRF, la rendre avant la mise en cache
+            if hasattr(result, 'render'):
+                rendered_result = result.render()
+                result._content = rendered_result  # Stocker le contenu rendu
             
-            logger.info(f"Function {func.__name__} executed in {execution_time:.3f}s and cached")
+            # Mettre en cache avec timeout
+            cache_timeout = timeout or performance_cache.default_timeout
+            performance_cache.set(cache_key, result, cache_timeout)
+            
             return result
-        return wrapper
-    return decorator
-
-
-# Global cache instance
-performance_cache = PerformanceCache()
-
-
-def cached_result(timeout: int = 300, key_prefix: str = 'cached'):
-    """
-    Decorator for caching function results
-    """
-    def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            # Generate cache key
-            cache_key = performance_cache.get_cache_key(
-                f"{key_prefix}:{func.__name__}", *args, **kwargs
-            )
-            
-            # Try to get from cache
-            result = performance_cache.get(cache_key)
-            if result is not None:
-                return result
-            
-            # Execute function and cache result
-            start_time = time.time()
-            result = func(*args, **kwargs)
-            execution_time = time.time() - start_time
-            
-            # Cache the result
-            performance_cache.set(cache_key, result, timeout)
-            
-            logger.info(f"Function {func.__name__} executed in {execution_time:.3f}s and cached")
-            return result
-        
         return wrapper
     return decorator
 

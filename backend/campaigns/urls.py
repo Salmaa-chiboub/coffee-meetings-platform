@@ -7,7 +7,6 @@ from .views import (
     CampaignWorkflowStepUpdateView,
     CampaignWorkflowValidationView,
     CampaignWorkflowResetView,
-    CompletedCampaignsView
 )
 
 router = DefaultRouter()
@@ -22,7 +21,6 @@ workflow_urlpatterns = [
 ]
 
 urlpatterns = [
-    path('completed/', CompletedCampaignsView.as_view(), name='completed-campaigns'),
     *workflow_urlpatterns,  # Unpack workflow patterns
     *router.urls  # Unpack router patterns
 ]

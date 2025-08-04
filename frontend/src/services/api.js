@@ -122,302 +122,13 @@ export const authAPI = {
   login: async (credentials) => {
     try {
       console.log('🔍 Login Debug - Sending request to:', `${API_BASE_URL}/users/login/`);
-      console.log('🔍 Login Debug - Credentials:', credentials);
-      console.log('🔍 Login Debug - Headers:', {
-        'Content-Type': 'application/json',
-      });
-
       const response = await apiClient.post('/users/login/', credentials);
-
-      console.log('✅ Login Debug - Success response:', response.data);
-
       return {
         success: true,
         data: response.data,
       };
     } catch (error) {
-      console.error('❌ Login Debug - Error details:');
-      console.error('Status:', error.response?.status);
-      console.error('Status Text:', error.response?.statusText);
-      console.error('Response Data:', error.response?.data);
-      console.error('Request URL:', error.config?.url);
-      console.error('Request Data:', error.config?.data);
-      console.error('Full Error:', error);
-
-      return {
-        success: false,
-        error: error.response?.data || { message: 'Network error occurred' },
-      };
-    }
-  },
-
-  // Register user
-  register: async (userData) => {
-    try {
-      const response = await apiClient.post('/users/register/', userData);
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data || { message: 'Network error occurred' },
-      };
-    }
-  },
-
-  // Get user profile
-  getProfile: async () => {
-    try {
-      const response = await apiClient.get('/users/profile/');
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data || { message: 'Network error occurred' },
-      };
-    }
-  },
-
-  // Update user profile
-  updateProfile: async (userData) => {
-    try {
-      const response = await apiClient.put('/users/profile/', userData);
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data || { message: 'Network error occurred' },
-      };
-    }
-  },
-
-  // Change password
-  changePassword: async (passwordData) => {
-    try {
-      const response = await apiClient.post('/users/change-password/', passwordData);
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data || { message: 'Network error occurred' },
-      };
-    }
-  },
-
-  // Request password reset
-  requestPasswordReset: async (email) => {
-    try {
-      const response = await apiClient.post('/users/password-reset-request/', { email });
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data || { message: 'Network error occurred' },
-      };
-    }
-  },
-
-  // Confirm password reset
-  confirmPasswordReset: async (resetData) => {
-    try {
-      console.log('🔍 API - Password Reset Confirm Request:');
-      console.log('URL:', `${API_BASE_URL}/users/password-reset-confirm/`);
-      console.log('Data:', resetData);
-
-      const response = await apiClient.post('/users/password-reset-confirm/', resetData);
-
-      console.log('✅ API - Password Reset Success:', response.data);
-
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      console.error('❌ API - Password Reset Error:');
-      console.error('Status:', error.response?.status);
-      console.error('Response Data:', error.response?.data);
-      console.error('Request Data:', error.config?.data);
-
-      return {
-        success: false,
-        error: error.response?.data || { message: 'Network error occurred' },
-      };
-    }
-  },
-
-  // Logout (clear tokens)
-  logout: () => {
-    console.log('🔄 API - Clearing all authentication data...');
-
-    // Clear all possible auth-related items from localStorage
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('authToken'); // Legacy token name
-
-    // Verify everything is cleared
-    const remainingTokens = {
-      access_token: localStorage.getItem('access_token'),
-      refresh_token: localStorage.getItem('refresh_token'),
-      user: localStorage.getItem('user'),
-      authToken: localStorage.getItem('authToken'),
-    };
-
-    console.log('🔍 API - Remaining tokens after logout:', remainingTokens);
-
-    // Check if anything is still there
-    const hasRemainingData = Object.values(remainingTokens).some(value => value !== null);
-
-    if (hasRemainingData) {
-      console.warn('⚠️ API - Some authentication data still exists after logout');
-    } else {
-      console.log('✅ API - All authentication data successfully cleared');
-    }
-
-    return Promise.resolve({ success: true });
-  },
-
-  // Get campaigns with pagination and optimized fetching
-  getCampaigns: async (params = {}) => {
-    try {
-      // Build query parameters
-      const queryParams = new URLSearchParams();
-      if (params.page) queryParams.append('page', params.page);
-      if (params.page_size) queryParams.append('page_size', params.page_size);
-      if (params.search) queryParams.append('search', params.search);
-      if (params.status) queryParams.append('status', params.status);
-
-      const queryString = queryParams.toString();
-      const url = `/campaigns/${queryString ? `?${queryString}` : ''}`;
-
-      const response = await apiClient.get(url);
-
-      // For paginated responses, return the full response structure
-      if (response.data.results) {
-        return {
-          success: true,
-          data: response.data.results,
-          pagination: {
-            count: response.data.count,
-            next: response.data.next,
-            previous: response.data.previous,
-            page_size: params.page_size || 20,
-            current_page: params.page || 1
-          }
-        };
-      }
-
-      // For non-paginated responses (backward compatibility)
-      // Only enhance with employee count for small datasets to avoid N+1 queries
-      const campaigns = Array.isArray(response.data) ? response.data : [];
-
-      // Le backend renvoie déjà employee_count via l'annotation dans le ViewSet
-      // Pas besoin de faire des appels supplémentaires
-      return {
-        success: true,
-        data: campaigns.map(campaign => ({
-          ...campaign,
-          // Assurer la compatibilité avec les deux noms de champs
-          employees_count: campaign.employee_count || campaign.employees_count || 0,
-        })),
-      };
-    } catch (error) {
-      console.warn('Campaigns API not available, returning empty data:', error);
-      return {
-        success: true,
-        data: [],
-        pagination: null
-      };
-    }
-  },
-
-  // Create campaign
-  createCampaign: async (campaignData) => {
-    try {
-      const response = await apiClient.post('/campaigns/', campaignData);
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data || { message: 'Network error occurred' },
-      };
-    }
-  },
-
-  // Get campaign employees
-  getCampaignEmployees: async (campaignId) => {
-    try {
-      const response = await apiClient.get(`/campaigns/${campaignId}/employees/`);
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data || { message: 'Network error occurred' },
-      };
-    }
-  },
-
-  // Get campaign evaluation statistics
-  getCampaignStatistics: async (campaignId) => {
-    try {
-      const response = await apiClient.get(`/evaluations/campaigns/${campaignId}/statistics/`);
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data || { message: 'Network error occurred' },
-      };
-    }
-  },
-
-  // Get campaign evaluation results
-  getCampaignEvaluations: async (campaignId) => {
-    try {
-      const response = await apiClient.get(`/evaluations/campaigns/${campaignId}/evaluations/`);
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data || { message: 'Network error occurred' },
-      };
-    }
-  },
-
-  // Get matching history for campaign
-  getMatchingHistory: async (campaignId) => {
-    try {
-      const response = await apiClient.get(`/matching/campaigns/${campaignId}/history/`);
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
+      console.error('❌ Login Debug - Error:', error);
       return {
         success: false,
         error: error.response?.data || { message: 'Network error occurred' },
@@ -442,9 +153,9 @@ export const authAPI = {
   },
 
   // Update user profile
-  updateProfile: async (profileData) => {
+  updateProfile: async (userData) => {
     try {
-      const response = await apiClient.put('/users/profile/', profileData);
+      const response = await apiClient.put('/users/profile/', userData);
       return {
         success: true,
         data: response.data,
@@ -529,6 +240,62 @@ export const authAPI = {
         success: false,
         error: error.response?.data || { message: 'Failed to delete profile picture' },
         message: error.response?.data?.message || 'Failed to delete profile picture',
+      };
+    }
+  },
+
+  // Get campaigns
+  getCampaigns: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.page) queryParams.append('page', params.page);
+      if (params.page_size) queryParams.append('page_size', params.page_size);
+      if (params.search) queryParams.append('search', params.search);
+      if (params.status) queryParams.append('status', params.status);
+
+      const queryString = queryParams.toString();
+      const url = `/campaigns/${queryString ? `?${queryString}` : ''}`;
+
+      const response = await apiClient.get(url);
+
+      if (response.data.results) {
+        return {
+          success: true,
+          data: response.data.results,
+          pagination: {
+            count: response.data.count,
+            next: response.data.next,
+            previous: response.data.previous,
+            page_size: params.page_size || 20,
+            current_page: params.page || 1
+          }
+        };
+      }
+
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Network error occurred' },
+      };
+    }
+  },
+
+  // Create campaign
+  createCampaign: async (campaignData) => {
+    try {
+      const response = await apiClient.post('/campaigns/', campaignData);
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Network error occurred' },
       };
     }
   },

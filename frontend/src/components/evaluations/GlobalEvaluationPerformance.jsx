@@ -20,56 +20,53 @@ const GlobalEvaluationPerformance = ({ campaigns = [] }) => {
     try {
       setLoading(true);
 
-      // Calculate statistics from campaigns data
+      // Calculer les statistiques à partir des campagnes avec gestion des valeurs nulles
       const totalCampaigns = campaigns.length;
-      const totalPairs = campaigns.reduce((sum, campaign) => sum + (campaign.total_pairs || 0), 0);
-      const totalEvaluations = campaigns.reduce((sum, campaign) => sum + (campaign.total_evaluations || 0), 0);
+      const totalPairs = campaigns.reduce((sum, campaign) => 
+        sum + (Number(campaign.total_pairs) || 0), 0);
+      const totalEvaluations = campaigns.reduce((sum, campaign) => 
+        sum + (Number(campaign.total_evaluations) || 0), 0);
 
-      // Calculate average rating
-      const campaignsWithRating = campaigns.filter(c => c.average_rating !== null && c.average_rating !== undefined);
-      const avgRating = campaignsWithRating.length > 0
-        ? campaignsWithRating.reduce((sum, c) => sum + c.average_rating, 0) / campaignsWithRating.length
-        : null;
+      // Calculer la note moyenne en excluant les valeurs nulles ou undefined
+      const validRatings = campaigns
+        .map(c => Number(c.average_rating))
+        .filter(rating => !isNaN(rating) && rating !== null);
+      
+      const avgRating = validRatings.length > 0
+        ? validRatings.reduce((sum, rating) => sum + rating, 0) / validRatings.length
+        : 0;
 
-      // Estimate response rate (assuming 2 evaluations per pair)
+      // Calculer le taux de réponse
       const expectedEvaluations = totalPairs * 2;
-      const responseRate = expectedEvaluations > 0 ? (totalEvaluations / expectedEvaluations * 100) : 0;
-
-      // Calculate performance
-      let performanceLevel = 'No Data';
-      if (totalCampaigns > 0) {
-        if (responseRate >= 80 && avgRating >= 4) {
-          performanceLevel = 'Excellent';
-        } else if (responseRate >= 60 && avgRating >= 3.5) {
-          performanceLevel = 'Good';
-        } else if (responseRate >= 40 && avgRating >= 3) {
-          performanceLevel = 'Average';
-        } else if (responseRate >= 20 && avgRating >= 2) {
-          performanceLevel = 'Below Average';
-        } else {
-          performanceLevel = 'Poor';
-        }
-      }
+      const responseRate = expectedEvaluations > 0 
+        ? Math.min(100, (totalEvaluations / expectedEvaluations) * 100)
+        : 0;
 
       setStatistics({
-        total_campaigns: totalCampaigns,
-        total_pairs: totalPairs,
-        total_evaluations_generated: expectedEvaluations,
-        evaluations_submitted: totalEvaluations,
-        evaluations_pending: expectedEvaluations - totalEvaluations,
-        response_rate: Math.round(responseRate * 10) / 10,
-        average_rating: avgRating ? Math.round(avgRating * 100) / 100 : null,
-        total_ratings: totalEvaluations,
-        global_performance: performanceLevel
+        totalCampaigns,
+        totalPairs,
+        totalEvaluations,
+        averageRating: avgRating,
+        responseRate: responseRate,
+        performanceLevel: calculatePerformanceLevel(responseRate, avgRating)
       });
-
-      setError(null);
-    } catch (err) {
-      console.error('Error calculating statistics:', err);
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Error calculating statistics:', error);
       setError('Failed to calculate statistics');
-    } finally {
       setLoading(false);
     }
+  };
+
+  const calculatePerformanceLevel = (responseRate, avgRating) => {
+    if (!responseRate || !avgRating) return 'No Data';
+    
+    if (responseRate >= 80 && avgRating >= 4) return 'Excellent';
+    if (responseRate >= 60 && avgRating >= 3.5) return 'Good';
+    if (responseRate >= 40 && avgRating >= 3) return 'Average';
+    if (responseRate >= 20 && avgRating >= 2) return 'Below Average';
+    return 'Poor';
   };
 
   const fetchGlobalStatistics = async () => {

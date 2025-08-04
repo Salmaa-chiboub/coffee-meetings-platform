@@ -9,7 +9,8 @@ import {
   CogIcon,
   ArrowRightOnRectangleIcon,
   PlusIcon,
-  ViewColumnsIcon
+  ViewColumnsIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 
 const Sidebar = ({ onHoverChange }) => {
@@ -77,11 +78,11 @@ const Sidebar = ({ onHoverChange }) => {
       active: location.pathname.startsWith('/employees')
     },
     {
-      id: 'analytics',
-      label: 'Analytics & Reports',
-      icon: ChartPieIcon,
-      path: '/campaigns/history',
-      active: location.pathname.startsWith('/campaigns/history')
+      id: 'history',
+      label: 'Historique',
+      icon: ClockIcon,
+      path: '/history',
+      active: location.pathname.startsWith('/history')
     },
     {
       id: 'settings',
