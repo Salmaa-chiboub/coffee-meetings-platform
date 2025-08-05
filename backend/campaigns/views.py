@@ -34,6 +34,14 @@ class CampaignViewSet(viewsets.ModelViewSet):
     serializer_class = CampaignSerializer
     permission_classes = [permissions.IsAuthenticated, IsCampaignOwner]
     pagination_class = CampaignPagination
+    filter_backends = [
+        __import__('django_filters.rest_framework').rest_framework.DjangoFilterBackend,
+        __import__('rest_framework.filters').filters.SearchFilter,
+        __import__('rest_framework.filters').filters.OrderingFilter
+    ]
+    search_fields = ['title', 'description']
+    ordering_fields = ['title', 'created_at', 'start_date', 'end_date']
+    ordering = ['-created_at']
 
     def get_queryset(self):
         """Filtrer les campagnes pour ne montrer que celles du HR manager connecté avec optimisations"""
