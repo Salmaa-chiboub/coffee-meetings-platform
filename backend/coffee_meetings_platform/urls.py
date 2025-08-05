@@ -27,6 +27,7 @@ urlpatterns = [
     path('evaluations/', include('evaluations.urls')),
     path('matching/', include('matching.urls')),
     path('dashboard/', include('dashboard.urls')),
+    path('notifications/', include('notifications.urls')),
 ]
 
 # Serve media files during development

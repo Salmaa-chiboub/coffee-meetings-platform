@@ -18,6 +18,33 @@ import { SkeletonDashboard } from '../components/ui/Skeleton';
 const DashboardModern = () => {
   const { user } = useAuth();
 
+  // Detect sidebar hover state from parent layout
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+
+  useEffect(() => {
+    const checkSidebarState = () => {
+      const mainContent = document.querySelector('[data-sidebar-hovered]');
+      if (mainContent) {
+        const isHovered = mainContent.getAttribute('data-sidebar-hovered') === 'true';
+        setIsSidebarHovered(isHovered);
+      }
+    };
+
+    // Check initially and set up observer
+    checkSidebarState();
+    const observer = new MutationObserver(checkSidebarState);
+    const mainContent = document.querySelector('[data-sidebar-hovered]');
+
+    if (mainContent) {
+      observer.observe(mainContent, {
+        attributes: true,
+        attributeFilter: ['data-sidebar-hovered']
+      });
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   // Helper functions
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -156,7 +183,7 @@ const DashboardModern = () => {
         </div>
 
         {/* Statistiques principales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className={`grid gap-6 ${isSidebarHovered ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-5'} transition-all duration-300`}>
           {/* Total Campaigns */}
           <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-all duration-500 border border-warmGray-100/50 hover:border-peach-200 group hover:-translate-y-1">
             <div className="flex items-center justify-between mb-6">

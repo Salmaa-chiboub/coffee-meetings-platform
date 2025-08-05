@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import QueryProvider from './contexts/QueryProvider';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { SkeletonDashboard, SkeletonCard } from './components/ui/Skeleton';
@@ -24,6 +25,7 @@ const CampaignEvaluations = lazy(() => import('./pages/CampaignEvaluations'));
 const CampaignEvaluationsView = lazy(() => import('./pages/CampaignEvaluationsView'));
 const Employees = lazy(() => import('./pages/Employees'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Notifications = lazy(() => import('./pages/Notifications'));
 
 
 
@@ -31,7 +33,8 @@ function App() {
   return (
     <QueryProvider>
       <AuthProvider>
-        <Router>
+        <NotificationProvider>
+          <Router>
           <Routes>
             {/* Public evaluation route - no authentication required */}
             <Route path="/evaluation/:token" element={<PublicEvaluation />} />
@@ -142,10 +145,21 @@ function App() {
               </ProtectedRoute>
             } />
 
+            <Route path="/notifications" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Suspense fallback={<SkeletonDashboard />}>
+                    <Notifications />
+                  </Suspense>
+                </Layout>
+              </ProtectedRoute>
+            } />
+
             {/* Catch all route - redirect to login */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Router>
+        </NotificationProvider>
       </AuthProvider>
     </QueryProvider>
   );

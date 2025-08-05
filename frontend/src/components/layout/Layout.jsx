@@ -3,55 +3,32 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 
 const Layout = ({ children }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
 
-  // Sync with sidebar state from localStorage
-  useEffect(() => {
-    const savedState = localStorage.getItem('sidebar-expanded');
-    if (savedState !== null) {
-      setIsExpanded(JSON.parse(savedState));
-    }
-
-    // Listen for sidebar state changes
-    const handleStorageChange = () => {
-      const newState = localStorage.getItem('sidebar-expanded');
-      if (newState !== null) {
-        setIsExpanded(JSON.parse(newState));
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    // Custom event for same-tab updates
-    const handleSidebarToggle = (event) => {
-      setIsExpanded(event.detail.isExpanded);
-    };
-
-    window.addEventListener('sidebarToggle', handleSidebarToggle);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('sidebarToggle', handleSidebarToggle);
-    };
-  }, []);
+  // Handle sidebar hover state changes
+  const handleSidebarHoverChange = (hovered) => {
+    setIsHovered(hovered);
+  };
 
   return (
     <div className="min-h-screen bg-cream">
-      <Sidebar />
-      <Header />
+      <Sidebar onHoverChange={handleSidebarHoverChange} />
+      <Header isHovered={isHovered} />
 
       {/* Main Content Area */}
       <div
-        className={`transition-all duration-300 ease-in-out ${
+        className={`main-content-responsive content-container-responsive ${
           // Mobile: always full width with top padding for toggle button and header
           'pt-32 lg:pt-16'
         } ${
-          // Desktop: adjust margin based on sidebar state
-          isExpanded ? 'lg:ml-80' : 'lg:ml-20'
+          // Desktop: adjust margin based on sidebar hover state
+          isHovered ? 'lg:ml-96' : 'lg:ml-24'
         }`}
       >
-        <main className="p-4 lg:p-8">
-          {children}
+        <main className="p-4 lg:p-6 w-full">
+          <div className="min-w-0 max-w-full" data-sidebar-hovered={isHovered}>
+            {children}
+          </div>
         </main>
       </div>
     </div>

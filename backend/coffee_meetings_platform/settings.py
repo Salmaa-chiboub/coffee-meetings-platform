@@ -36,12 +36,13 @@ ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(',')
 # Application definition
 
 INSTALLED_APPS = [
-    'users',
+    'users.apps.UsersConfig',
     'employees',
     'campaigns',
     'matching',
     'evaluations',
     'dashboard',
+    'notifications.apps.NotificationsConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

@@ -534,6 +534,155 @@ export const authAPI = {
   },
 };
 
+// Notification API
+export const notificationAPI = {
+  // Get notifications with filtering and pagination
+  getNotifications: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+
+      // Add pagination parameters
+      if (params.page) queryParams.append('page', params.page);
+      if (params.limit) queryParams.append('limit', params.limit);
+
+      // Add filter parameters
+      if (params.type && params.type !== 'all') queryParams.append('type', params.type);
+      if (params.status && params.status !== 'all') queryParams.append('status', params.status);
+      if (params.dateRange && params.dateRange !== 'all') queryParams.append('date_range', params.dateRange);
+      if (params.is_read !== undefined) queryParams.append('is_read', params.is_read);
+
+      const url = `/notifications/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await apiClient.get(url);
+
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Failed to fetch notifications' },
+      };
+    }
+  },
+
+  // Get unread notification count
+  getUnreadCount: async () => {
+    try {
+      const response = await apiClient.get('/notifications/unread-count/');
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Failed to fetch unread count' },
+      };
+    }
+  },
+
+  // Mark notification as read
+  markAsRead: async (notificationId) => {
+    try {
+      const response = await apiClient.patch(`/notifications/${notificationId}/mark-read/`);
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Failed to mark notification as read' },
+      };
+    }
+  },
+
+  // Mark notification as unread
+  markAsUnread: async (notificationId) => {
+    try {
+      const response = await apiClient.patch(`/notifications/${notificationId}/mark-unread/`);
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Failed to mark notification as unread' },
+      };
+    }
+  },
+
+  // Mark all notifications as read
+  markAllAsRead: async () => {
+    try {
+      const response = await apiClient.post('/notifications/mark-all-read/');
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Failed to mark all notifications as read' },
+      };
+    }
+  },
+
+  // Delete notification
+  deleteNotification: async (notificationId) => {
+    try {
+      await apiClient.delete(`/notifications/${notificationId}/`);
+      return {
+        success: true,
+        data: { message: 'Notification deleted successfully' },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Failed to delete notification' },
+      };
+    }
+  },
+
+  // Bulk delete notifications
+  bulkDeleteNotifications: async (notificationIds) => {
+    try {
+      const response = await apiClient.post('/notifications/bulk-delete/', {
+        notification_ids: notificationIds
+      });
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Failed to delete notifications' },
+      };
+    }
+  },
+
+  // Bulk mark notifications as read
+  bulkMarkAsRead: async (notificationIds) => {
+    try {
+      const response = await apiClient.post('/notifications/bulk-mark-read/', {
+        notification_ids: notificationIds
+      });
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Failed to mark notifications as read' },
+      };
+    }
+  }
+};
+
 // Token management utilities
 export const tokenUtils = {
   getAccessToken: () => localStorage.getItem('access_token'),
