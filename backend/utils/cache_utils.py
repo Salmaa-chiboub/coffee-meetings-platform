@@ -13,7 +13,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class PerformanceCache:
     """
     High-performance caching utility with automatic invalidation
@@ -67,39 +66,39 @@ class PerformanceCache:
             'hit_rate': round(hit_rate, 2)
         }
 
-
 # Global cache instance
 performance_cache = PerformanceCache()
 
-
-def cached_result(timeout: int = 300, key_prefix: str = 'cached'):
-    """
-    Decorator for caching function results
-    """
-    def decorator(func: Callable) -> Callable:
+def cached_result(timeout=None, key_prefix=None):
+    """Decorator for caching function results with DRF response handling"""
+    def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # Generate cache key
-            cache_key = performance_cache.get_cache_key(
-                f"{key_prefix}:{func.__name__}", *args, **kwargs
-            )
-            
-            # Try to get from cache
-            result = performance_cache.get(cache_key)
-            if result is not None:
-                return result
-            
-            # Execute function and cache result
-            start_time = time.time()
+            # Générer la clé de cache
+            if callable(key_prefix):
+                cache_key = key_prefix(*args, **kwargs)
+            else:
+                prefix = key_prefix or func.__name__
+                cache_key = performance_cache.get_cache_key(prefix, *args, **kwargs)
+
+            # Tenter de récupérer depuis le cache
+            cached_value = performance_cache.get(cache_key)
+            if cached_value is not None:
+                return cached_value
+
+            # Exécuter la fonction si pas en cache
             result = func(*args, **kwargs)
-            execution_time = time.time() - start_time
             
-            # Cache the result
-            performance_cache.set(cache_key, result, timeout)
+            # Si c'est une Response DRF, la rendre avant la mise en cache
+            if hasattr(result, 'render'):
+                rendered_result = result.render()
+                result._content = rendered_result  # Stocker le contenu rendu
             
-            logger.info(f"Function {func.__name__} executed in {execution_time:.3f}s and cached")
+            # Mettre en cache avec timeout
+            cache_timeout = timeout or performance_cache.default_timeout
+            performance_cache.set(cache_key, result, cache_timeout)
+            
             return result
-        
         return wrapper
     return decorator
 

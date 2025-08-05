@@ -19,7 +19,7 @@ import PerformanceBadge from '../components/ui/PerformanceBadge';
 import GlobalEvaluationPerformance from '../components/evaluations/GlobalEvaluationPerformance';
 import { LazyLoadingContainer } from '../components/ui/LazyLoadingContainer';
 import useLazyLoading from '../hooks/useLazyLoading';
-import pdfExportService from '../services/pdfExportService';
+import { exportCampaignHistory } from '../utils/pdfExport';
 
 const GlobalCampaignHistory = () => {
   const navigate = useNavigate();
@@ -29,44 +29,41 @@ const GlobalCampaignHistory = () => {
     try {
       console.log('Fetching campaigns:', { page, pageSize });
       const result = await campaignService.getCompletedCampaignsWithDetails(page, pageSize);
-      console.log('Campaign service result:', result);
+      console.log('Campaign service raw result:', result);
 
-      // Ensure the result has the correct format
-      if (!result) {
+      if (!result || !result.success) {
+        console.warn('Invalid or unsuccessful response:', result);
         return {
           success: false,
-          error: 'No response from service',
+          error: result?.error || 'Failed to fetch campaigns',
           data: [],
-          pagination: { has_next: false, has_previous: false }
+          pagination: {
+            has_next: false,
+            has_previous: false
+          }
         };
       }
 
-      // If the service returns the old format, convert it
-      if (result.campaigns && result.pagination && !result.success) {
-        return {
-          success: true,
-          data: result.campaigns,
-          pagination: result.pagination
-        };
-      }
-
-      // If result doesn't have success property, assume it's successful if it has data
-      if (!result.hasOwnProperty('success') && (result.data || result.campaigns)) {
-        return {
-          success: true,
-          data: result.data || result.campaigns || [],
-          pagination: result.pagination || { has_next: false, has_previous: false }
-        };
-      }
-
-      return result;
+      console.log('Processing successful response with', result.campaigns?.length || 0, 'campaigns');
+      
+      return {
+        success: true,
+        data: result.campaigns || [],
+        pagination: result.pagination || {
+          has_next: false,
+          has_previous: false
+        }
+      };
     } catch (error) {
       console.error('Error in fetchCompletedCampaigns:', error);
       return {
         success: false,
         error: error.message || 'Failed to fetch campaigns',
         data: [],
-        pagination: { has_next: false, has_previous: false }
+        pagination: { 
+          has_next: false, 
+          has_previous: false 
+        }
       };
     }
   }, []);
@@ -119,7 +116,12 @@ const GlobalCampaignHistory = () => {
   // Export to PDF
   const handleExportPDF = () => {
     if (campaigns.length === 0) return;
-    pdfExportService.exportCampaignHistory(campaigns);
+    try {
+      const { exportCampaignHistory } = require('../utils/pdfExport');
+      exportCampaignHistory(campaigns);
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+    }
   };
 
   if (loading) {
@@ -344,7 +346,9 @@ const GlobalCampaignHistory = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center text-sm text-warmGray-900">
                           <CogIcon className="h-4 w-4 text-warmGray-400 mr-2" />
-                          <span className="font-medium">{campaign.total_criteria || 0}</span>
+                          <span className="font-medium">
+                            {Number(campaign.total_criteria_count || campaign.total_criteria) || 0}
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

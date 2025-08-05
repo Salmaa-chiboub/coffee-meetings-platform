@@ -4,9 +4,35 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Count, Prefetch
 from .models import Campaign, CampaignWorkflowState, CampaignWorkflowLog
 
+class CampaignWorkflowStateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CampaignWorkflowState
+        fields = ['current_step', 'completed_steps', 'step_data', 'updated_at']
+
+class CampaignAggregatedSerializer(serializers.ModelSerializer):
+    workflow_state = CampaignWorkflowStateSerializer(read_only=True)
+    employee_count = serializers.IntegerField(read_only=True)
+    pairs_count = serializers.IntegerField(read_only=True)
+    total_criteria = serializers.SerializerMethodField()
+    
+    def get_total_criteria(self, obj):
+        return obj.campaignmatchingcriteria_set.count()
+    
+    class Meta:
+        model = Campaign
+        fields = [
+            'id', 'title', 'description', 'start_date', 'end_date',
+            'created_at', 'workflow_state', 'employee_count', 'pairs_count',
+            'total_criteria'
+        ]
+
 class CampaignSerializer(serializers.ModelSerializer):
     employee_count = serializers.SerializerMethodField()
     employees_count = serializers.SerializerMethodField()  # Alias pour compatibilité frontend
+    total_criteria = serializers.SerializerMethodField()
+    
+    def get_total_criteria(self, obj):
+        return obj.campaignmatchingcriteria_set.count()
 
     class Meta:
         model = Campaign

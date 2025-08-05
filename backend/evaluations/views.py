@@ -1,19 +1,58 @@
+from django.db.models import Count, Avg, Q
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from django.db.models import Avg, Count, Q
-from django.utils import timezone
 
 from .models import Evaluation
+from campaigns.models import Campaign
+from campaigns.permissions import IsCampaignOwner
+
+class EvaluationStatisticsView(APIView):
+    """View for getting evaluation statistics for a campaign"""
+    permission_classes = [IsAuthenticated, IsCampaignOwner]
+
+    def get(self, request, campaign_id):
+        """Get evaluation statistics for a specific campaign"""
+        try:
+            # Get campaign with prefetched data
+            campaign = get_object_or_404(
+                Campaign.objects.select_related('workflow_state')
+                .prefetch_related('campaignmatchingcriteria_set'),
+                id=campaign_id,
+                hr_manager=request.user
+            )
+
+            # Get evaluation statistics with optimized query
+            evaluations = Evaluation.objects.filter(
+                employee_pair__campaign=campaign
+            ).aggregate(
+                total_count=Count('id'),
+                completed_count=Count('id', filter=Q(completed=True)),
+                average_rating=Avg('rating', filter=Q(rating__isnull=False))
+            )
+
+            return Response({
+                'campaign_id': campaign_id,
+                'total_evaluations': evaluations['total_count'] or 0,
+                'completed_evaluations': evaluations['completed_count'] or 0,
+                'average_rating': round(evaluations['average_rating'], 2) if evaluations['average_rating'] else None
+            })
+
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to get evaluation statistics: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 from .serializers import (
     EvaluationSerializer,
     EvaluationFormSerializer,
     EvaluationSubmissionSerializer,
     CampaignEvaluationResultsSerializer
 )
-from campaigns.models import Campaign
 
 
 # ViewSet supprimé - utilisation des vues spécifiques uniquement

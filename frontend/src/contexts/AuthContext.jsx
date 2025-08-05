@@ -77,25 +77,12 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      console.log('🔄 Logging out user...');
-
-      // Call logout service to clear tokens
       await authService.logout();
-
-      // Clear user state
       setUser(null);
-
-      console.log('✅ Logout successful - redirecting to login');
-
-      // Force redirect to login page
-      window.location.href = '/login';
-
     } catch (error) {
-      console.error('❌ Logout error:', error);
-
-      // Even if logout fails, clear local state and redirect
+      console.error('Error during logout:', error);
+      // Forcer la déconnexion même en cas d'erreur
       setUser(null);
-      window.location.href = '/login';
     }
   };
 
@@ -115,11 +102,21 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
-    login,
-    register,
-    logout,
-    updateUser,
     loading,
+    setUser,
+    logout,
+    login: async (credentials) => {
+      try {
+        const { user } = await authService.login(credentials);
+        setUser(user);
+        return { success: true };
+      } catch (error) {
+        console.error('Login error:', error);
+        throw error;
+      }
+    },
+    register,
+    updateUser,
     isAuthenticated: !!user,
   };
 

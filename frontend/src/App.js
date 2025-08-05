@@ -14,19 +14,19 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import LandingPage from './pages/LandingPage';
 import PublicEvaluation from './components/evaluation/PublicEvaluation';
-import GlobalCampaignHistory from './pages/GlobalCampaignHistory';
 
 // Lazy load heavy components for code splitting
 const Dashboard = lazy(() => import('./pages/DashboardModern'));
 const Campaigns = lazy(() => import('./pages/Campaigns'));
 const CampaignWorkflow = lazy(() => import('./pages/CampaignWorkflow'));
 const CampaignHistory = lazy(() => import('./pages/CampaignHistory'));
+const GlobalHistory = lazy(() => import('./pages/GlobalHistory'));
+const GlobalCampaignHistory = lazy(() => import('./pages/GlobalCampaignHistory'));
 const CampaignEvaluations = lazy(() => import('./pages/CampaignEvaluations'));
 const CampaignEvaluationsView = lazy(() => import('./pages/CampaignEvaluationsView'));
 const Employees = lazy(() => import('./pages/Employees'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Notifications = lazy(() => import('./pages/Notifications'));
-
 
 
 function App() {
@@ -87,14 +87,6 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/campaigns/history" element={
-              <ProtectedRoute>
-                <Layout>
-                  <GlobalCampaignHistory />
-                </Layout>
-              </ProtectedRoute>
-            } />
-
             <Route path="/campaigns/:id/history" element={
               <ProtectedRoute>
                 <Layout>
@@ -130,6 +122,27 @@ function App() {
                 <Layout>
                   <Suspense fallback={<SkeletonDashboard />}>
                     <Employees />
+                  </Suspense>
+                </Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/history" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Suspense fallback={<SkeletonDashboard />}>
+                    <GlobalHistory />
+                  </Suspense>
+                </Layout>
+              </ProtectedRoute>
+            } />
+
+            {/* Global Campaign History */}
+            <Route path="/history/campaigns" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Suspense fallback={<SkeletonDashboard />}>
+                    <GlobalCampaignHistory />
                   </Suspense>
                 </Layout>
               </ProtectedRoute>

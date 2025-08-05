@@ -7,7 +7,6 @@ from .views import (
     CampaignWorkflowStepUpdateView,
     CampaignWorkflowValidationView,
     CampaignWorkflowResetView,
-    CompletedCampaignsView
 )
 
 router = DefaultRouter()
@@ -21,6 +20,7 @@ workflow_urlpatterns = [
     path('<int:campaign_id>/workflow-reset/', CampaignWorkflowResetView.as_view(), name='campaign-workflow-reset'),
 ]
 
-urlpatterns = router.urls + workflow_urlpatterns + [
-    path('completed/', CompletedCampaignsView.as_view(), name='completed-campaigns'),
+urlpatterns = [
+    *workflow_urlpatterns,  # Unpack workflow patterns
+    *router.urls  # Unpack router patterns
 ]

@@ -1,5 +1,5 @@
 # campaigns/views.py
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,13 +7,22 @@ from rest_framework.pagination import PageNumberPagination
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db.models import Prefetch, Count, Q, Avg, F
+
+from employees.models import Employee
+from evaluations.models import Evaluation
+from matching.models import EmployeePair, CampaignMatchingCriteria
 
 from .models import Campaign, CampaignWorkflowState, CampaignWorkflowLog
 from .serializers import (
     CampaignSerializer, CampaignWorkflowStateSerializer,
-    WorkflowStepUpdateSerializer, WorkflowValidationSerializer
+    WorkflowStepUpdateSerializer, WorkflowValidationSerializer,
+    CampaignAggregatedSerializer
 )
 from .permissions import IsCampaignOwner
+from utils.cache_utils import cached_result
+from employees.models import Employee
+from matching.models import EmployeePair
 
 
 class CampaignPagination(PageNumberPagination):
@@ -33,6 +42,32 @@ class CampaignViewSet(viewsets.ModelViewSet):
                               .select_related('hr_manager')\
                               .annotate(employee_count=Count('employee'))\
                               .order_by('-created_at')
+
+    @action(detail=False, methods=['get'])
+    @cached_result(timeout=300, key_prefix=lambda request: f'campaign_aggregated_{request.user.id}')
+    def aggregated_campaigns(self, request):
+        """Endpoint optimisé pour charger les campagnes avec leurs workflows"""
+        from django.db.models import Count, Q
+        from matching.models import CampaignMatchingCriteria
+        
+        campaigns = Campaign.objects.filter(hr_manager=request.user)\
+            .select_related('workflow_state', 'hr_manager')\
+            .prefetch_related(
+                Prefetch('employee_set', queryset=Employee.objects.only('id', 'campaign_id')),
+                Prefetch('employeepair_set', queryset=EmployeePair.objects.only('id', 'campaign_id')),
+                'campaignmatchingcriteria_set'
+            )\
+            .annotate(
+                employee_count=Count('employee', distinct=True),
+                pairs_count=Count('employeepair', distinct=True)
+            )\
+            .order_by('-created_at')
+        
+        serializer = CampaignAggregatedSerializer(campaigns, many=True)
+        return Response({
+            'results': serializer.data,
+            'count': campaigns.count()
+        })
 
     def perform_create(self, serializer):
         """Associer automatiquement le hr_manager connecté à la campagne"""
@@ -73,7 +108,18 @@ class CampaignWorkflowStatusView(APIView):
 
     def get(self, request, campaign_id):
         try:
-            campaign = get_object_or_404(Campaign, id=campaign_id, hr_manager=request.user)
+            # Get campaign with all related data
+            campaign = Campaign.objects.filter(
+                id=campaign_id, 
+                hr_manager=request.user
+            ).select_related(
+                'workflow_state'
+            ).prefetch_related(
+                'campaignmatchingcriteria_set'
+            ).first()
+
+            if not campaign:
+                return Response({'error': 'Campaign not found'}, status=404)
 
             # Get or create workflow state
             workflow_state, created = CampaignWorkflowState.objects.get_or_create(
@@ -214,59 +260,182 @@ class CampaignWorkflowValidationView(APIView):
             )
 
 
+class CompletedCampaignSerializer(serializers.ModelSerializer):
+    """Serializer for completed campaigns with optimized field handling"""
+    
+    completed = serializers.SerializerMethodField()
+    workflow_state = CampaignWorkflowStateSerializer(read_only=True)
+    
+    class Meta:
+        model = Campaign
+        fields = [
+            'id', 'title', 'description', 'start_date', 'end_date', 'created_at',
+            'total_criteria_count', 'participants_count', 'total_pairs_count',
+            'completed', 'workflow_state'
+        ]
+    
+    def get_completed(self, instance):
+        """Calculate whether the campaign is completed"""
+        try:
+            # Check workflow state first
+            if hasattr(instance, 'workflow_state') and instance.workflow_state:
+                completed_steps = instance.workflow_state.completed_steps or []
+                if 5 in completed_steps:
+                    return True
+            
+            # If not completed by workflow, check end date
+            if instance.end_date:
+                return instance.end_date < timezone.now().date()
+                
+            return False
+        except Exception as e:
+            print(f"DEBUG: Error calculating completion status: {str(e)}")
+            return False
+    
+    def to_representation(self, instance):
+        try:
+            print(f"DEBUG: Starting serialization of campaign {instance.id}")
+            
+            # Safely get counts with default values
+            try:
+                total_criteria = int(instance.total_criteria_count)
+            except (TypeError, ValueError):
+                total_criteria = 0
+                
+            try:
+                participants = int(instance.participants_count)
+            except (TypeError, ValueError):
+                participants = 0
+                
+            try:
+                total_pairs = int(instance.total_pairs_count)
+            except (TypeError, ValueError):
+                total_pairs = 0
+            
+            # Determine completion status
+            is_completed = False
+            try:
+                if instance.workflow_state and instance.workflow_state.completed_steps:
+                    is_completed = 5 in instance.workflow_state.completed_steps
+                elif instance.end_date and instance.end_date < timezone.now().date():
+                    is_completed = True
+                print(f"DEBUG: Campaign {instance.id} completion status:")
+                print(f"DEBUG: - Workflow state: {instance.workflow_state.completed_steps if instance.workflow_state else None}")
+                print(f"DEBUG: - End date: {instance.end_date}")
+                print(f"DEBUG: - Is completed: {is_completed}")
+            except Exception as e:
+                print(f"DEBUG: Error determining completion status: {str(e)}")
+            
+            data = {
+                'id': instance.id,
+                'title': instance.title,
+                'description': instance.description,
+                'start_date': instance.start_date.strftime('%Y-%m-%d') if instance.start_date else None,
+                'end_date': instance.end_date.strftime('%Y-%m-%d') if instance.end_date else None,
+                'created_at': instance.created_at.isoformat() if instance.created_at else None,
+                'total_criteria': total_criteria,
+                'participants_count': participants,
+                'total_pairs': total_pairs,
+                'completed': is_completed
+            }
+            
+            print(f"DEBUG: Campaign {instance.id} counts:")
+            print(f"DEBUG: - Criteria: {instance.total_criteria_count}")
+            print(f"DEBUG: - Participants: {instance.participants_count}")
+            print(f"DEBUG: - Pairs: {instance.total_pairs_count}")
+            
+            return data
+            
+        except Exception as e:
+            print(f"DEBUG: Error serializing campaign {instance.id}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'id': instance.id,
+                'error': str(e)
+            }
+        
 class CompletedCampaignsView(APIView):
     """
     Optimized endpoint for completed campaigns with pagination
     GET /campaigns/completed/
     """
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CompletedCampaignSerializer
+    pagination_class = CampaignPagination
+    
+    def get_queryset(self):
+        """Get optimized queryset with all related data"""
+        try:
+            print("DEBUG: Building queryset in get_queryset")
+            
+            # Build base queryset with workflow state condition and prefetch related data
+            current_date = timezone.now().date()
+            base_qs = Campaign.objects.filter(
+                hr_manager=self.request.user
+            ).select_related(
+                'workflow_state'
+            ).prefetch_related(
+                'campaignmatchingcriteria_set',
+                'employee_set',
+                'employeepair_set',
+                'employeepair_set__evaluation_set'
+            ).annotate(
+                has_completed_workflow=Q(workflow_state__completed_steps__contains=[5]),
+                has_passed_end_date=Q(end_date__lt=current_date),
+                is_completed=Q(has_completed_workflow=True) | Q(has_passed_end_date=True)
+            ).filter(
+                Q(workflow_state__completed_steps__contains=[5]) |
+                Q(end_date__lt=current_date)
+            )
+
+            # Add annotations and return
+            return base_qs.annotate(
+                total_criteria_count=Count('campaignmatchingcriteria', distinct=True),
+                participants_count=Count('employee', distinct=True),
+                total_pairs_count=Count('employeepair', distinct=True)
+            ).order_by('-created_at')
+            
+        except Exception as e:
+            print(f"DEBUG: Error in get_queryset: {str(e)}")
+            print("DEBUG: Full traceback:")
+            import traceback
+            traceback.print_exc()
+            raise
 
     def get(self, request):
         """Get completed campaigns with pagination and optimized queries"""
         try:
-            # Get pagination parameters
-            page = int(request.GET.get('page', 1))
-            page_size = int(request.GET.get('page_size', 10))
-            offset = (page - 1) * page_size
+            # Get pagination parameters with validation
+            try:
+                page = max(int(request.query_params.get('page', 1)), 1)
+                page_size = min(int(request.query_params.get('page_size', 10)), self.pagination_class.max_page_size)
+            except (ValueError, TypeError):
+                page = 1
+                page_size = 10
 
-            # Get campaigns for the authenticated HR manager with optimized query
-            campaigns_query = Campaign.objects.filter(
-                hr_manager=request.user,
-                workflow_state__completed_steps__contains=[5]  # Only completed campaigns
-            ).select_related(
-                'hr_manager',
-                'workflow_state'
-            ).prefetch_related(
-                'employeepair_set',
-                'employeepair_set__evaluation_set'
-            ).order_by('-created_at')
+            # Log request info
+            print(f"DEBUG: Fetching completed campaigns for user {request.user.id}")
+            print(f"DEBUG: Pagination - page: {page}, size: {page_size}")
 
-            # Get total count for pagination
-            total_count = campaigns_query.count()
+            # Get queryset and paginate
+            queryset = self.get_queryset()
+            paginator = self.pagination_class()
+            paginated_queryset = paginator.paginate_queryset(queryset, request)
 
-            # Apply pagination
-            campaigns = campaigns_query[offset:offset + page_size]
-
-            # Calculate statistics for paginated campaigns
-            completed_campaigns = []
-            for campaign in campaigns:
-                campaign_data = self._calculate_campaign_statistics_optimized(campaign)
-                completed_campaigns.append(campaign_data)
-
-            # Calculate pagination info
-            has_next = offset + page_size < total_count
-            has_previous = page > 1
-
+            # Serialize data
+            serializer = self.serializer_class(paginated_queryset, many=True)
+            
             return Response({
                 'success': True,
-                'campaigns': completed_campaigns,
+                'campaigns': serializer.data,
                 'pagination': {
                     'current_page': page,
                     'page_size': page_size,
-                    'total_count': total_count,
-                    'total_pages': (total_count + page_size - 1) // page_size,
-                    'has_next': has_next,
-                    'has_previous': has_previous
+                    'total_count': queryset.count(),
+                    'total_pages': (queryset.count() + page_size - 1) // page_size,
+                    'has_next': page * page_size < queryset.count(),
+                    'has_previous': page > 1
                 }
             })
 
@@ -277,52 +446,63 @@ class CompletedCampaignsView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def _calculate_campaign_statistics_optimized(self, campaign):
-        """Calculate campaign statistics with optimized queries"""
-        from matching.models import EmployeePair
-        from evaluations.models import Evaluation
-        from employees.models import Employee
-        from django.db.models import Count, Avg
+        """Calculate campaign statistics with optimized queries using prefetched data"""
+        # Get data from annotations
+        participants_count = campaign.participants_count or 0
+        total_pairs = campaign.total_pairs or 0
+        total_criteria = campaign.total_criteria or 0
 
-        # Use prefetched data when possible
-        pairs = campaign.employeepair_set.all()
-        total_pairs = len(pairs)
-
-        # Get participants count
-        participants_count = Employee.objects.filter(campaign=campaign).count()
-
-        # Get evaluations data
+        # Get evaluations from prefetched data
         evaluations = []
+        pairs = campaign.employeepair_set.all()
         for pair in pairs:
             evaluations.extend(pair.evaluation_set.all())
 
-        total_evaluations = len([e for e in evaluations if e.used])
-        avg_rating = sum(e.rating for e in evaluations if e.used and e.rating) / max(1, len([e for e in evaluations if e.used and e.rating]))
+        # Calculate evaluation statistics
+        used_evaluations = [e for e in evaluations if e.used]
+        total_evaluations = len(used_evaluations)
+        rated_evaluations = [e for e in used_evaluations if e.rating is not None]
+        avg_rating = (
+            round(sum(e.rating for e in rated_evaluations) / len(rated_evaluations), 2)
+            if rated_evaluations else None
+        )
 
-        # Get completion date from workflow
+        # Get completion date with safe access to JSON field
         completion_date = None
-        if hasattr(campaign, 'workflow_state') and campaign.workflow_state:
-            step_5_data = campaign.workflow_state.step_data.get('5', {})
-            completion_date = step_5_data.get('completion_date')
+        if campaign.workflow_state:
+            try:
+                step_data = campaign.workflow_state.step_data or {}
+                step_5_data = step_data.get('5', {})
+                completion_date = step_5_data.get('completion_date')
+            except Exception:
+                pass
 
         if not completion_date:
             completion_date = campaign.end_date
+
+        # Calculate duration in days
+        start_date = campaign.start_date
+        end_date = campaign.end_date
+        if start_date and end_date:
+            duration = (end_date - start_date).days
+        else:
+            duration = 0
 
         return {
             'id': campaign.id,
             'title': campaign.title,
             'description': campaign.description,
-            'start_date': campaign.start_date,
-            'end_date': campaign.end_date,
+            'start_date': start_date,
+            'end_date': end_date,
             'created_at': campaign.created_at,
             'completion_date': completion_date,
             'participants_count': participants_count,
             'total_pairs': total_pairs,
             'total_evaluations': total_evaluations,
-            'average_rating': round(avg_rating, 2) if avg_rating else None,
-            'total_criteria': 0  # Can be calculated if needed
+            'average_rating': avg_rating,
+            'total_criteria': total_criteria,
+            'duration': duration
         }
-
-
 class CampaignWorkflowResetView(APIView):
     """
     Reset workflow from a specific step

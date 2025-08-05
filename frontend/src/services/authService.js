@@ -97,27 +97,26 @@ export const authService = {
   // Logout user
   logout: async () => {
     try {
-      console.log('🔄 AuthService - Starting logout process...');
-
-      // Clear tokens via API (this also clears localStorage)
-      await authAPI.logout();
-
-      console.log('✅ AuthService - API logout successful');
-
-    } catch (error) {
-      console.error('❌ AuthService - Logout error:', error);
-    } finally {
-      // Ensure tokens are cleared even if API call fails
-      console.log('🧹 AuthService - Clearing all tokens and user data');
+      // Supprimer les tokens
       tokenUtils.clearTokens();
 
-      // Double-check: manually clear any remaining auth data
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      // Supprimer les informations utilisateur
       localStorage.removeItem('user');
-      localStorage.removeItem('authToken'); // Legacy token name
 
-      console.log('✅ AuthService - Logout cleanup complete');
+      // Supprimer toute autre donnée de session si nécessaire
+      localStorage.removeItem('authToken'); // Legacy token
+
+      // Déclencher l'événement de déconnexion
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+
+      return { success: true };
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Continuer avec la déconnexion locale même en cas d'erreur
+      tokenUtils.clearTokens();
+      localStorage.removeItem('user');
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+      return { success: true };
     }
   },
 
@@ -257,20 +256,6 @@ export const authService = {
     } catch (error) {
       console.error('❌ AuthService - Password Reset Error:', error);
       throw error;
-    }
-  },
-
-  // Logout user
-  logout: async () => {
-    try {
-      // Call logout API to invalidate tokens on server
-      await authAPI.logout();
-    } catch (error) {
-      console.error('Logout API error:', error);
-      // Continue with local logout even if API fails
-    } finally {
-      // Always clear local storage
-      tokenUtils.clearTokens();
     }
   },
 

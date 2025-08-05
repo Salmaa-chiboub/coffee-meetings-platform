@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_redis',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -61,12 +62,15 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.cache.FetchFromCacheMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'axes.middleware.AxesMiddleware',
+    'utils.middleware.PerformanceMiddleware',
 ]
 
 ROOT_URLCONF = 'coffee_meetings_platform.urls'
@@ -89,9 +93,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'coffee_meetings_platform.wsgi.application'
 
 
+# Import cache settings
+from .cache_settings import *
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
 
 DATABASES = {
     'default': dj_database_url.config(
