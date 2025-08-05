@@ -16,6 +16,9 @@ const CampaignsList = React.memo(() => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState([{ field: 'created_at', direction: 'desc' }]);
   const [useVirtualScrolling, setUseVirtualScrolling] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'completed', 'incomplete'
+  const [campaignsWithStatus, setCampaignsWithStatus] = useState([]);
+  const [statusLoading, setStatusLoading] = useState(false);
   const navigate = useNavigate();
 
   // Use debounced search for better performance
@@ -46,17 +49,72 @@ const CampaignsList = React.memo(() => {
   const campaigns = campaignsResponse?.data || [];
   const pagination = campaignsResponse?.pagination;
 
+  // Load workflow status for all campaigns when campaigns change
+  useEffect(() => {
+    const loadWorkflowStatus = async () => {
+      if (campaigns.length === 0) return;
+
+      setStatusLoading(true);
+      try {
+        const { workflowService } = await import('../services/workflowService');
+
+        const campaignsWithWorkflow = await Promise.all(
+          campaigns.map(async (campaign) => {
+            try {
+              const workflowData = await workflowService.getCampaignWorkflowStatus(campaign.id);
+              const isCompleted = workflowData.completed_steps &&
+                                 workflowData.completed_steps.includes(1) &&
+                                 workflowData.completed_steps.includes(2) &&
+                                 workflowData.completed_steps.includes(3) &&
+                                 workflowData.completed_steps.includes(4) &&
+                                 workflowData.completed_steps.includes(5);
+
+              return {
+                ...campaign,
+                workflow_status: workflowData,
+                isCompleted
+              };
+            } catch (error) {
+              console.error(`Error loading workflow for campaign ${campaign.id}:`, error);
+              return {
+                ...campaign,
+                workflow_status: null,
+                isCompleted: false
+              };
+            }
+          })
+        );
+
+        setCampaignsWithStatus(campaignsWithWorkflow);
+      } catch (error) {
+        console.error('Error loading workflow statuses:', error);
+        setCampaignsWithStatus(campaigns.map(c => ({ ...c, isCompleted: false })));
+      } finally {
+        setStatusLoading(false);
+      }
+    };
+
+    loadWorkflowStatus();
+  }, [campaigns]);
+
   // Filtrage et tri côté client avec JavaScript (pas de requêtes HTTP)
   const filteredAndSortedCampaigns = useMemo(() => {
     return performanceMonitor.measure('campaigns-filter-sort', () => {
-      let result = campaigns;
+      let result = campaignsWithStatus;
 
-      // Toujours utiliser le filtrage côté client JavaScript
+      // Filtrage par recherche
       if (debouncedSearchTerm.trim()) {
-        result = campaigns.filter(campaign =>
+        result = result.filter(campaign =>
           campaign.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
           campaign.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
         );
+      }
+
+      // Filtrage par statut (completed/incomplete)
+      if (statusFilter !== 'all') {
+        result = result.filter(campaign => {
+          return statusFilter === 'completed' ? campaign.isCompleted : !campaign.isCompleted;
+        });
       }
 
       // Appliquer le tri côté client
@@ -66,7 +124,7 @@ const CampaignsList = React.memo(() => {
 
       return result;
     });
-  }, [campaigns, debouncedSearchTerm, sortConfig]);
+  }, [campaignsWithStatus, debouncedSearchTerm, sortConfig, statusFilter]);
 
   // Pagination côté client pour les résultats filtrés
   const pageSize = useVirtualScrolling ? 50 : 6;
@@ -131,23 +189,34 @@ const CampaignsList = React.memo(() => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || statusLoading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header Skeleton */}
-        <div className="flex items-center justify-between">
-          <SkeletonTitle size="large" variant="text" />
+      <div className="max-w-7xl mx-auto space-y-4">
+        {/* Title, description and button skeleton */}
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <SkeletonTitle size="large" variant="text" />
+            <Skeleton width="w-96" height="h-5" rounded="rounded" variant="light" />
+          </div>
           <SkeletonButton size="medium" variant="card" />
         </div>
 
-        {/* Search Skeleton */}
-        <Skeleton width="w-full" height="h-12" rounded="rounded-lg" variant="light" />
+        {/* Campaign listing card skeleton */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6">
+          {/* Search and filters skeleton */}
+          <div className="flex items-center justify-between mb-6">
+            <Skeleton width="w-80" height="h-12" rounded="rounded-lg" variant="light" />
+            <div className="flex items-center gap-4">
+              <Skeleton width="w-40" height="h-10" rounded="rounded-lg" variant="light" />
+            </div>
+          </div>
 
-        {/* Cards Skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <SkeletonCard key={index} />
-          ))}
+          {/* Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <SkeletonCard key={index} />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -164,20 +233,31 @@ const CampaignsList = React.memo(() => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4">
-      {/* Title and description at the top */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-warmGray-800">
-          Coffee Meeting Campaigns
-        </h1>
-        <p className="text-warmGray-600 mt-0.5">
-          Manage your coffee meeting campaigns and track employee participation
-        </p>
+    <div className="max-w-7xl mx-auto space-y-3">
+      {/* Title, description and Add Campaign button */}
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-warmGray-800">
+            Coffee Meeting Campaigns
+          </h1>
+          <p className="text-warmGray-600 mt-0.5">
+            Manage your coffee meeting campaigns and track employee participation
+          </p>
+        </div>
+
+        {/* Add Campaign Button */}
+        <button
+          onClick={handleCreateCampaign}
+          className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-4 px-6 rounded-full transition-all duration-200 transform hover:scale-[1.02] flex items-center space-x-2"
+        >
+          <PlusIcon className="h-5 w-5" />
+          <span>Add Campaign</span>
+        </button>
       </div>
 
       {/* Campaign listing card */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6">
-        {/* Search and add button inside the card */}
+        {/* Search and filters with Add Campaign button */}
         <div className="flex items-center justify-between mb-6">
           {/* Search bar on the left */}
           <div className="flex-1 max-w-sm">
@@ -198,8 +278,21 @@ const CampaignsList = React.memo(() => {
             </div>
           </div>
 
-          {/* Performance controls and Add Campaign button */}
-          <div className="ml-4 flex items-center gap-2">
+          {/* Status Filter and Performance controls */}
+          <div className="ml-4 flex items-center gap-4">
+            {/* Status Filter */}
+            <div className="min-w-[160px]">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full py-2 px-4 border-2 border-warmGray-400 rounded-full focus:outline-none focus:border-warmGray-600 transition-all duration-200 bg-white text-warmGray-700 text-sm"
+              >
+                <option value="all">All Campaigns</option>
+                <option value="completed">Completed</option>
+                <option value="incomplete">In Progress</option>
+              </select>
+            </div>
+
             {/* Virtual scrolling toggle for large datasets */}
             {filteredAndSortedCampaigns.length > 20 && (
               <button
@@ -214,20 +307,12 @@ const CampaignsList = React.memo(() => {
                 {useVirtualScrolling ? '📊 Virtual' : '📋 Standard'}
               </button>
             )}
-
-            <button
-              onClick={handleCreateCampaign}
-              className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-4 px-6 rounded-full transition-all duration-200 transform hover:scale-[1.02] flex items-center space-x-2"
-            >
-              <PlusIcon className="h-5 w-5" />
-              <span>Add Campaign</span>
-            </button>
           </div>
         </div>
 
         {paginatedCampaigns.length === 0 ? (
           <div className="text-center py-12">
-            {campaigns.length === 0 ? (
+            {campaignsWithStatus.length === 0 ? (
               <div>
                 <div className="w-16 h-16 bg-[#E8C4A0] rounded-full flex items-center justify-center mx-auto mb-4">
                   <PlusIcon className="h-8 w-8 text-[#8B6F47]" />

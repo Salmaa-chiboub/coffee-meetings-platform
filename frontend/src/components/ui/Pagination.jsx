@@ -1,141 +1,112 @@
 import React from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
-const Pagination = React.memo(({ 
-  currentPage = 1, 
-  totalPages = 1, 
-  totalItems = 0, 
-  pageSize = 20, 
+const Pagination = React.memo(({
+  currentPage = 1,
+  totalPages = 1,
+  totalItems = 0,
+  pageSize = 20,
   onPageChange,
-  className = '' 
+  className = ''
 }) => {
   // Don't render if there are no items or only one page
   if (totalItems === 0 || totalPages <= 1) {
     return null;
   }
 
-  // Calculate visible page numbers
+  // Calculate visible page numbers (simplified for modern look)
   const getVisiblePages = () => {
-    const delta = 2; // Number of pages to show on each side of current page
+    const delta = 1; // Show only 1 page on each side for cleaner look
     const range = [];
-    const rangeWithDots = [];
 
-    // Always include first page
-    range.push(1);
+    // Show first page
+    if (currentPage > 2) {
+      range.push(1);
+      if (currentPage > 3) {
+        range.push('...');
+      }
+    }
 
-    // Add pages around current page
-    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+    // Show pages around current
+    for (let i = Math.max(1, currentPage - delta); i <= Math.min(totalPages, currentPage + delta); i++) {
       range.push(i);
     }
 
-    // Always include last page if more than 1 page
-    if (totalPages > 1) {
+    // Show last page
+    if (currentPage < totalPages - 1) {
+      if (currentPage < totalPages - 2) {
+        range.push('...');
+      }
       range.push(totalPages);
     }
 
-    // Remove duplicates and sort
-    const uniqueRange = [...new Set(range)].sort((a, b) => a - b);
-
-    // Add dots where there are gaps
-    let prev = 0;
-    for (const page of uniqueRange) {
-      if (page - prev > 1) {
-        rangeWithDots.push('...');
-      }
-      rangeWithDots.push(page);
-      prev = page;
-    }
-
-    return rangeWithDots;
+    return [...new Set(range)];
   };
 
   const visiblePages = getVisiblePages();
 
-  // Calculate item range for current page
-  const startItem = (currentPage - 1) * pageSize + 1;
-  const endItem = Math.min(currentPage * pageSize, totalItems);
-
   return (
-    <div className={`flex items-center justify-between bg-white px-4 py-3 border-t border-gray-200 sm:px-6 ${className}`}>
-      {/* Mobile view */}
-      <div className="flex flex-1 justify-between sm:hidden">
+    <div className={`flex flex-col items-center space-y-4 py-8 ${className}`}>
+      {/* Modern Page Info */}
+      <div className="text-center">
+        <p className="text-sm text-warmGray-500 font-medium">
+          Page <span className="text-[#8B6F47] font-semibold">{currentPage}</span> of{' '}
+          <span className="text-[#8B6F47] font-semibold">{totalPages}</span>
+          <span className="mx-2">•</span>
+          <span className="text-warmGray-400">{totalItems} total items</span>
+        </p>
+      </div>
+
+      {/* Modern Pagination Controls */}
+      <div className="flex items-center space-x-2">
+        {/* Previous Button */}
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
-          className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="group flex items-center justify-center w-10 h-10 rounded-full bg-white border-2 border-warmGray-200 text-warmGray-400 hover:border-[#E8C4A0] hover:text-[#8B6F47] hover:bg-[#E8C4A0]/5 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-warmGray-200 disabled:hover:text-warmGray-400 disabled:hover:bg-white transition-all duration-200"
         >
-          Previous
+          <ChevronLeftIcon className="w-5 h-5" />
         </button>
+
+        {/* Page Numbers */}
+        <div className="flex items-center space-x-1">
+          {visiblePages.map((page, index) => {
+            if (page === '...') {
+              return (
+                <div
+                  key={`dots-${index}`}
+                  className="flex items-center justify-center w-10 h-10 text-warmGray-400 font-medium"
+                >
+                  ⋯
+                </div>
+              );
+            }
+
+            const isCurrentPage = page === currentPage;
+            return (
+              <button
+                key={page}
+                onClick={() => onPageChange(page)}
+                className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold text-sm transition-all duration-200 transform hover:scale-105 ${
+                  isCurrentPage
+                    ? 'bg-gradient-to-r from-[#E8C4A0] to-[#DDB892] text-white shadow-lg shadow-[#E8C4A0]/25 border-2 border-[#E8C4A0]'
+                    : 'bg-white border-2 border-warmGray-200 text-warmGray-600 hover:border-[#E8C4A0] hover:text-[#8B6F47] hover:bg-[#E8C4A0]/5'
+                }`}
+              >
+                {page}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Next Button */}
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
-          className="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="group flex items-center justify-center w-10 h-10 rounded-full bg-white border-2 border-warmGray-200 text-warmGray-400 hover:border-[#E8C4A0] hover:text-[#8B6F47] hover:bg-[#E8C4A0]/5 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-warmGray-200 disabled:hover:text-warmGray-400 disabled:hover:bg-white transition-all duration-200"
         >
-          Next
+          <ChevronRightIcon className="w-5 h-5" />
         </button>
-      </div>
-
-      {/* Desktop view */}
-      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-gray-700">
-            Showing <span className="font-medium">{startItem}</span> to{' '}
-            <span className="font-medium">{endItem}</span> of{' '}
-            <span className="font-medium">{totalItems}</span> results
-          </p>
-        </div>
-        <div>
-          <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-            {/* Previous button */}
-            <button
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage <= 1}
-              className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="sr-only">Previous</span>
-              <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
-            </button>
-
-            {/* Page numbers */}
-            {visiblePages.map((page, index) => {
-              if (page === '...') {
-                return (
-                  <span
-                    key={`dots-${index}`}
-                    className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300 focus:outline-offset-0"
-                  >
-                    ...
-                  </span>
-                );
-              }
-
-              const isCurrentPage = page === currentPage;
-              return (
-                <button
-                  key={page}
-                  onClick={() => onPageChange(page)}
-                  className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${
-                    isCurrentPage
-                      ? 'z-10 bg-[#E8C4A0] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8C4A0]'
-                      : 'text-gray-900'
-                  }`}
-                >
-                  {page}
-                </button>
-              );
-            })}
-
-            {/* Next button */}
-            <button
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage >= totalPages}
-              className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="sr-only">Next</span>
-              <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
-            </button>
-          </nav>
-        </div>
       </div>
     </div>
   );

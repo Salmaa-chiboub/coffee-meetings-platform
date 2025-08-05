@@ -1,133 +1,98 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  ChartBarIcon,
   CalendarDaysIcon,
   UserGroupIcon,
-  StarIcon,
   CheckCircleIcon,
-  EyeIcon,
+  ArrowTopRightOnSquareIcon,
   DocumentTextIcon,
-  ChartPieIcon,
-  ArrowTrendingUpIcon
+  ClockIcon,
+  UsersIcon,
+  CogIcon,
+  ChartBarIcon,
+  DocumentArrowDownIcon
 } from '@heroicons/react/24/outline';
 import { campaignService } from '../services/campaignService';
-import { downloadService } from '../services/downloadService';
-import { SkeletonCard } from '../components/ui/Skeleton';
-import CountUp from '../components/ui/CountUp';
-import AnimatedSection from '../components/ui/AnimatedSection';
-import DownloadDropdown from '../components/ui/DownloadDropdown';
-import CampaignTimelineChart from '../components/charts/CampaignTimelineChart';
-import ParticipationChart from '../components/charts/ParticipationChart';
-import NetworkDiagram from '../components/charts/NetworkDiagram';
+import CampaignMetricsChart from '../components/charts/CampaignMetricsChart';
+import EvaluationTrendsChart from '../components/charts/EvaluationTrendsChart';
+import PerformanceBadge from '../components/ui/PerformanceBadge';
+import GlobalEvaluationPerformance from '../components/evaluations/GlobalEvaluationPerformance';
+import { LazyLoadingContainer } from '../components/ui/LazyLoadingContainer';
+import useLazyLoading from '../hooks/useLazyLoading';
+import pdfExportService from '../services/pdfExportService';
 
 const GlobalCampaignHistory = () => {
   const navigate = useNavigate();
-  
-  // State management
-  const [campaigns, setCampaigns] = useState([]);
-  const [filteredCampaigns, setFilteredCampaigns] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [overallStats, setOverallStats] = useState(null);
 
-  // Load campaigns and statistics
-  useEffect(() => {
-    const loadCampaignHistory = async () => {
-      try {
-        setLoading(true);
+  // Fetch function for lazy loading with error handling
+  const fetchCompletedCampaigns = useCallback(async (page, pageSize) => {
+    try {
+      console.log('Fetching campaigns:', { page, pageSize });
+      const result = await campaignService.getCompletedCampaignsWithDetails(page, pageSize);
+      console.log('Campaign service result:', result);
 
-        // Use the new getCompletedCampaigns method which handles the filtering logic
-        const completedCampaigns = await campaignService.getCompletedCampaigns();
-
-        setCampaigns(completedCampaigns);
-        setFilteredCampaigns(completedCampaigns);
-
-
-
-        // Calculate overall statistics
-        const stats = calculateOverallStats(completedCampaigns);
-        setOverallStats(stats);
-
-      } catch (err) {
-        setError(err.message || 'Failed to load campaign history');
-      } finally {
-        setLoading(false);
+      // Ensure the result has the correct format
+      if (!result) {
+        return {
+          success: false,
+          error: 'No response from service',
+          data: [],
+          pagination: { has_next: false, has_previous: false }
+        };
       }
-    };
 
-    loadCampaignHistory();
+      // If the service returns the old format, convert it
+      if (result.campaigns && result.pagination && !result.success) {
+        return {
+          success: true,
+          data: result.campaigns,
+          pagination: result.pagination
+        };
+      }
+
+      // If result doesn't have success property, assume it's successful if it has data
+      if (!result.hasOwnProperty('success') && (result.data || result.campaigns)) {
+        return {
+          success: true,
+          data: result.data || result.campaigns || [],
+          pagination: result.pagination || { has_next: false, has_previous: false }
+        };
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error in fetchCompletedCampaigns:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch campaigns',
+        data: [],
+        pagination: { has_next: false, has_previous: false }
+      };
+    }
   }, []);
 
-  // Filter campaigns based on search and filter criteria
-  useEffect(() => {
-    let filtered = campaigns;
-
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(campaign =>
-        campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        campaign.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Apply date filter
-    const now = new Date();
-    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
-
-    switch (selectedFilter) {
-      case 'recent':
-        filtered = filtered.filter(campaign => new Date(campaign.end_date) >= sixMonthsAgo);
-        break;
-      case 'thisYear':
-        filtered = filtered.filter(campaign => new Date(campaign.end_date).getFullYear() === now.getFullYear());
-        break;
-      case 'lastYear':
-        filtered = filtered.filter(campaign => new Date(campaign.end_date).getFullYear() === now.getFullYear() - 1);
-        break;
-      default:
-        // 'all' - no additional filtering
-        break;
-    }
-
-    setFilteredCampaigns(filtered);
-  }, [campaigns, searchTerm, selectedFilter]);
-
-  // Calculate overall statistics
-  const calculateOverallStats = (campaignsList) => {
-    const totalCampaigns = campaignsList.length;
-    const totalParticipants = campaignsList.reduce((sum, campaign) => sum + (campaign.employees_count || 0), 0);
-    const totalPairs = campaignsList.reduce((sum, campaign) => sum + (campaign.pairs_count || 0), 0);
-
-    // Safely calculate average rating - only include campaigns with real ratings
-    const campaignsWithRatings = campaignsList.filter(campaign => campaign.avg_rating && campaign.avg_rating !== null);
-    const avgRating = campaignsWithRatings.length > 0
-      ? campaignsWithRatings.reduce((sum, campaign) => {
-          const rating = parseFloat(campaign.avg_rating);
-          return sum + rating;
-        }, 0) / campaignsWithRatings.length
-      : 0;
-
-    // Calculate average success rate
-    const avgSuccessRate = totalCampaigns > 0
-      ? campaignsList.reduce((sum, campaign) => sum + (campaign.success_rate || 0), 0) / totalCampaigns
-      : 0;
-
-    return {
-      totalCampaigns,
-      totalParticipants,
-      totalPairs,
-      avgRating: avgRating.toFixed(1),
-      successRate: avgSuccessRate.toFixed(1)
-    };
-  };
+  // Lazy loading hook with optimized configuration
+  const {
+    data: campaigns,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    isEmpty,
+    isFirstLoad,
+    refresh,
+    sentinelRef,
+    totalItems,
+    cacheHits,
+    totalRequests
+  } = useLazyLoading({
+    fetchData: fetchCompletedCampaigns,
+    contentType: 'history'
+  });
 
   // Format date for display
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -141,49 +106,38 @@ const GlobalCampaignHistory = () => {
     navigate(`/campaigns/${campaignId}/history`);
   };
 
-  // Download handlers
-  const handleDownloadPDF = async () => {
-    try {
-      await downloadService.downloadPDF(filteredCampaigns, overallStats);
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-      alert('Failed to download PDF report. Please try again.');
-    }
+  // Calculate duration in days
+  const calculateDuration = (startDate, endDate) => {
+    if (!startDate || !endDate) return 'N/A';
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return `${diffDays} days`;
   };
 
-
-
-  const handleDownloadExcel = () => {
-    try {
-      downloadService.downloadExcel(filteredCampaigns, overallStats);
-    } catch (error) {
-      console.error('Error downloading Excel:', error);
-      alert('Failed to download Excel file. Please try again.');
-    }
-  };
-
-  const handleDownloadCSV = () => {
-    try {
-      downloadService.downloadCSV(filteredCampaigns);
-    } catch (error) {
-      console.error('Error downloading CSV:', error);
-      alert('Failed to download CSV file. Please try again.');
-    }
+  // Export to PDF
+  const handleExportPDF = () => {
+    if (campaigns.length === 0) return;
+    pdfExportService.exportCampaignHistory(campaigns);
   };
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
+      <div className="min-h-screen bg-warmGray-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-warmGray-200 rounded w-1/3"></div>
+            <div className="h-4 bg-warmGray-200 rounded w-2/3"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-white rounded-lg p-6 space-y-4">
+                  <div className="h-4 bg-warmGray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-warmGray-200 rounded w-1/2"></div>
+                  <div className="h-3 bg-warmGray-200 rounded w-full"></div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -192,10 +146,16 @@ const GlobalCampaignHistory = () => {
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-            <p className="text-red-600">{error}</p>
+      <div className="min-h-screen bg-warmGray-50 p-2 lg:p-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+            <p className="text-red-600 font-medium">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Retry
+            </button>
           </div>
         </div>
       </div>
@@ -203,280 +163,326 @@ const GlobalCampaignHistory = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <AnimatedSection>
-          <div className="text-center">
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex-1"></div>
-              <div className="flex-1">
-                <h1 className="text-4xl font-bold text-warmGray-800 mb-4">
-                  Campaign History Archive
-                </h1>
-              </div>
-              <div className="flex-1 flex justify-end">
-                <DownloadDropdown
-                  onDownloadPDF={handleDownloadPDF}
-                  onDownloadExcel={handleDownloadExcel}
-                  onDownloadCSV={handleDownloadCSV}
-                  disabled={loading || !filteredCampaigns.length}
-                />
-              </div>
-            </div>
-            <p className="text-lg text-warmGray-600 max-w-3xl mx-auto">
-              Comprehensive archive of all completed coffee meeting campaigns with detailed analytics,
-              participant feedback, and performance metrics.
+    <div className="min-h-screen">
+      {/* Header outside any background - truly external */}
+      <div className="max-w-6xl mx-auto px-2 lg:px-4 pt-2 lg:pt-4">
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-warmGray-800 mb-2">
+              Campaign History
+            </h1>
+            <p className="text-warmGray-600">
+              View and manage completed coffee meeting campaigns. Statistics below reflect only completed campaigns.
             </p>
           </div>
-        </AnimatedSection>
 
-        {/* Overall Statistics */}
-        {overallStats && (
-          <AnimatedSection delay={200}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-              <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: '#F0E8D5' }}>
-                  <ChartBarIcon className="h-6 w-6" style={{ color: '#D4A574' }} />
-                </div>
-                <p className="text-sm font-medium text-warmGray-600 mb-1">Total Campaigns</p>
-                <p className="text-3xl font-bold text-warmGray-800">
-                  <CountUp end={overallStats.totalCampaigns} duration={2000} />
-                </p>
-              </div>
+          {/* Export Button */}
+          <button
+            onClick={handleExportPDF}
+            disabled={campaigns.length === 0}
+            className="bg-[#E8C4A0] hover:bg-[#DDB892] disabled:bg-warmGray-300 text-[#8B6F47] disabled:text-warmGray-500 font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center space-x-2"
+          >
+            <DocumentArrowDownIcon className="h-4 w-4" />
+            <span>Export PDF</span>
+          </button>
+        </div>
+      </div>
 
-              <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: '#D5E0F0' }}>
-                  <UserGroupIcon className="h-6 w-6" style={{ color: '#8FA8C7' }} />
-                </div>
-                <p className="text-sm font-medium text-warmGray-600 mb-1">Total Participants</p>
-                <p className="text-3xl font-bold text-warmGray-800">
-                  <CountUp end={overallStats.totalParticipants} duration={2500} />
-                </p>
-              </div>
+      {/* Main content area with background */}
+      <div className="bg-warmGray-50 min-h-screen">
+        <div className="max-w-6xl mx-auto p-2 lg:p-4">
 
-              <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: '#D5E8E8' }}>
-                  <UserGroupIcon className="h-6 w-6" style={{ color: '#8FB8B8' }} />
+        {/* Summary Stats */}
+        {campaigns.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="bg-white rounded-lg p-4 border border-warmGray-200">
+              <div className="flex items-center">
+                <div className="p-2 bg-[#E8C4A0] rounded-lg">
+                  <ChartBarIcon className="h-5 w-5 text-[#8B6F47]" />
                 </div>
-                <p className="text-sm font-medium text-warmGray-600 mb-1">Coffee Pairs</p>
-                <p className="text-3xl font-bold text-warmGray-800">
-                  <CountUp end={overallStats.totalPairs} duration={3000} />
-                </p>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: '#F0F0D5' }}>
-                  <StarIcon className="h-6 w-6" style={{ color: '#C7C78F' }} />
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-warmGray-600">Completed Campaigns</p>
+                  <p className="text-xl font-bold text-warmGray-800">{campaigns.length}</p>
                 </div>
-                <p className="text-sm font-medium text-warmGray-600 mb-1">Avg Rating</p>
-                <p className="text-3xl font-bold text-warmGray-800">
-                  {parseFloat(overallStats.avgRating) > 0 ? (
-                    <CountUp end={parseFloat(overallStats.avgRating)} duration={2000} suffix="/5" />
-                  ) : (
-                    <span className="text-2xl text-warmGray-400">No Ratings</span>
-                  )}
-                </p>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: '#E8D5E8' }}>
-                  <ArrowTrendingUpIcon className="h-6 w-6" style={{ color: '#B8A8B8' }} />
-                </div>
-                <p className="text-sm font-medium text-warmGray-600 mb-1">Success Rate</p>
-                <p className="text-3xl font-bold text-warmGray-800">
-                  <CountUp end={overallStats.successRate} duration={2500} suffix="%" />
-                </p>
               </div>
             </div>
-          </AnimatedSection>
+
+            <div className="bg-white rounded-lg p-4 border border-warmGray-200">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <UserGroupIcon className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-warmGray-600">Participants (Completed)</p>
+                  <p className="text-xl font-bold text-warmGray-800">
+                    {campaigns.reduce((sum, campaign) => sum + (campaign.participants_count || 0), 0)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-4 border border-warmGray-200">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <UsersIcon className="h-5 w-5 text-green-600" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-warmGray-600">Pairs (Completed)</p>
+                  <p className="text-xl font-bold text-warmGray-800">
+                    {campaigns.reduce((sum, campaign) => sum + (campaign.total_pairs || 0), 0)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* Search and Filter Controls */}
-        <AnimatedSection delay={400}>
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-              {/* Search */}
-              <div className="relative flex-1 max-w-md">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-warmGray-400" />
-                <input
-                  type="text"
-                  placeholder="Search campaigns..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-warmGray-300 rounded-lg focus:ring-2 focus:ring-peach-500 focus:border-transparent"
-                />
-              </div>
 
-              {/* Filter Dropdown */}
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <FunnelIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-warmGray-400" />
-                  <select
-                    value={selectedFilter}
-                    onChange={(e) => setSelectedFilter(e.target.value)}
-                    className="pl-10 pr-8 py-2 border border-warmGray-300 rounded-lg focus:ring-2 focus:ring-peach-500 focus:border-transparent appearance-none bg-white"
-                  >
-                    <option value="all">All Time</option>
-                    <option value="recent">Last 6 Months</option>
-                    <option value="thisYear">This Year</option>
-                    <option value="lastYear">Last Year</option>
-                  </select>
-                </div>
 
-                <div className="text-sm text-warmGray-600">
-                  {filteredCampaigns.length} campaign{filteredCampaigns.length !== 1 ? 's' : ''} found
-                </div>
-              </div>
+        {/* Charts Section */}
+        {campaigns.length > 0 && (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+            <div className="order-2 xl:order-1">
+              <CampaignMetricsChart campaigns={campaigns} />
+            </div>
+            <div className="order-1 xl:order-2">
+              <EvaluationTrendsChart campaigns={campaigns} />
             </div>
           </div>
-        </AnimatedSection>
+        )}
 
-        {/* Data Visualizations */}
-        <AnimatedSection delay={200}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Campaign Timeline Chart */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-warmGray-100/50 p-8 hover:shadow-xl transition-all duration-300">
-              <h3 className="text-xl font-bold text-warmGray-800 mb-6 flex items-center">
-                <ChartPieIcon className="h-6 w-6 mr-3 text-[#E8C4A0]" />
-                Campaign Timeline
-              </h3>
-              <div className="h-96">
-                <CampaignTimelineChart campaigns={filteredCampaigns} />
-              </div>
+        {/* Empty State */}
+        {campaigns.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-warmGray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ChartBarIcon className="h-8 w-8 text-warmGray-400" />
             </div>
-
-            {/* Participation Chart */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-warmGray-100/50 p-8 hover:shadow-xl transition-all duration-300">
-              <h3 className="text-xl font-bold text-warmGray-800 mb-6 flex items-center">
-                <ArrowTrendingUpIcon className="h-6 w-6 mr-3 text-[#BDDCFF]" />
-                Participation Trends
-              </h3>
-              <div className="h-96">
-                <ParticipationChart campaigns={filteredCampaigns} />
-              </div>
-            </div>
+            <h3 className="text-lg font-medium text-warmGray-800 mb-2">No campaigns found</h3>
+            <p className="text-warmGray-600">
+              No completed campaigns available yet.
+            </p>
           </div>
-        </AnimatedSection>
+        )}
 
-        {/* Network Diagram */}
-        <AnimatedSection delay={300}>
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-semibold text-warmGray-800 mb-4 flex items-center">
-              <UserGroupIcon className="h-5 w-5 mr-2 text-green-600" />
-              Employee Pairing Network
-            </h3>
-            <NetworkDiagram campaigns={filteredCampaigns} />
-          </div>
-        </AnimatedSection>
-
-        {/* Campaign Cards */}
-        <AnimatedSection delay={1000}>
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-warmGray-800">Campaign Archive</h2>
-
-            {filteredCampaigns.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-                <DocumentTextIcon className="h-16 w-16 text-warmGray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-warmGray-800 mb-2">
-                  No campaigns found
-                </h3>
-                <p className="text-warmGray-600">
-                  {searchTerm || selectedFilter !== 'all'
-                    ? 'Try adjusting your search or filter criteria'
-                    : 'No completed campaigns available yet'
-                  }
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredCampaigns.map((campaign, index) => (
-                  <div
-                    key={campaign.id}
-                    className="bg-white rounded-xl shadow-lg border border-warmGray-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    {/* Campaign Header */}
-                    <div className="p-6 border-b border-warmGray-100">
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-lg font-semibold text-warmGray-800 line-clamp-2">
-                          {campaign.title}
-                        </h3>
-                        <div className="flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: '#E8F0D5', color: '#6B8E4B' }}>
-                          <CheckCircleIcon className="h-3 w-3" />
-                          <span>Completed</span>
-                        </div>
-                      </div>
-
-                      {campaign.description && (
-                        <p className="text-warmGray-600 text-sm line-clamp-2 mb-3">
-                          {campaign.description}
-                        </p>
-                      )}
-
-                      <div className="flex items-center text-sm text-warmGray-500">
-                        <CalendarDaysIcon className="h-4 w-4 mr-1" />
-                        <span>{formatDate(campaign.start_date)} - {formatDate(campaign.end_date)}</span>
-                      </div>
-                    </div>
-
-                    {/* Campaign Stats */}
-                    <div className="p-6 border-b border-warmGray-100">
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                          <div className="text-2xl font-bold text-warmGray-800">
-                            {campaign.employees_count || 0}
-                          </div>
-                          <div className="text-xs text-warmGray-500">Participants</div>
-                        </div>
-                        <div>
-                          <div className="text-2xl font-bold text-warmGray-800">
-                            {campaign.pairs_count || 0}
-                          </div>
-                          <div className="text-xs text-warmGray-500">Pairs</div>
-                        </div>
-                        <div>
-                          <div className="text-2xl font-bold text-warmGray-800">
-                            {campaign.avg_rating ? campaign.avg_rating.toFixed(1) : (
-                              <span className="text-lg text-warmGray-400">No Rating</span>
+        {/* Campaign Table - Desktop */}
+        {campaigns.length > 0 && (
+          <>
+            {/* Desktop Table */}
+            <div className="hidden lg:block bg-white rounded-lg border border-warmGray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-warmGray-200">
+                <thead className="bg-warmGray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
+                      Campaign
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
+                      Duration
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
+                      Participants
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
+                      Pairs
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
+                      Criteria
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
+                      Completed
+                    </th>
+                    <th className="px-3 py-3 text-center text-xs font-medium text-warmGray-500 uppercase tracking-wider w-20">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-warmGray-200">
+                  {campaigns.map((campaign) => (
+                    <tr key={campaign.id} className="hover:bg-warmGray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div>
+                            <div className="text-sm font-medium text-warmGray-900">
+                              {campaign.title}
+                            </div>
+                            {campaign.description && (
+                              <div className="text-sm text-warmGray-500 mt-1 max-w-xs truncate">
+                                {campaign.description}
+                              </div>
                             )}
-                          </div>
-                          <div className="text-xs text-warmGray-500">
-                            {campaign.avg_rating ? 'Rating' : 'No Feedback'}
+                            <div className="text-xs text-warmGray-400 mt-1">
+                              Created: {formatDate(campaign.created_at)}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="p-6">
-                      <div className="flex space-x-3">
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm text-warmGray-900">
+                          <CalendarDaysIcon className="h-4 w-4 text-warmGray-400 mr-2" />
+                          <div>
+                            <div className="font-medium">
+                              {calculateDuration(campaign.start_date, campaign.end_date)}
+                            </div>
+                            <div className="text-xs text-warmGray-500">
+                              {formatDate(campaign.start_date)} - {formatDate(campaign.end_date)}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm text-warmGray-900">
+                          <UserGroupIcon className="h-4 w-4 text-warmGray-400 mr-2" />
+                          <span className="font-medium">{campaign.participants_count || 0}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm text-warmGray-900">
+                          <UsersIcon className="h-4 w-4 text-warmGray-400 mr-2" />
+                          <span className="font-medium">{campaign.total_pairs || 0}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm text-warmGray-900">
+                          <CogIcon className="h-4 w-4 text-warmGray-400 mr-2" />
+                          <span className="font-medium">{campaign.total_criteria || 0}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm text-warmGray-900">
+                          <ClockIcon className="h-4 w-4 text-warmGray-400 mr-2" />
+                          <span>{formatDate(campaign.completion_date)}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap text-center">
                         <button
                           onClick={() => handleViewCampaign(campaign.id)}
-                          className="flex-1 flex items-center justify-center space-x-2 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
-                          style={{
-                            backgroundColor: '#F0E8D5',
-                            color: '#A67C52',
-                            ':hover': { backgroundColor: '#E8D5C5' }
-                          }}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = '#E8D5C5'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = '#F0E8D5'}
+                          className="text-[#8B6F47] hover:text-[#6B5537] transition-colors p-1 hover:bg-[#E8C4A0]/20 rounded"
+                          title="View campaign details"
                         >
-                          <EyeIcon className="h-4 w-4" />
-                          <span>View Details</span>
+                          <ArrowTopRightOnSquareIcon className="h-5 w-5" />
                         </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
+          {/* Mobile Cards */}
+          <div className="lg:hidden space-y-4">
+            {campaigns.map((campaign) => (
+              <div key={campaign.id} className="bg-white rounded-lg border border-warmGray-200 p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-warmGray-800 mb-1">
+                      {campaign.title}
+                    </h3>
+                    <PerformanceBadge campaign={campaign} />
+                  </div>
+                  <button
+                    onClick={() => handleViewCampaign(campaign.id)}
+                    className="text-[#8B6F47] hover:text-[#6B5537] transition-colors p-2 hover:bg-[#E8C4A0]/20 rounded"
+                    title="View campaign details"
+                  >
+                    <ArrowTopRightOnSquareIcon className="h-5 w-5" />
+                  </button>
+                </div>
 
-                      </div>
+                {campaign.description && (
+                  <p className="text-warmGray-600 text-sm mb-3 line-clamp-2">
+                    {campaign.description}
+                  </p>
+                )}
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="flex items-center space-x-2">
+                    <UserGroupIcon className="h-4 w-4 text-warmGray-400" />
+                    <div>
+                      <p className="text-xs text-warmGray-500">Participants</p>
+                      <p className="text-sm font-medium text-warmGray-800">
+                        {campaign.participants_count || 0}
+                      </p>
                     </div>
                   </div>
-                ))}
+
+                  <div className="flex items-center space-x-2">
+                    <UsersIcon className="h-4 w-4 text-warmGray-400" />
+                    <div>
+                      <p className="text-xs text-warmGray-500">Pairs</p>
+                      <p className="text-sm font-medium text-warmGray-800">
+                        {campaign.total_pairs || 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <CogIcon className="h-4 w-4 text-warmGray-400" />
+                    <div>
+                      <p className="text-xs text-warmGray-500">Criteria</p>
+                      <p className="text-sm font-medium text-warmGray-800">
+                        {campaign.total_criteria || 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <CalendarDaysIcon className="h-4 w-4 text-warmGray-400" />
+                    <div>
+                      <p className="text-xs text-warmGray-500">Duration</p>
+                      <p className="text-sm font-medium text-warmGray-800">
+                        {calculateDuration(campaign.start_date, campaign.end_date)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-warmGray-500 pt-3 border-t border-warmGray-100">
+                  <span>
+                    <ClockIcon className="h-3 w-3 inline mr-1" />
+                    Completed: {formatDate(campaign.completion_date)}
+                  </span>
+                  <span>
+                    Created: {formatDate(campaign.created_at)}
+                  </span>
+                </div>
               </div>
-            )}
+            ))}
           </div>
-        </AnimatedSection>
+        </>
+        )}
 
+        {/* Loading more indicator */}
+        {loadingMore && (
+          <div className="flex justify-center py-8">
+            <div className="flex items-center space-x-2 text-warmGray-600">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-warmGray-600"></div>
+              <span>Loading more campaigns...</span>
+            </div>
+          </div>
+        )}
 
+        {/* End of list indicator */}
+        {!hasMore && campaigns.length > 0 && (
+          <div className="text-center py-8">
+            <div className="text-warmGray-500 text-sm">
+              You've reached the end of your campaign history
+            </div>
+            <div className="text-warmGray-400 text-xs mt-1">
+              {campaigns.length} campaigns total
+            </div>
+          </div>
+        )}
+
+        {/* Sentinel for infinite scroll */}
+        {hasMore && !loadingMore && (
+          <div ref={sentinelRef} className="h-4" aria-hidden="true" />
+        )}
+
+        {/* Global Evaluation Performance Section */}
+        <GlobalEvaluationPerformance campaigns={campaigns} />
+
+        </div>
       </div>
     </div>
   );
