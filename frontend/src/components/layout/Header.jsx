@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline';
 import SearchBar from '../ui/SearchBar';
 import SearchResults from '../ui/SearchResults';
+import SearchButton from '../ui/SearchButton';
 import NotificationButton from '../ui/NotificationButton';
 import { globalSearchService } from '../../services/searchService';
 
