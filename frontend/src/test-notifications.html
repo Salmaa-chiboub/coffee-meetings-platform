@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Notifications API</title>
+</head>
+<body>
+    <h1>Test Notifications API</h1>
+    <button onclick="testNotificationsAPI()">Test Notifications API</button>
+    <button onclick="testUnreadCount()">Test Unread Count</button>
+    <div id="results"></div>
+
+    <script>
+        async function testNotificationsAPI() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = 'Testing notifications API...';
+            
+            try {
+                // First, let's try to get a token (you'll need to replace with actual login)
+                const loginResponse = await fetch('http://localhost:8000/users/login/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'hr@test.com',
+                        password: 'password123' // You'll need to use the actual password
+                    })
+                });
+                
+                if (!loginResponse.ok) {
+                    throw new Error('Login failed');
+                }
+                
+                const loginData = await loginResponse.json();
+                const token = loginData.access;
+                
+                // Now test the notifications API
+                const response = await fetch('http://localhost:8000/notifications/', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                resultsDiv.innerHTML = `<h3>Success!</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                resultsDiv.innerHTML = `<h3>Error:</h3><p>${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        }
+        
+        async function testUnreadCount() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = 'Testing unread count API...';
+            
+            try {
+                // First, let's try to get a token
+                const loginResponse = await fetch('http://localhost:8000/users/login/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'hr@test.com',
+                        password: 'password123'
+                    })
+                });
+                
+                if (!loginResponse.ok) {
+                    throw new Error('Login failed');
+                }
+                
+                const loginData = await loginResponse.json();
+                const token = loginData.access;
+                
+                // Now test the unread count API
+                const response = await fetch('http://localhost:8000/notifications/unread-count/', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                resultsDiv.innerHTML = `<h3>Unread Count Success!</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                resultsDiv.innerHTML = `<h3>Error:</h3><p>${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

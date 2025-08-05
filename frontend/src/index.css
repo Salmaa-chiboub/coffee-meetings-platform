@@ -192,3 +192,35 @@ code {
 .animate-scroll-horizontal:hover {
   animation-play-state: paused;
 }
+
+/* Sidebar hover transition classes */
+.sidebar-hover-transition {
+  transition: width 300ms ease-in-out, margin-left 300ms ease-in-out, transform 300ms ease-in-out;
+}
+
+/* Responsive layout adjustments */
+@media (min-width: 1024px) {
+  .main-content-responsive {
+    transition: margin-left 300ms ease-in-out, width 300ms ease-in-out;
+  }
+
+  /* Ensure dashboard grids are responsive when sidebar expands */
+  .dashboard-grid-responsive {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  /* Ensure charts are responsive */
+  .chart-container-responsive {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* Prevent content overflow when sidebar expands */
+  .content-container-responsive {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+}
