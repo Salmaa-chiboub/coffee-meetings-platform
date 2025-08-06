@@ -301,6 +301,13 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # CORS Configuration
+CORS_ALLOW_CREDENTIALS = True
+
+# Session and CSRF cookie settings for local development
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = False
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",

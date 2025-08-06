@@ -164,6 +164,14 @@ const CampaignsList = React.memo(() => {
 
   const handleCampaignClick = async (campaign) => {
     try {
+      console.log('🔍 Campaign clicked:', campaign);
+      console.log('🔍 Campaign ID:', campaign.id);
+
+      if (!campaign.id) {
+        console.error('❌ Campaign ID is missing!', campaign);
+        return;
+      }
+
       // Check if campaign workflow is completed
       const { workflowService } = await import('../services/workflowService');
       const workflowData = await workflowService.getCampaignWorkflowStatus(campaign.id);
@@ -177,14 +185,17 @@ const CampaignsList = React.memo(() => {
 
       if (isCompleted) {
         // All workflow steps completed - go to history page
+        console.log('🎯 Navigating to history:', `/campaigns/${campaign.id}/history`);
         navigate(`/campaigns/${campaign.id}/history`);
       } else {
         // Workflow incomplete - go to workflow page to continue
+        console.log('🎯 Navigating to workflow:', `/campaigns/${campaign.id}/workflow`);
         navigate(`/campaigns/${campaign.id}/workflow`);
       }
     } catch (error) {
       console.error('Error checking workflow status:', error);
       // Fallback to workflow if there's an error
+      console.log('🎯 Fallback navigation to workflow:', `/campaigns/${campaign.id}/workflow`);
       navigate(`/campaigns/${campaign.id}/workflow`);
     }
   };

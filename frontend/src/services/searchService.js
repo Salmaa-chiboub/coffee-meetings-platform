@@ -1,5 +1,7 @@
 import { authAPI } from './api';
 import { campaignService } from './campaignService';
+import { employeeService } from './employeeService';
+import { evaluationService } from './evaluationService';
 import { FuzzySearch } from '../utils/searchOptimization';
 
 /**
@@ -29,21 +31,24 @@ export class GlobalSearchService {
       };
     }
 
-    const { limit = 10, includeEmployees = true, includeCampaigns = true } = options;
+    const { limit = 10, includeEmployees = true, includeCampaigns = true, includeEvaluations = true } = options;
 
     try {
       const results = await Promise.allSettled([
         includeCampaigns ? this.searchCampaigns(query, limit) : Promise.resolve([]),
-        includeEmployees ? this.searchEmployees(query, limit) : Promise.resolve([])
+        includeEmployees ? this.searchEmployees(query, limit) : Promise.resolve([]),
+        includeEvaluations ? this.searchEvaluations(query, limit) : Promise.resolve([])
       ]);
 
       const campaigns = results[0].status === 'fulfilled' ? results[0].value : [];
       const employees = results[1].status === 'fulfilled' ? results[1].value : [];
+      const evaluations = results[2].status === 'fulfilled' ? results[2].value : [];
 
       return {
         campaigns,
         employees,
-        total: campaigns.length + employees.length,
+        evaluations,
+        total: campaigns.length + employees.length + evaluations.length,
         query: query.trim()
       };
     } catch (error) {
@@ -51,6 +56,7 @@ export class GlobalSearchService {
       return {
         campaigns: [],
         employees: [],
+        evaluations: [],
         total: 0,
         query: query,
         error: 'Search failed'
@@ -66,14 +72,18 @@ export class GlobalSearchService {
    */
   async searchCampaigns(query, limit = 10) {
     try {
+      console.log('🔍 Searching campaigns with query:', query);
       // Try to use real API first
       const response = await authAPI.getCampaigns({
         search: query,
         page_size: limit
       });
 
+      console.log('📊 Campaign API response:', response);
+
       if (response.success && response.data) {
         const campaigns = Array.isArray(response.data) ? response.data : response.data.results || [];
+        console.log('📋 Found campaigns:', campaigns);
         if (campaigns.length > 0) {
           return campaigns.map(campaign => ({
             ...campaign,
@@ -141,8 +151,32 @@ export class GlobalSearchService {
    */
   async searchEmployees(query, limit = 10) {
     try {
-      // For demo purposes, return mock employee data that matches the query
-      // In production, this would call the actual employee API
+      console.log('👥 Searching employees with query:', query);
+      // Try to use real API first
+      const response = await employeeService.getEmployees({
+        search: query,
+        page_size: limit
+      });
+
+      console.log('👤 Employee API response:', response);
+
+      if (response && Array.isArray(response.results)) {
+        console.log('📝 Found employees (results):', response.results);
+        return response.results.map(employee => ({
+          ...employee,
+          type: 'employee',
+          searchScore: this.calculateRelevanceScore(query, employee, ['name', 'email'])
+        }));
+      } else if (response && Array.isArray(response)) {
+        console.log('📝 Found employees (array):', response);
+        return response.map(employee => ({
+          ...employee,
+          type: 'employee',
+          searchScore: this.calculateRelevanceScore(query, employee, ['name', 'email'])
+        }));
+      }
+
+      // Fallback to mock data for demo if API fails
       const mockEmployees = [
         { id: 1, name: 'Mark Johnson', email: 'mark.johnson@company.com', arrival_date: '2023-01-15' },
         { id: 2, name: 'Sarah Marketing', email: 'sarah.m@company.com', arrival_date: '2023-03-20' },
@@ -164,6 +198,121 @@ export class GlobalSearchService {
       }));
     } catch (error) {
       console.warn('Employee search failed:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Search evaluations/feedback
+   * @param {string} query - Search query
+   * @param {number} limit - Maximum results
+   * @returns {Promise<Array>} - Evaluation results
+   */
+  async searchEvaluations(query, limit = 10) {
+    try {
+      console.log('📝 Searching evaluations with query:', query);
+
+      // Since we don't have a direct evaluation search API, we'll search through campaigns
+      // and get their evaluations, then filter by the query
+      const campaignResponse = await authAPI.getCampaigns({ page_size: 50 });
+
+      if (campaignResponse.success && campaignResponse.data) {
+        const campaigns = Array.isArray(campaignResponse.data) ? campaignResponse.data : campaignResponse.data.results || [];
+        const evaluationResults = [];
+
+        // Search through campaigns that have evaluations
+        for (const campaign of campaigns.slice(0, 10)) { // Limit to first 10 campaigns for performance
+          try {
+            const evaluationData = await evaluationService.getCampaignEvaluations(campaign.id);
+
+            if (evaluationData.success && evaluationData.evaluations) {
+              // Filter evaluations that match the search query
+              const matchingEvaluations = evaluationData.evaluations.filter(evaluation => {
+                const searchText = `${evaluation.employee_name} ${evaluation.partner_name} ${evaluation.comment || ''} ${campaign.title}`.toLowerCase();
+                return searchText.includes(query.toLowerCase());
+              });
+
+              // Transform matching evaluations
+              matchingEvaluations.forEach(evaluation => {
+                evaluationResults.push({
+                  id: evaluation.id,
+                  employee_name: evaluation.employee_name,
+                  partner_name: evaluation.partner_name,
+                  campaign_title: campaign.title,
+                  campaign_id: campaign.id,
+                  rating: evaluation.rating,
+                  comment: evaluation.comment,
+                  submitted_at: evaluation.submitted_at,
+                  type: 'evaluation',
+                  searchScore: this.calculateRelevanceScore(query, {
+                    employee_name: evaluation.employee_name,
+                    partner_name: evaluation.partner_name,
+                    comment: evaluation.comment,
+                    campaign_title: campaign.title
+                  }, ['employee_name', 'partner_name', 'comment', 'campaign_title'])
+                });
+              });
+            }
+          } catch (evalError) {
+            // Skip campaigns where we can't fetch evaluations
+            console.warn(`Could not fetch evaluations for campaign ${campaign.id}:`, evalError);
+          }
+        }
+
+        // Sort by relevance score and limit results
+        return evaluationResults
+          .sort((a, b) => b.searchScore - a.searchScore)
+          .slice(0, limit);
+      }
+
+      // Fallback to mock data for demo if API fails
+      const mockEvaluations = [
+        {
+          id: 1,
+          employee_name: 'John Smith',
+          partner_name: 'Sarah Johnson',
+          campaign_title: 'Weekly Coffee Meetings',
+          campaign_id: 1,
+          rating: 5,
+          comment: 'Great coffee meeting! Very productive discussion about marketing strategies.',
+          submitted_at: '2024-01-15T10:30:00Z',
+          type: 'evaluation'
+        },
+        {
+          id: 2,
+          employee_name: 'Emily Davis',
+          partner_name: 'Michael Brown',
+          campaign_title: 'New Employee Onboarding',
+          campaign_id: 3,
+          rating: 4,
+          comment: 'Nice conversation about company culture and team dynamics.',
+          submitted_at: '2024-01-14T14:20:00Z',
+          type: 'evaluation'
+        },
+        {
+          id: 3,
+          employee_name: 'Lisa Wilson',
+          partner_name: 'David Tech',
+          campaign_title: 'Innovation Sessions',
+          campaign_id: 4,
+          rating: 5,
+          comment: 'Excellent brainstorming session with innovative ideas for product development.',
+          submitted_at: '2024-01-13T16:45:00Z',
+          type: 'evaluation'
+        }
+      ];
+
+      // Filter mock evaluations by query using fuzzy search
+      const searchFields = ['employee_name', 'partner_name', 'comment', 'campaign_title'];
+      const filteredEvaluations = this.fuzzySearch.search(query, mockEvaluations, searchFields);
+
+      return filteredEvaluations.slice(0, limit).map(evaluation => ({
+        ...evaluation,
+        searchScore: this.calculateRelevanceScore(query, evaluation, searchFields)
+      }));
+
+    } catch (error) {
+      console.warn('Evaluation search failed:', error);
       return [];
     }
   }
@@ -233,14 +382,25 @@ export class GlobalSearchService {
       results.employees.forEach(employee => {
         suggestions.push({
           text: employee.name,
-          type: 'employee', 
+          type: 'employee',
           icon: '👤',
           subtitle: employee.email,
           action: () => `/employees/${employee.id}`
         });
       });
 
-      return suggestions.slice(0, 8); // Limit to 8 suggestions
+      // Add evaluation suggestions
+      results.evaluations.forEach(evaluation => {
+        suggestions.push({
+          text: `${evaluation.employee_name} ↔ ${evaluation.partner_name}`,
+          type: 'evaluation',
+          icon: '⭐',
+          subtitle: `${evaluation.campaign_title} - Rating: ${evaluation.rating}/5`,
+          action: () => `/campaigns/${evaluation.campaign_id}/feedback`
+        });
+      });
+
+      return suggestions.slice(0, 10); // Limit to 10 suggestions
     } catch (error) {
       console.error('Search suggestions error:', error);
       return [];

@@ -1,5 +1,4 @@
-import { authAPI } from './api';
-import apiClient from './api';
+import apiClient, { authAPI } from './api';
 
 export const campaignService = {
   // Get all campaigns
@@ -16,13 +15,17 @@ export const campaignService = {
   // Get campaign by ID
   getCampaign: async (id) => {
     try {
+      console.log('🔍 getCampaign called with ID:', id);
+      if (!id || id === 'undefined') {
+        throw new Error('Campaign ID is required and cannot be undefined');
+      }
       const response = await apiClient.get(`/campaigns/${id}/`);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.error('Error fetching campaign:', error);
+      console.error('❌ Error fetching campaign:', error);
       return {
         success: false,
         error: error.response?.data || error.message

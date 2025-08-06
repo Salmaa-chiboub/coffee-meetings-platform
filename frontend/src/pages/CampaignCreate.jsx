@@ -25,9 +25,17 @@ const CampaignCreate = () => {
       console.log('🔍 DEBUG: Creating campaign with data:', data);
       const newCampaign = await createCampaignMutation.mutateAsync(data);
       console.log('✅ DEBUG: Campaign created successfully:', newCampaign);
-      console.log('🔍 DEBUG: Navigating to workflow:', `/campaigns/${newCampaign.id}/workflow`);
-      // Navigate to workflow page on success
-      navigate(`/campaigns/${newCampaign.id}/workflow`);
+
+      // Ensure we have a valid campaign ID before navigating
+      if (newCampaign && newCampaign.id) {
+        console.log('🔍 DEBUG: Navigating to workflow:', `/campaigns/${newCampaign.id}/workflow`);
+        // Navigate to workflow page on success
+        navigate(`/campaigns/${newCampaign.id}/workflow`);
+      } else {
+        console.error('❌ DEBUG: Campaign created but no ID returned:', newCampaign);
+        // Fallback to campaigns list
+        navigate('/campaigns');
+      }
     } catch (error) {
       console.error('❌ DEBUG: Campaign creation failed:', error);
       // Handle validation errors from backend

@@ -16,6 +16,24 @@ const Finalization = lazy(() => import('../components/workflow/Finalization'));
 const CampaignWorkflow = () => {
   const { id: campaignId } = useParams();
   const navigate = useNavigate();
+
+  console.log('🔍 CampaignWorkflow - Campaign ID from params:', campaignId);
+
+  // Redirect to campaigns list if no valid campaign ID
+  useEffect(() => {
+    if (!campaignId || campaignId === 'undefined' || campaignId === 'null') {
+      console.log('❌ Invalid campaign ID detected:', campaignId);
+      console.log('💡 This can happen if you refresh the page or access the URL directly');
+      console.log('🔄 Redirecting to campaigns list...');
+
+      // Add a small delay to prevent immediate redirect in case of React double-rendering
+      const timer = setTimeout(() => {
+        navigate('/campaigns', { replace: true });
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [campaignId, navigate]);
   
   // State management
   const [campaign, setCampaign] = useState(null);
@@ -27,14 +45,19 @@ const CampaignWorkflow = () => {
 
   // Load campaign and workflow state
   useEffect(() => {
+    // Don't load data if campaign ID is invalid
+    if (!campaignId || campaignId === 'undefined' || campaignId === 'null') {
+      return;
+    }
+
     const loadData = async () => {
       try {
         setLoading(true);
-        
+
         // Load campaign details
         const campaignData = await campaignService.getCampaign(campaignId);
         setCampaign(campaignData);
-        
+
         // Load workflow state
         const workflowData = await workflowService.getCampaignWorkflowStatus(campaignId);
         setWorkflowState(workflowData);

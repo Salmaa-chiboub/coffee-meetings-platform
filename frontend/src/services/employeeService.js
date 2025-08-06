@@ -26,10 +26,26 @@ export const employeeService = {
   // Upload Excel file with employee data
   uploadExcel: async (campaignId, file, replaceExisting = false) => {
     try {
+      console.log('📤 uploadExcel called with:', { campaignId, fileName: file?.name, replaceExisting });
+
+      if (!campaignId || campaignId === 'undefined') {
+        throw new Error('Campaign ID is required and cannot be undefined');
+      }
+
+      if (!file) {
+        throw new Error('File is required');
+      }
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('campaign_id', campaignId);
       formData.append('replace_existing', replaceExisting);
+
+      console.log('📤 FormData contents:', {
+        file: file.name,
+        campaign_id: campaignId,
+        replace_existing: replaceExisting
+      });
 
       const response = await api.post('/employees/upload_excel/', formData, {
         headers: {
@@ -38,6 +54,7 @@ export const employeeService = {
       });
       return response.data;
     } catch (error) {
+      console.error('❌ uploadExcel error:', error);
       throw error.response?.data || error.message;
     }
   },

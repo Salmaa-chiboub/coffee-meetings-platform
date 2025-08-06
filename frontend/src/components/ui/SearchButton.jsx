@@ -5,14 +5,16 @@ import {
   ClockIcon,
   UserGroupIcon,
   UserCircleIcon,
-  DocumentTextIcon
+  StarIcon
 } from '@heroicons/react/24/outline';
+import { globalSearchService } from '../../services/searchService';
 
 const SearchButton = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -39,43 +41,52 @@ const SearchButton = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle search with real API (campaigns and employees)
+  // Handle search with proper authentication
   useEffect(() => {
     if (searchQuery.trim()) {
       setIsSearching(true);
-      Promise.all([
-        fetch(`/campaigns/?search=${encodeURIComponent(searchQuery)}`, { credentials: 'include' }).then(res => res.json()),
-        fetch(`/employees/?search=${encodeURIComponent(searchQuery)}`, { credentials: 'include' }).then(res => res.json())
-      ])
-        .then(([campaigns, employees]) => {
-          // Adjust if your API returns results in a different property
-          const campaignResults = (campaigns.results || campaigns || []).map(c => ({
+      globalSearchService.globalSearch(searchQuery.trim(), { limit: 10 })
+        .then((results) => {
+          // Transform results to match expected format
+          const campaignResults = results.campaigns.map(c => ({
             id: c.id,
             title: c.title,
             description: c.description || c.objective || '',
             type: 'campaign',
             url: `/campaigns/${c.id}/workflow`,
           }));
-          const employeeResults = (employees.results || employees || []).map(e => ({
+
+          const employeeResults = results.employees.map(e => ({
             id: e.id,
             name: e.name,
             email: e.email,
             type: 'employee',
             url: `/employees/${e.id}`,
           }));
-          setSearchResults([...campaignResults, ...employeeResults]);
+
+          const evaluationResults = results.evaluations.map(evaluation => ({
+            id: evaluation.id,
+            title: `${evaluation.employee_name} ↔ ${evaluation.partner_name}`,
+            description: evaluation.comment || `Rating: ${evaluation.rating}/5 - ${evaluation.campaign_title}`,
+            campaign_title: evaluation.campaign_title,
+            rating: evaluation.rating,
+            type: 'evaluation',
+            url: `/campaigns/${evaluation.campaign_id}/feedback`,
+          }));
+
+          const allResults = [...campaignResults, ...employeeResults, ...evaluationResults];
+          setSearchResults(allResults);
         })
-        .catch(() => setSearchResults([]))
+        .catch((error) => {
+          console.error('Search error:', error);
+          setSearchResults([]);
+        })
         .finally(() => setIsSearching(false));
     } else {
       setSearchResults([]);
       setIsSearching(false);
     }
   }, [searchQuery]);
-
-  const handleOpen = () => {
-    setIsOpen(true);
-  };
 
   const handleClose = () => {
     setIsOpen(false);
@@ -89,8 +100,16 @@ const SearchButton = () => {
     }
   };
 
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
+
   return (
-    <div className="relative w-full" ref={containerRef}>
+    <div className={`relative w-full transition-all duration-300 ${isFocused ? 'drop-shadow-lg' : ''}`} ref={containerRef}>
       <div className="flex items-center w-full">
         <div className="relative w-full">
           <input
@@ -99,52 +118,55 @@ const SearchButton = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search campaigns, employees..."
-            className="transition-all duration-300 w-[480px] max-w-full pl-12 pr-4 py-3 bg-white rounded-full border-2 border-[#E8C4A0] shadow-[0_2px_8px_0_rgba(232,196,160,0.15)] text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E8C4A0]/40 text-base focus:shadow-[0_8px_32px_0_rgba(232,196,160,0.30)]"
-            style={{ boxShadow: '0 2px 8px 0 rgba(232,196,160,0.15)' }}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            placeholder="Search campaigns, employees, feedback..."
+            className={`transition-all duration-300 w-[360px] max-w-full pl-10 pr-4 py-2.5 bg-gradient-to-r from-white to-[#FDF9F5] rounded-full border text-gray-600 placeholder-gray-400 focus:outline-none text-sm ${
+              isFocused
+                ? 'border-[#E6C19A] ring-2 ring-[#F3E3CE]/60 shadow-[0_6px_24px_0_rgba(230,193,154,0.20)] scale-[1.01]'
+                : 'border-[#EED2B3] shadow-[0_3px_12px_0_rgba(238,210,179,0.15)] hover:shadow-[0_4px_16px_0_rgba(238,210,179,0.20)]'
+            } active:shadow-[0_2px_8px_0_rgba(238,210,179,0.25)] active:scale-[0.999]`}
           />
-          <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#E8C4A0]" />
+          <MagnifyingGlassIcon className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-all duration-200 ${
+            isFocused ? 'text-[#D2A26F] scale-105' : 'text-[#E6C19A]'
+          }`} />
         </div>
         {(searchQuery.trim() || isSearching) && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-100 z-50 backdrop-blur-sm max-h-80 overflow-y-auto">
+          <div className="absolute top-full left-0 right-0 mt-2 bg-gradient-to-b from-white to-[#FDF9F5] rounded-xl shadow-[0_6px_24px_0_rgba(238,210,179,0.15)] border border-[#F3E3CE]/40 z-50 backdrop-blur-sm max-h-72 overflow-y-auto animate-in slide-in-from-top-2 fade-in duration-200">
             {isSearching ? (
-              <div className="px-4 py-8 text-center">
-                <div className="animate-spin w-6 h-6 border-2 border-[#E8C4A0] border-t-transparent rounded-full mx-auto mb-2"></div>
-                <p className="text-sm text-gray-500">Searching...</p>
+              <div className="px-4 py-6 text-center">
+                <div className="animate-spin w-5 h-5 border-2 border-[#EED2B3] border-t-transparent rounded-full mx-auto mb-2"></div>
+                <p className="text-sm text-gray-500 font-medium">Searching...</p>
               </div>
             ) : searchResults.length > 0 ? (
               <div className="py-2">
                 {searchResults.map((result) => {
-                  // You may need to adjust the rendering below to match your real API response structure
+                  let IconComponent = UserGroupIcon;
+                  if (result.type === 'employee') IconComponent = UserCircleIcon;
+                  if (result.type === 'evaluation') IconComponent = StarIcon;
                   return (
                     <button
                       key={result.id}
-                      className="w-full px-4 py-3 text-left hover:bg-[#E8C4A0]/10 transition-colors border-b border-gray-50 last:border-b-0"
+                      className="w-full px-4 py-3 text-left hover:bg-gradient-to-r hover:from-[#F3E3CE]/30 hover:to-[#FDF9F5]/50 transition-all duration-200 border-b border-[#F3E3CE]/30 last:border-b-0 group"
                       onClick={() => {
-                        // Handle navigation
-                        // You may want to use result.url or build a URL from result data
                         window.location.href = result.url || '/';
                         setSearchQuery("");
                         setSearchResults([]);
                       }}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-[#E8C4A0] rounded-lg flex items-center justify-center">
-                          {result.type === 'campaign' ? (
-                            <UserGroupIcon className="w-4 h-4 text-[#8B6F47]" />
-                          ) : (
-                            <UserCircleIcon className="w-4 h-4 text-[#8B6F47]" />
-                          )}
+                        <div className="w-8 h-8 bg-gradient-to-br from-[#EED2B3] to-[#E6C19A] rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow duration-200">
+                          <IconComponent className="w-4 h-4 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 truncate">
+                          <p className="text-sm font-medium text-gray-700 truncate group-hover:text-[#B69155] transition-colors duration-200">
                             {result.title || result.name}
                           </p>
-                          <p className="text-xs text-gray-500 truncate">
-                            {result.type === 'campaign' ? result.description : result.email}
+                          <p className="text-xs text-gray-500 truncate mt-0.5">
+                            {result.type === 'campaign' ? result.description : result.type === 'employee' ? result.email : result.description}
                           </p>
                         </div>
-                        <span className="text-xs text-gray-400 capitalize">
+                        <span className="text-xs text-[#D2A26F] capitalize font-medium bg-[#F3E3CE]/40 px-2 py-1 rounded-full">
                           {result.type}
                         </span>
                       </div>
@@ -154,8 +176,10 @@ const SearchButton = () => {
               </div>
             ) : (
               <div className="px-4 py-8 text-center">
-                <MagnifyingGlassIcon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No results found</p>
+                <div className="w-10 h-10 bg-gradient-to-br from-[#F3E3CE]/30 to-[#EED2B3]/30 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <MagnifyingGlassIcon className="w-5 h-5 text-[#D2A26F]" />
+                </div>
+                <p className="text-sm text-gray-500 font-medium">No results found</p>
                 <p className="text-xs text-gray-400 mt-1">
                   Try different keywords
                 </p>
