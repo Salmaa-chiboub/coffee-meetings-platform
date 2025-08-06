@@ -18,7 +18,7 @@ const Layout = ({ children }) => {
       {/* Main Content Area */}
       <div
         className={`main-content-responsive content-container-responsive ${
-          // Mobile: always full width with top padding for toggle button and header
+          // Mobile/Tablet: full width with top padding for toggle button and header
           'pt-32 lg:pt-16'
         } ${
           // Desktop: adjust margin based on sidebar hover state

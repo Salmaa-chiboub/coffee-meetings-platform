@@ -15,8 +15,17 @@ const SearchButton = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const inputRef = useRef(null);
   const containerRef = useRef(null);
+
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // No mock data. Will use real API data.
 
@@ -120,14 +129,14 @@ const SearchButton = () => {
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            placeholder="Search campaigns, employees, feedback..."
-            className={`transition-all duration-300 w-[360px] max-w-full pl-10 pr-4 py-2.5 bg-gradient-to-r from-white to-[#FDF9F5] rounded-full border text-gray-600 placeholder-gray-400 focus:outline-none text-sm ${
+            placeholder={isMobile ? "Search..." : "Search campaigns, employees, feedback..."}
+            className={`transition-all duration-300 w-[200px] sm:w-[280px] md:w-[320px] lg:w-[360px] max-w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 bg-gradient-to-r from-white to-[#FDF9F5] rounded-full border text-gray-600 placeholder-gray-400 focus:outline-none text-xs sm:text-sm ${
               isFocused
                 ? 'border-[#E6C19A] ring-2 ring-[#F3E3CE]/60 shadow-[0_6px_24px_0_rgba(230,193,154,0.20)] scale-[1.01]'
                 : 'border-[#EED2B3] shadow-[0_3px_12px_0_rgba(238,210,179,0.15)] hover:shadow-[0_4px_16px_0_rgba(238,210,179,0.20)]'
             } active:shadow-[0_2px_8px_0_rgba(238,210,179,0.25)] active:scale-[0.999]`}
           />
-          <MagnifyingGlassIcon className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-all duration-200 ${
+          <MagnifyingGlassIcon className={`absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 transition-all duration-200 ${
             isFocused ? 'text-[#D2A26F] scale-105' : 'text-[#E6C19A]'
           }`} />
         </div>

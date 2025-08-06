@@ -156,11 +156,11 @@ const Sidebar = ({ onHoverChange }) => {
     />
   );
 
-  // Mobile toggle button
+  // Mobile toggle button (3 lines menu for phone and tablet only)
   const MobileToggle = () => (
     <button
       onClick={() => setIsMobileOpen(true)}
-      className="lg:hidden fixed top-4 left-4 z-30 bg-white rounded-xl p-2 shadow-lg border border-warmGray-200 hover:bg-warmGray-50 transition-all duration-200"
+      className="lg:hidden fixed top-20 left-4 z-20 bg-white rounded-xl p-2 shadow-lg border border-warmGray-200 hover:bg-warmGray-50 transition-all duration-200"
     >
       <svg className="w-6 h-6 text-warmGray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -179,12 +179,12 @@ const Sidebar = ({ onHoverChange }) => {
       {/* Modern Sidebar */}
       <div
         className={`fixed top-0 left-0 h-full bg-white z-50 transition-all duration-300 ease-in-out shadow-xl flex flex-col ${
-          // Mobile styles
+          // Mobile/Tablet: hidden by default, shows when toggle is clicked
           isMobileOpen
             ? 'translate-x-0 w-72 lg:translate-x-0'
             : '-translate-x-full lg:translate-x-0'
         } ${
-          // Desktop styles - always collapsed, expands on hover
+          // Desktop: always visible, expands on hover
           shouldShowExpanded ? 'lg:w-96' : 'lg:w-24'
         }`}
         onMouseEnter={handleMouseEnter}
