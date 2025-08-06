@@ -30,7 +30,7 @@ const Register = () => {
       // Auto-login successful - redirect to dashboard
       if (result.autoLogin) {
         console.log('🎉 Registration complete - redirecting to dashboard');
-        navigate('/dashboard');
+        navigate('/app');
       } else {
         // Fallback to login page if auto-login failed
         navigate('/login');

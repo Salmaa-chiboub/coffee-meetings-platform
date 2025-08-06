@@ -105,16 +105,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     setUser,
     logout,
-    login: async (credentials) => {
-      try {
-        const { user } = await authService.login(credentials);
-        setUser(user);
-        return { success: true };
-      } catch (error) {
-        console.error('Login error:', error);
-        throw error;
-      }
-    },
+    login,
     register,
     updateUser,
     isAuthenticated: !!user,

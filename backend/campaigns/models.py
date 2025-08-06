@@ -43,6 +43,18 @@ class Campaign(models.Model):
                 raise ValidationError("La modification des dates n'est pas autorisée après création.")
         super().save(*args, **kwargs)
 
+    def is_completed(self):
+        """Vérifie si la campagne est complétée (étape 5 terminée)"""
+        try:
+            workflow_state = self.workflow_state
+            return 5 in workflow_state.completed_steps
+        except CampaignWorkflowState.DoesNotExist:
+            return False
+
+    def can_be_deleted(self):
+        """Vérifie si la campagne peut être supprimée"""
+        return not self.is_completed()
+
 
 class CampaignWorkflowState(models.Model):
     """

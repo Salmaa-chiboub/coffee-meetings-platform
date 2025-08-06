@@ -4,20 +4,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
-from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.db.models import Prefetch, Count, Q, Avg, F
-
-from employees.models import Employee
-from evaluations.models import Evaluation
-from matching.models import EmployeePair, CampaignMatchingCriteria
+from django.db.models import Prefetch, Count, Q
 
 from .models import Campaign, CampaignWorkflowState, CampaignWorkflowLog
 from .serializers import (
     CampaignSerializer, CampaignWorkflowStateSerializer,
-    WorkflowStepUpdateSerializer, WorkflowValidationSerializer,
-    CampaignAggregatedSerializer
+    WorkflowStepUpdateSerializer
 )
 from .permissions import IsCampaignOwner
 from utils.cache_utils import cached_result
@@ -97,6 +91,20 @@ class CampaignViewSet(viewsets.ModelViewSet):
             'count': employees.count()
         })
 
+
+    def destroy(self, request, *args, **kwargs):
+        campaign = self.get_object()
+
+        if not campaign.can_be_deleted():
+            return Response(
+                {'error': 'Impossible de supprimer une campagne complétée.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # La suppression en cascade est gérée automatiquement par Django
+        # grâce aux relations on_delete=models.CASCADE définies dans les modèles
+        campaign.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 # Workflow Views
 class CampaignWorkflowStatusView(APIView):
@@ -265,7 +273,10 @@ class CompletedCampaignSerializer(serializers.ModelSerializer):
     
     completed = serializers.SerializerMethodField()
     workflow_state = CampaignWorkflowStateSerializer(read_only=True)
-    
+    total_criteria_count = serializers.IntegerField(read_only=True)
+    participants_count = serializers.IntegerField(read_only=True)
+    total_pairs_count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Campaign
         fields = [

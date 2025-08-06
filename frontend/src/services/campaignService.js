@@ -55,5 +55,39 @@ export const campaignService = {
         error: error.response?.data || error.message
       };
     }
+  },
+
+  // Delete campaign
+  deleteCampaign: async (id) => {
+    try {
+      const response = await apiClient.delete(`/campaigns/${id}/`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error deleting campaign:', error);
+      return {
+        success: false,
+        error: error.response?.data || error.message
+      };
+    }
+  },
+
+  // Update campaign
+  updateCampaign: async (id, campaignData) => {
+    try {
+      const response = await apiClient.put(`/campaigns/${id}/`, campaignData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error updating campaign:', error);
+      return {
+        success: false,
+        error: error.response?.data || error.message
+      };
+    }
   }
 };
