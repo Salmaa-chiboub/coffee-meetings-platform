@@ -68,26 +68,26 @@ const Profile = () => {
   // Handle name update
   const handleNameUpdate = async () => {
     if (!editName.trim()) {
-      setMessage({ type: 'error', text: 'Name cannot be empty' });
+      setMessage({ type: 'error', text: 'Le nom ne peut pas être vide' });
       return;
     }
 
     try {
-      const result = await authAPI.updateProfile({ 
+      const result = await authAPI.updateProfile({
         name: editName.trim(),
         email: user.email,
-        company_name: user.company_name 
+        company_name: user.company_name
       });
 
       if (result.success) {
         updateUser(result.data);
         setIsEditingName(false);
-        setMessage({ type: 'success', text: 'Name updated successfully!' });
+        setMessage({ type: 'success', text: 'Nom mis à jour avec succès !' });
       } else {
-        throw new Error(result.error?.message || 'Failed to update name');
+        throw new Error(result.error?.message || 'Échec de la mise à jour du nom');
       }
     } catch (error) {
-      setMessage({ type: 'error', text: error.message || 'Failed to update name' });
+      setMessage({ type: 'error', text: error.message || 'Échec de la mise à jour du nom' });
       setEditName(user.name || '');
     }
   };
@@ -95,12 +95,12 @@ const Profile = () => {
   // Handle company update
   const handleCompanyUpdate = async () => {
     if (!editCompany.trim()) {
-      setMessage({ type: 'error', text: 'Company name cannot be empty' });
+      setMessage({ type: 'error', text: 'Le nom de l\'entreprise ne peut pas être vide' });
       return;
     }
 
     try {
-      const result = await authAPI.updateProfile({ 
+      const result = await authAPI.updateProfile({
         name: user.name,
         email: user.email,
         company_name: editCompany.trim()
@@ -109,12 +109,12 @@ const Profile = () => {
       if (result.success) {
         updateUser(result.data);
         setIsEditingCompany(false);
-        setMessage({ type: 'success', text: 'Company updated successfully!' });
+        setMessage({ type: 'success', text: 'Entreprise mise à jour avec succès !' });
       } else {
-        throw new Error(result.error?.message || 'Failed to update company');
+        throw new Error(result.error?.message || 'Échec de la mise à jour de l\'entreprise');
       }
     } catch (error) {
-      setMessage({ type: 'error', text: error.message || 'Failed to update company' });
+      setMessage({ type: 'error', text: error.message || 'Échec de la mise à jour de l\'entreprise' });
       setEditCompany(user.company_name || '');
     }
   };
@@ -130,13 +130,13 @@ const Profile = () => {
   const handleProfilePictureUpload = async (file) => {
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      setMessage({ type: 'error', text: 'Please select a valid image file' });
+      setMessage({ type: 'error', text: 'Veuillez sélectionner un fichier image valide' });
       return;
     }
 
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      setMessage({ type: 'error', text: 'Image size must be less than 5MB' });
+      setMessage({ type: 'error', text: 'La taille de l\'image doit être inférieure à 5 Mo' });
       return;
     }
 
@@ -148,12 +148,12 @@ const Profile = () => {
 
       if (result.success) {
         updateUser(result.data);
-        setMessage({ type: 'success', text: 'Profile picture updated successfully!' });
+        setMessage({ type: 'success', text: 'Photo de profil mise à jour avec succès !' });
       } else {
-        throw new Error(result.message || 'Failed to upload profile picture');
+        throw new Error(result.message || 'Échec du téléchargement de la photo de profil');
       }
     } catch (error) {
-      setMessage({ type: 'error', text: error.message || 'Failed to upload profile picture' });
+      setMessage({ type: 'error', text: error.message || 'Échec du téléchargement de la photo de profil' });
     } finally {
       setIsUploadingPicture(false);
     }
@@ -207,7 +207,7 @@ const Profile = () => {
     if (passwordForm.new_password !== passwordForm.confirm_password) {
       setMessage({
         type: 'error',
-        text: 'New passwords do not match.'
+        text: 'Les nouveaux mots de passe ne correspondent pas.'
       });
       setIsLoading(false);
       return;
@@ -217,7 +217,7 @@ const Profile = () => {
     if (passwordForm.new_password.length < 8) {
       setMessage({
         type: 'error',
-        text: 'Password must be at least 8 characters long.'
+        text: 'Le mot de passe doit contenir au moins 8 caractères.'
       });
       setIsLoading(false);
       return;
@@ -233,7 +233,7 @@ const Profile = () => {
       if (result.success) {
         setMessage({
           type: 'success',
-          text: 'Password changed successfully!'
+          text: 'Mot de passe modifié avec succès !'
         });
         setPasswordForm({
           current_password: '',
@@ -241,12 +241,12 @@ const Profile = () => {
           confirm_password: ''
         });
       } else {
-        throw new Error(result.error?.message || 'Failed to change password');
+        throw new Error(result.error?.message || 'Échec de la modification du mot de passe');
       }
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error.message || 'Failed to change password. Please try again.'
+        text: error.message || 'Échec de la modification du mot de passe. Veuillez réessayer.'
       });
     } finally {
       setIsLoading(false);
@@ -294,8 +294,8 @@ const Profile = () => {
     <div className="max-w-none mx-2 px-2 py-2">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-warmGray-800">Profile</h1>
-        <p className="text-warmGray-600 mt-1">Manage your personal information and settings</p>
+        <h1 className="text-3xl font-bold text-warmGray-800">Profil</h1>
+        <p className="text-warmGray-600 mt-1">Gérez vos informations personnelles et paramètres</p>
       </div>
 
       {/* Message Display */}
@@ -323,7 +323,7 @@ const Profile = () => {
               {/* User Name and Role */}
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-warmGray-800 mb-1">{user?.name || 'User Name'}</h2>
-                <p className="text-peach-700 font-medium bg-peach-100 px-3 py-1 rounded-full inline-block">HR Manager</p>
+                <p className="text-peach-700 font-medium bg-peach-100 px-3 py-1 rounded-full inline-block">Responsable RH</p>
               </div>
 
               <div className="relative group">
@@ -364,7 +364,7 @@ const Profile = () => {
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploadingPicture}
                         className="bg-white bg-opacity-90 hover:bg-opacity-100 text-warmGray-700 p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-105 disabled:opacity-50"
-                        title="Change profile picture"
+                        title="Changer la photo de profil"
                       >
                         <CameraIcon className="w-5 h-5" />
                       </button>
@@ -373,7 +373,7 @@ const Profile = () => {
                           onClick={handleProfilePictureDelete}
                           disabled={isUploadingPicture}
                           className="bg-red-500 bg-opacity-90 hover:bg-opacity-100 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-105 disabled:opacity-50"
-                          title="Remove profile picture"
+                          title="Supprimer la photo de profil"
                         >
                           <TrashIcon className="w-5 h-5" />
                         </button>
@@ -436,7 +436,7 @@ const Profile = () => {
                   <div className="group">
                     <label className="block text-sm font-medium text-warmGray-700 mb-2">
                       <UserIcon className="w-4 h-4 inline mr-2" />
-                      Full Name
+                      Nom Complet
                     </label>
                     {isEditingName ? (
                       <div className="flex items-center space-x-2">
@@ -445,14 +445,14 @@ const Profile = () => {
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
                           className="flex-1 px-3 py-2 border border-warmGray-300 rounded-lg focus:ring-2 focus:ring-peach-500 focus:border-transparent transition-all duration-200"
-                          placeholder="Enter your full name"
+                          placeholder="Entrez votre nom complet"
                           autoFocus
                           onKeyPress={(e) => e.key === 'Enter' && handleNameUpdate()}
                         />
                         <button
                           onClick={handleNameUpdate}
                           className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition-colors"
-                          title="Save"
+                          title="Enregistrer"
                         >
                           <CheckIcon className="w-4 h-4" />
                         </button>
@@ -462,7 +462,7 @@ const Profile = () => {
                             setEditName(user?.name || '');
                           }}
                           className="bg-warmGray-500 hover:bg-warmGray-600 text-white p-2 rounded-lg transition-colors"
-                          title="Cancel"
+                          title="Annuler"
                         >
                           <XMarkIcon className="w-4 h-4" />
                         </button>
@@ -470,12 +470,12 @@ const Profile = () => {
                     ) : (
                       <div className="flex items-center justify-between p-3 bg-warmGray-50 rounded-lg border border-warmGray-200 group-hover:bg-warmGray-100 transition-colors">
                         <span className="text-warmGray-800 font-medium">
-                          {user?.name || 'No name set'}
+                          {user?.name || 'Aucun nom défini'}
                         </span>
                         <button
                           onClick={() => setIsEditingName(true)}
                           className="opacity-0 group-hover:opacity-100 text-warmGray-500 hover:text-warmGray-700 transition-all duration-200"
-                          title="Edit name"
+                          title="Modifier le nom"
                         >
                           <PencilIcon className="w-4 h-4" />
                         </button>
@@ -487,15 +487,15 @@ const Profile = () => {
                   <div>
                     <label className="block text-sm font-medium text-warmGray-700 mb-2">
                       <EnvelopeIcon className="w-4 h-4 inline mr-2" />
-                      Email Address
+                      Adresse Email
                     </label>
                     <div className="p-3 bg-warmGray-50 rounded-lg border border-warmGray-200">
                       <div className="flex items-center justify-between">
                         <span className="text-warmGray-800 font-medium">
-                          {user?.email || 'No email set'}
+                          {user?.email || 'Aucun email défini'}
                         </span>
                         <span className="text-xs text-warmGray-500 bg-warmGray-200 px-2 py-1 rounded-full">
-                          Cannot be changed
+                          Ne peut pas être modifié
                         </span>
                       </div>
                     </div>
@@ -505,7 +505,7 @@ const Profile = () => {
                   <div className="group">
                     <label className="block text-sm font-medium text-warmGray-700 mb-2">
                       <BuildingOfficeIcon className="w-4 h-4 inline mr-2" />
-                      Company Name
+                      Nom de l'Entreprise
                     </label>
                     {isEditingCompany ? (
                       <div className="flex items-center space-x-2">
@@ -514,14 +514,14 @@ const Profile = () => {
                           value={editCompany}
                           onChange={(e) => setEditCompany(e.target.value)}
                           className="flex-1 px-3 py-2 border border-warmGray-300 rounded-lg focus:ring-2 focus:ring-peach-500 focus:border-transparent transition-all duration-200"
-                          placeholder="Enter your company name"
+                          placeholder="Entrez le nom de votre entreprise"
                           autoFocus
                           onKeyPress={(e) => e.key === 'Enter' && handleCompanyUpdate()}
                         />
                         <button
                           onClick={handleCompanyUpdate}
                           className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition-colors"
-                          title="Save"
+                          title="Enregistrer"
                         >
                           <CheckIcon className="w-4 h-4" />
                         </button>
@@ -531,7 +531,7 @@ const Profile = () => {
                             setEditCompany(user?.company_name || '');
                           }}
                           className="bg-warmGray-500 hover:bg-warmGray-600 text-white p-2 rounded-lg transition-colors"
-                          title="Cancel"
+                          title="Annuler"
                         >
                           <XMarkIcon className="w-4 h-4" />
                         </button>
@@ -539,12 +539,12 @@ const Profile = () => {
                     ) : (
                       <div className="flex items-center justify-between p-3 bg-warmGray-50 rounded-lg border border-warmGray-200 group-hover:bg-warmGray-100 transition-colors">
                         <span className="text-warmGray-800 font-medium">
-                          {user?.company_name || 'No company set'}
+                          {user?.company_name || 'Aucune entreprise définie'}
                         </span>
                         <button
                           onClick={() => setIsEditingCompany(true)}
                           className="opacity-0 group-hover:opacity-100 text-warmGray-500 hover:text-warmGray-700 transition-all duration-200"
-                          title="Edit company"
+                          title="Modifier l'entreprise"
                         >
                           <PencilIcon className="w-4 h-4" />
                         </button>
@@ -561,7 +561,7 @@ const Profile = () => {
                   <div className="bg-warmGray-50 rounded-lg p-6 border border-warmGray-200">
                     <h3 className="text-lg font-semibold text-warmGray-800 mb-4 flex items-center">
                       <KeyIcon className="w-5 h-5 mr-2" />
-                      Change Password
+                      Changer le Mot de Passe
                     </h3>
 
                     <form onSubmit={handlePasswordUpdate} className="space-y-4">
@@ -573,10 +573,10 @@ const Profile = () => {
                           onChange={handlePasswordChange}
                           required
                           className="w-full pl-10 pr-10 py-3 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-warmGray-600 transition-all duration-200"
-                          placeholder="Enter your current password"
+                          placeholder="Entrez votre mot de passe actuel"
                         />
                         <label className="absolute -top-2 left-4 bg-warmGray-50 px-2 text-xs font-medium text-warmGray-600">
-                          Current Password *
+                          Mot de Passe Actuel *
                         </label>
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <LockClosedIcon className="h-4 w-4 text-warmGray-400" />
@@ -603,10 +603,10 @@ const Profile = () => {
                             onChange={handlePasswordChange}
                             required
                             className="w-full pl-10 pr-10 py-3 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-warmGray-600 transition-all duration-200"
-                            placeholder="Enter new password"
+                            placeholder="Entrez le nouveau mot de passe"
                           />
                           <label className="absolute -top-2 left-4 bg-warmGray-50 px-2 text-xs font-medium text-warmGray-600">
-                            New Password *
+                            Nouveau Mot de Passe *
                           </label>
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <LockClosedIcon className="h-4 w-4 text-warmGray-400" />
@@ -631,10 +631,10 @@ const Profile = () => {
                             onChange={handlePasswordChange}
                             required
                             className="w-full pl-10 pr-10 py-3 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-warmGray-600 transition-all duration-200"
-                            placeholder="Confirm new password"
+                            placeholder="Confirmez le nouveau mot de passe"
                           />
                           <label className="absolute -top-2 left-4 bg-warmGray-50 px-2 text-xs font-medium text-warmGray-600">
-                            Confirm New Password *
+                            Confirmer le Nouveau Mot de Passe *
                           </label>
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <LockClosedIcon className="h-4 w-4 text-warmGray-400" />
@@ -654,11 +654,11 @@ const Profile = () => {
                       </div>
 
                       <div className="text-sm text-warmGray-600">
-                        <p>Password requirements:</p>
+                        <p>Exigences du mot de passe :</p>
                         <ul className="list-disc list-inside mt-1 space-y-1">
-                          <li>At least 8 characters long</li>
-                          <li>Contains at least one uppercase letter</li>
-                          <li>Contains at least one number</li>
+                          <li>Au moins 8 caractères</li>
+                          <li>Contient au moins une lettre majuscule</li>
+                          <li>Contient au moins un chiffre</li>
                         </ul>
                       </div>
 
@@ -671,10 +671,10 @@ const Profile = () => {
                           {isLoading ? (
                             <div className="flex items-center justify-center">
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#8B6F47] mr-2"></div>
-                              Changing Password...
+                              Modification du mot de passe...
                             </div>
                           ) : (
-                            'Change Password'
+                            'Changer le Mot de Passe'
                           )}
                         </button>
 
@@ -687,7 +687,7 @@ const Profile = () => {
                           {isLoading ? (
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                           ) : (
-                            'Send Reset Email'
+                            'Envoyer Email de Réinitialisation'
                           )}
                         </button>
                       </div>
