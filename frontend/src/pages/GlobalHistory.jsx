@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { historyService } from '../services/historyService';
-import { modernPdfService } from '../services/modernPdfService';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,7 +14,7 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
-import { Line, Doughnut } from 'react-chartjs-2';
+import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import {
   ChartBarIcon,
   ArrowTrendingUpIcon,
@@ -78,50 +79,227 @@ const GlobalHistory = () => {
   const handleExportPDF = async () => {
     try {
       setExportLoading(true);
-      // Utiliser notre service PDF moderne avec les données réelles
-      modernPdfService.exportHistoryReport(data, data?.statistics);
-    } catch (error) {
-      console.error('Error exporting PDF:', error);
-      // Fallback vers l'ancien service si nécessaire
-      try {
-        await historyService.exportHistoryPDF();
-      } catch (fallbackError) {
-        console.error('Fallback PDF export also failed:', fallbackError);
+
+      const doc = new jsPDF();
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      // Ligne de séparation en haut (couleur peach professionnelle)
+      doc.setFillColor(233, 109, 42); // Couleur peach-500
+      doc.rect(0, 0, pageWidth, 5, 'F');
+
+      // En-tête du document avec style professionnel
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(26, 32, 44); // Couleur sombre professionnelle
+      doc.text('RAPPORT D\'HISTORIQUE GLOBAL', pageWidth / 2, 22, { align: 'center' });
+
+      // Sous-titre élégant
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(74, 85, 104);
+      doc.text('Analyse Complète des Campagnes Coffee Meetings', pageWidth / 2, 32, { align: 'center' });
+
+      // Date de génération avec style
+      const today = new Date();
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(128, 128, 128);
+      const dateStr = `Rapport généré le ${today.toLocaleDateString('fr-FR')} à ${today.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+      doc.text(dateStr, pageWidth / 2, 42, { align: 'center' });
+
+      // Ligne de séparation élégante
+      doc.setLineWidth(0.5);
+      doc.setDrawColor(226, 232, 240);
+      doc.line(20, 48, pageWidth - 20, 48);
+
+      let yPos = 58;
+
+      // Section statistiques avec encadré professionnel
+      if (data?.statistics) {
+        // Encadré pour les statistiques
+        doc.setFillColor(248, 250, 252); // Couleur de fond gris très clair
+        doc.setDrawColor(226, 232, 240); // Bordure grise
+        doc.setLineWidth(0.5);
+        doc.roundedRect(20, yPos - 5, pageWidth - 40, 35, 3, 3, 'FD');
+
+        // Titre section statistiques
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(45, 55, 72);
+        doc.text('STATISTIQUES GÉNÉRALES', 25, yPos + 5);
+        yPos += 15;
+
+        const stats = data.statistics;
+
+        // Statistiques en colonnes pour un look plus professionnel
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(74, 85, 104);
+
+        // Colonne gauche
+        doc.setFont('helvetica', 'bold');
+        doc.text('Total Paires:', 25, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${stats.total_pairs ?? 0}`, 70, yPos);
+
+        // Colonne centre
+        doc.setFont('helvetica', 'bold');
+        doc.text('Total Évaluations:', 110, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${stats.total_evaluations ?? 0}`, 170, yPos);
+
+        yPos += 8;
+
+        // Note globale avec mise en évidence
+        doc.setFont('helvetica', 'bold');
+        doc.text('Note Globale Moyenne:', 25, yPos);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(233, 109, 42); // Couleur peach pour la note
+        doc.text(`${stats.overall_rating ? Number(stats.overall_rating).toFixed(1) : '0.0'}/5 ⭐`, 85, yPos);
+
+        yPos += 25;
       }
+
+
+      // Vérifier si on a besoin d'une nouvelle page
+      if (yPos > pageHeight - 100) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      // Tableau des campagnes avec titre professionnel
+      if (data?.campaigns && data.campaigns.length > 0) {
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(45, 55, 72);
+        doc.text('DÉTAIL DES CAMPAGNES', 20, yPos);
+        yPos += 5;
+
+        // Ligne de séparation sous le titre
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(233, 109, 42); // Couleur peach
+        doc.line(20, yPos, pageWidth - 20, yPos);
+        yPos += 10;
+
+        // Préparer les données du tableau
+        const tableData = data.campaigns.map(campaign => [
+          campaign.title || '',
+          campaign.status || '',
+          campaign.start_date || '',
+          campaign.end_date || 'En cours',
+          String(campaign.participants ?? 0),
+          String(campaign.pairs ?? 0),
+          String(campaign.evaluations ?? 0),
+          campaign.average_rating ? Number(campaign.average_rating).toFixed(1) : '0.0',
+          campaign.response_rate ? `${Number(campaign.response_rate).toFixed(1)}%` : '0.0%'
+        ]);
+
+        // Générer le tableau
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Titre', 'Statut', 'Début', 'Fin', 'Participants', 'Paires', 'Évaluations', 'Note', 'Taux']],
+          body: tableData,
+          styles: {
+            fontSize: 9,
+            cellPadding: 3,
+          },
+          headStyles: {
+            fillColor: [232, 196, 160], // Couleur peach
+            textColor: [60, 60, 60],
+            fontStyle: 'bold',
+          },
+          alternateRowStyles: {
+            fillColor: [248, 248, 248]
+          },
+          columnStyles: {
+            0: { cellWidth: 'auto' }, // Titre
+            1: { cellWidth: 25 },      // Statut
+            2: { cellWidth: 20 },      // Début
+            3: { cellWidth: 20 },      // Fin
+            4: { cellWidth: 15 },      // Participants
+            5: { cellWidth: 15 },      // Paires
+            6: { cellWidth: 15 },      // Évaluations
+            7: { cellWidth: 15 },      // Note
+            8: { cellWidth: 15 },      // Taux
+          },
+          margin: { left: 20, right: 20 },
+        });
+      }
+
+      // Pied de page professionnel
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+
+        // Ligne de séparation en bas
+        doc.setFillColor(233, 109, 42); // Couleur peach-500
+        doc.rect(0, pageHeight - 15, pageWidth, 2, 'F');
+
+        // Numérotation des pages
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(74, 85, 104);
+        doc.text(`Page ${i} sur ${totalPages}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+
+        // Nom de l'entreprise/plateforme
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(128, 128, 128);
+        doc.text('Coffee Meetings Platform - Rapport Confidentiel', 20, pageHeight - 8);
+      }
+
+      // Télécharger le fichier
+      const fileName = `historique-global-${today.toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Erreur lors de la génération du PDF. Veuillez réessayer.');
     } finally {
       setExportLoading(false);
     }
   };
 
   const statisticsCards = useMemo(() => {
-    if (!data?.statistics) return [];
+    console.log('🔍 DEBUG: Toute la réponse API:', data);
+    console.log('🔍 DEBUG: statistics existe?', !!data?.statistics);
+    console.log('🔍 DEBUG: campaigns existe?', !!data?.campaigns);
+    console.log('🔍 DEBUG: rating_distribution existe?', !!data?.statistics?.rating_distribution);
+
+    if (!data?.statistics) {
+      console.log('❌ statistics pas trouvé, aucune carte ne sera affichée');
+      return [];
+    }
 
     const stats = data.statistics;
+    console.log('📊 DEBUG: statistics:', stats);
 
     return [
       {
-        title: 'Total Campagnes',
-        value: stats.total_campaigns || 0,
+        title: 'Total Paires',
+        value: stats.total_pairs ?? 0,
+        icon: ArrowTrendingUpIcon,
+        description: 'Paires générées au total'
+      },
+      {
+        title: 'Total Évaluations',
+        value: stats.total_evaluations ?? 0,
         icon: ChartBarIcon,
-        description: 'Campagnes terminées'
+        description: 'Évaluations complétées'
+      },
+      {
+        title: 'Note Globale',
+        value: `${stats.overall_rating ? Number(stats.overall_rating).toFixed(1) : '0.0'}/5`,
+        icon: StarIcon,
+        description: 'Note moyenne générale'
       },
       {
         title: 'Taux de Réponse',
-        value: `${stats.response_rate || 0}%`,
-        icon: ArrowTrendingUpIcon,
-        description: 'Moyenne globale des réponses'
-      },
-      {
-        title: 'Participants Actifs',
-        value: stats.total_participants || 0,
+        value: `${stats.response_rate ? Number(stats.response_rate).toFixed(1) : '0.0'}%`,
         icon: UserGroupIcon,
-        description: 'Employés ayant participé'
-      },
-      {
-        title: 'Note Moyenne',
-        value: `${stats.overall_rating ? (stats.overall_rating * 20).toFixed(1) : 0}%`,
-        icon: StarIcon,
-        description: 'Satisfaction globale'
+        description: 'Taux de participation'
       }
     ];
   }, [data]);
@@ -130,9 +308,10 @@ const GlobalHistory = () => {
     if (!data?.statistics) return null;
 
     const stats = data.statistics;
+    // Utiliser le response_rate directement de l'API
     const currentPerformance = {
-      response_rate: stats.response_rate || 0,
-      overall_rating: stats.overall_rating || 0
+      response_rate: stats.response_rate ?? 0,
+      overall_rating: stats.overall_rating ?? 0
     };
 
     const currentTrends = trendsData || [];
@@ -154,7 +333,7 @@ const GlobalHistory = () => {
           backgroundColor: [
             'rgba(255, 107, 107, 0.9)', // Rouge corail moderne
             'rgba(102, 126, 234, 0.9)', // Bleu violet moderne
-            'rgba(226, 232, 240, 0.6)'  // Gris très clair pour l'espace restant
+            'rgba(226, 232, 240, 0.6)'  // Gris tr��s clair pour l'espace restant
           ],
           borderColor: [
             '#ff6b6b',
@@ -177,6 +356,30 @@ const GlobalHistory = () => {
           spacing: 3, // Espace entre les segments
           borderRadius: 8, // Coins arrondis
         }],
+      },
+      ratingDistribution: {
+        labels: stats.rating_distribution?.map(item => `${item.rating ?? 0} étoile${(item.rating ?? 0) > 1 ? 's' : ''}`) || [],
+        datasets: [{
+          label: 'Nombre d\'évaluations',
+          data: stats.rating_distribution?.map(item => item.count ?? 0) || [],
+          backgroundColor: [
+            'rgba(248, 113, 113, 0.8)', // Rouge pour 1 étoile
+            'rgba(251, 146, 60, 0.8)',  // Orange pour 2 étoiles
+            'rgba(250, 204, 21, 0.8)',  // Jaune pour 3 étoiles
+            'rgba(34, 197, 94, 0.8)',   // Vert clair pour 4 étoiles
+            'rgba(16, 185, 129, 0.8)'   // Vert foncé pour 5 étoiles
+          ],
+          borderColor: [
+            '#ef4444',
+            '#fb7c00',
+            '#eab308',
+            '#22c55e',
+            '#10b981'
+          ],
+          borderWidth: 2,
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
       },
       trends: {
         labels: currentTrends.map(item => {
@@ -430,7 +633,7 @@ const GlobalHistory = () => {
         {/* Graphiques et analyses */}
         {chartData && (
           <AnimatedSection animation="fadeInUp" delay={200}>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
               {/* Graphique de performance en cercle */}
               <Card className="border-0 shadow-2xl bg-gradient-to-br from-indigo-50 via-white to-purple-50 hover:shadow-3xl transition-all duration-500 relative overflow-hidden">
                 {/* Décoration de fond */}
@@ -680,6 +883,97 @@ const GlobalHistory = () => {
                   </div>
                 </div>
               </Card>
+
+              {/* Graphique de distribution des notes */}
+              <Card className="border-0 shadow-2xl bg-gradient-to-br from-emerald-50 via-white to-green-50 hover:shadow-3xl transition-all duration-500">
+                <div className="p-8">
+                  <div className="flex items-center mb-6">
+                    <div className="p-3 bg-gradient-to-r from-emerald-100 to-green-100 rounded-xl mr-4 shadow-lg">
+                      <StarIcon className="h-7 w-7 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-gray-800">Distribution des Notes</h3>
+                      <p className="text-sm text-gray-500">Répartition des évaluations</p>
+                    </div>
+                  </div>
+                  <div className="h-80 relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-transparent to-emerald-50 rounded-lg opacity-20"></div>
+                    {chartData.ratingDistribution && (
+                      <Bar
+                        data={chartData.ratingDistribution}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          animation: {
+                            duration: 2000,
+                            easing: 'easeInOutQuart',
+                            delay: (context) => context.dataIndex * 200
+                          },
+                          plugins: {
+                            legend: {
+                              display: false
+                            },
+                            tooltip: {
+                              backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                              titleColor: '#f1f5f9',
+                              bodyColor: '#e2e8f0',
+                              borderColor: '#10b981',
+                              borderWidth: 2,
+                              cornerRadius: 12,
+                              padding: 12,
+                              titleFont: { size: 14, weight: 'bold' },
+                              bodyFont: { size: 13 },
+                              callbacks: {
+                                label: (context) => {
+                                  const value = context.parsed.y;
+                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                  const percentage = ((value / total) * 100).toFixed(1);
+                                  return `${value} évaluations (${percentage}%)`;
+                                }
+                              }
+                            }
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              title: {
+                                display: true,
+                                text: 'Nombre d\'évaluations',
+                                color: '#6b7280',
+                                font: { size: 13, weight: '600' }
+                              },
+                              ticks: {
+                                color: '#6b7280',
+                                font: { size: 11 }
+                              },
+                              grid: {
+                                color: 'rgba(148, 163, 184, 0.1)',
+                                drawBorder: false
+                              }
+                            },
+                            x: {
+                              title: {
+                                display: true,
+                                text: 'Note attribuée',
+                                color: '#6b7280',
+                                font: { size: 13, weight: '600' }
+                              },
+                              grid: {
+                                color: 'rgba(148, 163, 184, 0.05)',
+                                drawBorder: false
+                              },
+                              ticks: {
+                                color: '#6b7280',
+                                font: { size: 11 }
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+              </Card>
             </div>
           </AnimatedSection>
         )}
@@ -745,36 +1039,36 @@ const GlobalHistory = () => {
                         {campaign.start_date}
                       </td>
                       <td className="px-6 py-5 text-sm text-warmGray-600 font-medium">
-                        {campaign.end_date}
+                        {campaign.end_date || 'En cours'}
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center text-sm text-warmGray-900 font-medium">
                           <UserGroupIcon className="h-4 w-4 mr-1 text-warmGray-500" />
-                          {campaign.participants}
+                          {campaign.participants ?? 0}
                         </div>
                       </td>
                       <td className="px-6 py-5 text-sm text-warmGray-900 font-medium">
-                        {campaign.pairs}
+                        {campaign.pairs ?? 0}
                       </td>
                       <td className="px-6 py-5 text-sm text-warmGray-900 font-medium">
-                        {campaign.evaluations}
+                        {campaign.evaluations ?? 0}
                       </td>
                       <td className="px-6 py-5">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getRatingColor(campaign.average_rating)}`}>
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getRatingColor(campaign.average_rating ?? 0)}`}>
                           <StarIcon className="h-3 w-3 mr-1" />
-                          {campaign.average_rating}/5
+                          {campaign.average_rating ? Number(campaign.average_rating).toFixed(1) : '0.0'}/5
                         </span>
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center">
                           <div className="w-16 bg-warmGray-200 rounded-full h-2 mr-3">
-                            <div 
+                            <div
                               className="bg-gradient-to-r from-peach-400 to-peach-500 h-2 rounded-full transition-all duration-500"
-                              style={{ width: `${campaign.response_rate}%` }}
+                              style={{ width: `${campaign.response_rate ?? 0}%` }}
                             ></div>
                           </div>
                           <span className="text-sm font-medium text-warmGray-700">
-                            {campaign.response_rate}%
+                            {campaign.response_rate ?? 0}%
                           </span>
                         </div>
                       </td>
@@ -791,19 +1085,19 @@ const GlobalHistory = () => {
           <AnimatedSection animation="fadeInUp" delay={400}>
             <div className="mt-8 flex items-center justify-between">
               <div className="text-sm text-warmGray-600 bg-white px-4 py-2 rounded-lg shadow-sm border border-warmGray-200">
-                Affichage de <span className="font-medium text-warmGray-800">{((currentPage - 1) * pageSize) + 1}</span> à{' '}
+                Affichage de <span className="font-medium text-warmGray-800">{((data.pagination.current_page ?? 1) - 1) * (data.pagination.page_size ?? 10) + 1}</span> à{' '}
                 <span className="font-medium text-warmGray-800">
-                  {Math.min(currentPage * pageSize, data.pagination.total_items)}
+                  {Math.min((data.pagination.current_page ?? 1) * (data.pagination.page_size ?? 10), data.pagination.total_items ?? 0)}
                 </span> sur{' '}
-                <span className="font-medium text-warmGray-800">{data.pagination.total_items}</span> résultats
+                <span className="font-medium text-warmGray-800">{data.pagination.total_items ?? 0}</span> résultats
               </div>
               
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
+                  disabled={(data.pagination.current_page ?? 1) === 1}
                   className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all duration-200 ${
-                    currentPage === 1 
+                    (data.pagination.current_page ?? 1) === 1 
                       ? 'bg-warmGray-100 text-warmGray-400 border-warmGray-200 cursor-not-allowed' 
                       : 'bg-white text-warmGray-700 border-warmGray-300 hover:bg-peach-50 hover:border-peach-300 hover:text-peach-700'
                   }`}
@@ -812,14 +1106,14 @@ const GlobalHistory = () => {
                 </button>
                 
                 <div className="flex items-center space-x-1">
-                  {[...Array(Math.min(5, data.pagination.total_pages))].map((_, i) => {
+                  {[...Array(Math.min(5, data.pagination.total_pages ?? 1))].map((_, i) => {
                     const pageNum = i + 1;
                     return (
                       <button
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
                         className={`w-10 h-10 text-sm font-medium rounded-lg transition-all duration-200 ${
-                          currentPage === pageNum
+                          (data.pagination.current_page ?? 1) === pageNum
                             ? 'bg-peach-500 text-white shadow-lg'
                             : 'bg-white text-warmGray-700 border border-warmGray-300 hover:bg-peach-50 hover:border-peach-300'
                         }`}
@@ -829,12 +1123,12 @@ const GlobalHistory = () => {
                     );
                   })}
                 </div>
-                
+
                 <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, data.pagination.total_pages))}
-                  disabled={currentPage === data.pagination.total_pages}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, data.pagination.total_pages ?? 1))}
+                  disabled={(data.pagination.current_page ?? 1) === (data.pagination.total_pages ?? 1)}
                   className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all duration-200 ${
-                    currentPage === data.pagination.total_pages
+                    (data.pagination.current_page ?? 1) === (data.pagination.total_pages ?? 1)
                       ? 'bg-warmGray-100 text-warmGray-400 border-warmGray-200 cursor-not-allowed'
                       : 'bg-white text-warmGray-700 border-warmGray-300 hover:bg-peach-50 hover:border-peach-300 hover:text-peach-700'
                   }`}

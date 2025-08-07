@@ -118,7 +118,7 @@ const CampaignWorkflow = () => {
 
   // Handle going back to campaigns list
   const handleBackToCampaigns = () => {
-    navigate('/campaigns');
+    navigate('/app/campaigns');
   };
 
   // Step loading component

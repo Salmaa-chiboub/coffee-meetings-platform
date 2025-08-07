@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarDaysIcon, UserGroupIcon, CheckCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { CalendarDaysIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import CampaignCardMenu from './CampaignCardMenu';
 
 const CampaignCard = React.memo(({ campaign, onClick, onDelete }) => {
@@ -55,7 +55,7 @@ const CampaignCard = React.memo(({ campaign, onClick, onDelete }) => {
       onClick(campaign);
     } else {
       // Fallback to workflow page if no onClick handler provided
-      navigate(`/campaigns/${campaign.id}/workflow`);
+      navigate(`/app/campaigns/${campaign.id}/workflow`);
     }
   }, [onClick, campaign, navigate]);
 

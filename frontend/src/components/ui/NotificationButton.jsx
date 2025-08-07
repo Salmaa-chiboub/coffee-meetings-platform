@@ -28,23 +28,16 @@ const NotificationButton = () => {
     isFirstLoad = true
   } = notificationContext || {};
 
-  // Fetch notifications on component mount and set up polling
+  // Fetch notifications on component mount only (no polling)
   useEffect(() => {
     // Only try to fetch if we have the context functions
     if (fetchNotifications && fetchUnreadCount) {
-      // Initial fetch
+      // Initial fetch only - no aggressive polling
       fetchNotifications({ limit: 5 }); // Only fetch first 5 for dropdown
       fetchUnreadCount();
-
-      // Set up polling for unread count every 5 seconds for testing
-      const pollInterval = setInterval(() => {
-        fetchUnreadCount();
-        fetchNotifications({ limit: 5 }); // Also refresh notifications
-      }, 5000);
-
-      return () => clearInterval(pollInterval);
     }
-  }, [fetchNotifications, fetchUnreadCount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount, no polling to reduce server load
 
   // Use only real notifications from the API
   const displayNotifications = notifications || [];
@@ -94,20 +87,20 @@ const NotificationButton = () => {
     // Navigate based on notification type
     switch (notification.type) {
       case 'campaign':
-        navigate('/campaigns');
+        navigate('/app/campaigns');
         break;
       case 'evaluation':
-        navigate('/campaigns/history');
+        navigate('/app/history/campaigns');
         break;
       default:
-        navigate('/notifications');
+        navigate('/app/notifications');
     }
   };
 
   // Handle view all notifications
   const handleViewAll = () => {
     setIsOpen(false);
-    navigate('/notifications');
+    navigate('/app/notifications');
   };
 
   // Handle mark all as read

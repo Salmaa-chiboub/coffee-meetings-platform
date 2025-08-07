@@ -20,11 +20,25 @@ export const AuthProvider = ({ children }) => {
     const initializeAuth = async () => {
       try {
         const currentUser = authService.getCurrentUser();
-        if (currentUser && authService.isAuthenticated()) {
-          setUser(currentUser);
+        const refreshToken = localStorage.getItem('refresh_token');
+
+        // Only validate if we have both user data and refresh token
+        if (currentUser && refreshToken) {
+          // Check if refresh token is still valid
+          const { tokenUtils } = await import('../services/api');
+          if (!tokenUtils.isTokenExpired(refreshToken)) {
+            setUser(currentUser);
+            console.log('✅ User session restored from localStorage');
+          } else {
+            console.log('🔄 Refresh token expired, clearing auth data');
+            authService.logout();
+          }
         } else {
-          // Clear any invalid tokens
-          authService.logout();
+          // Clear any incomplete auth data
+          if (currentUser || refreshToken) {
+            console.log('🔄 Incomplete auth data found, clearing');
+            authService.logout();
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);

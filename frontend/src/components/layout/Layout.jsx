@@ -26,7 +26,7 @@ const Layout = ({ children }) => {
           isHovered ? 'lg:ml-96' : 'lg:ml-24'
         }`}
       >
-        <main className="p-4 lg:p-6 w-full">
+        <main className="p-2 lg:p-3 w-full">
           <div className="min-w-0 max-w-full" data-sidebar-hovered={isHovered}>
             <Outlet />
           </div>

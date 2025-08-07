@@ -1,36 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useLazyLoadingConfig, usePerformanceMonitoring, useMemoryManagement } from './useLazyLoadingConfig';
 
 /**
- * Unified lazy loading hook for consistent implementation across the app
- * Combines viewport detection, infinite scroll, and batch loading with performance optimization
+ * Simplified lazy loading hook
  */
 const useLazyLoading = ({
   fetchData,
   initialData = [],
-  contentType = 'campaigns', // Type of content for optimized config
-  pageSize: customPageSize,
-  threshold: customThreshold,
-  rootMargin: customRootMargin,
+  contentType = 'campaigns',
+  pageSize = 10,
+  threshold = 200,
+  rootMargin = '100px',
   enabled = true,
-  resetTrigger = null, // Dependency to reset the data
-  customConfig = {}
+  resetTrigger = null,
 }) => {
-  // Get optimized configuration
-  const { config } = useLazyLoadingConfig(contentType, {
-    pageSize: customPageSize,
-    threshold: customThreshold,
-    rootMargin: customRootMargin,
-    ...customConfig
-  });
-
-  const { pageSize, threshold, rootMargin } = config;
-
-  // Performance monitoring
-  const { measureLoadTime, logPerformanceMetrics } = usePerformanceMonitoring();
-
-  // Memory management
-  const { shouldCleanup, cleanupOldItems } = useMemoryManagement();
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -55,11 +37,9 @@ const useLazyLoading = ({
     }
   }, [resetTrigger]);
 
-  // Load data function with performance monitoring
+  // Load data function
   const loadData = useCallback(async (pageNum, isLoadMore = false) => {
     if (!enabled || loading || (isLoadMore && !hasMore)) return;
-
-    const startTime = performance.now();
 
     try {
       if (isLoadMore) {
@@ -77,26 +57,12 @@ const useLazyLoading = ({
         setCacheHits(prev => prev + 1);
       }
 
-      // Debug logging in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Lazy loading result:', result);
-      }
-
       if (result && result.success) {
         const newData = result.data || [];
         const pagination = result.pagination;
 
         if (isLoadMore) {
-          setData(prevData => {
-            const newCombinedData = [...prevData, ...newData];
-
-            // Apply memory management
-            if (shouldCleanup(newCombinedData)) {
-              return cleanupOldItems(newCombinedData, pageSize * 5);
-            }
-
-            return newCombinedData;
-          });
+          setData(prevData => [...prevData, ...newData]);
         } else {
           setData(newData);
         }
@@ -110,34 +76,13 @@ const useLazyLoading = ({
         }
 
         setPage(pageNum);
-
-        // Log performance metrics in development
-        if (process.env.NODE_ENV === 'development') {
-          const loadTime = performance.now() - startTime;
-          logPerformanceMetrics({
-            loadTime,
-            itemsLoaded: newData.length,
-            itemsInMemory: data.length + newData.length,
-            totalRequests,
-            cacheHits,
-            pageNumber: pageNum,
-            contentType
-          });
-        }
       } else {
-        const errorMessage = result?.error || 'Failed to load data - invalid response format';
-        console.error('Lazy loading failed:', { result, errorMessage });
+        const errorMessage = result?.error || 'Failed to load data';
+        console.error('Lazy loading failed:', errorMessage);
         throw new Error(errorMessage);
       }
     } catch (err) {
       console.error('Lazy loading error:', err);
-      console.error('Error details:', {
-        message: err.message,
-        stack: err.stack,
-        pageNum,
-        pageSize,
-        contentType
-      });
       setError(err.message || 'Failed to load data');
       setHasMore(false);
     } finally {
@@ -145,7 +90,7 @@ const useLazyLoading = ({
       setLoadingMore(false);
       isInitialLoad.current = false;
     }
-  }, [fetchData, pageSize, enabled, loading, hasMore, shouldCleanup, cleanupOldItems, logPerformanceMetrics, data.length, contentType]);
+  }, [fetchData, pageSize, enabled, loading, hasMore]);
 
   // Load more data
   const loadMore = useCallback(() => {
@@ -180,31 +125,12 @@ const useLazyLoading = ({
     };
   }, [loadMore, hasMore, loading, loadingMore, enabled, rootMargin]);
 
-  // Scroll-based fallback for infinite scroll
-  useEffect(() => {
-    if (!enabled) return;
-
-    const handleScroll = () => {
-      if (loading || loadingMore || !hasMore) return;
-
-      const scrollTop = document.documentElement.scrollTop;
-      const scrollHeight = document.documentElement.scrollHeight;
-      const clientHeight = document.documentElement.clientHeight;
-
-      if (scrollTop + clientHeight >= scrollHeight - threshold) {
-        loadMore();
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [loadMore, loading, loadingMore, hasMore, threshold, enabled]);
-
   // Initial load
   useEffect(() => {
     if (enabled && isInitialLoad.current) {
       loadData(1, false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled]); // Only depend on enabled to avoid infinite loops
 
   // Refresh function
@@ -228,7 +154,7 @@ const useLazyLoading = ({
     page,
     loadMore,
     refresh,
-    sentinelRef, // Ref for the sentinel element
+    sentinelRef,
     // Utility functions
     isEmpty: data.length === 0 && !loading,
     isFirstLoad: loading && data.length === 0,

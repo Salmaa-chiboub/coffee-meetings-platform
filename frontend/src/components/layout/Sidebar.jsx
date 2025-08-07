@@ -6,11 +6,12 @@ import {
   CalendarDaysIcon,
   UserGroupIcon,
   ChartPieIcon,
-  CogIcon,
+  UserIcon,
   ArrowRightOnRectangleIcon,
   PlusIcon,
   ViewColumnsIcon,
-  ClockIcon
+  ClockIcon,
+  BellIcon
 } from '@heroicons/react/24/outline';
 
 const Sidebar = ({ onHoverChange }) => {
@@ -85,11 +86,18 @@ const Sidebar = ({ onHoverChange }) => {
       active: location.pathname.startsWith('/app/history')
     },
     {
-      id: 'settings',
-      label: 'Settings',
-      icon: CogIcon,
-      path: '/app/settings',
-      active: location.pathname.startsWith('/app/settings')
+      id: 'notifications',
+      label: 'Notifications',
+      icon: BellIcon,
+      path: '/app/notifications',
+      active: location.pathname.startsWith('/app/notifications')
+    },
+    {
+      id: 'profile',
+      label: 'Profile',
+      icon: UserIcon,
+      path: '/app/profile',
+      active: location.pathname.startsWith('/app/profile')
     }
   ];
 

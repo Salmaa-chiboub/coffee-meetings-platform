@@ -100,7 +100,7 @@ const GlobalCampaignHistory = () => {
 
   // Handle campaign view
   const handleViewCampaign = (campaignId) => {
-    navigate(`/campaigns/${campaignId}/history`);
+    navigate(`/app/campaigns/${campaignId}/history`);
   };
 
   // Calculate duration in days

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useCampaigns } from '../hooks/useCampaigns';
 import { useDebouncedSearch } from '../hooks/useDebounce';
@@ -11,7 +11,6 @@ import { SkeletonCard, SkeletonTitle, SkeletonButton } from '../components/ui/Sk
 import Skeleton from '../components/ui/Skeleton';
 import Pagination from '../components/ui/Pagination';
 import VirtualScrollList from '../components/ui/VirtualScrollList';
-import CampaignCreate from './CampaignCreate';
 
 const CampaignsList = React.memo(() => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -39,7 +38,7 @@ const CampaignsList = React.memo(() => {
 
   // Prepare query parameters for campaigns - charger toutes les campagnes pour pagination côté client
   const queryParams = useMemo(() => ({
-    page: 1, // Toujours page 1 pour récupérer toutes les données
+    page: 1, // Toujours page 1 pour récup��rer toutes les données
     page_size: 1000, // Grande taille pour récupérer toutes les campagnes
     // Pas de paramètre search - on utilise JavaScript côté client pour filtrer
   }), []);
@@ -167,7 +166,7 @@ const CampaignsList = React.memo(() => {
   }, [debouncedSearchTerm, searchTerm]);
 
   const handleCreateCampaign = useCallback(() => {
-    navigate('/campaigns/create');
+    navigate('/app/campaigns/create');
   }, [navigate]);
 
   // Handle page change
@@ -202,15 +201,15 @@ const CampaignsList = React.memo(() => {
 
       if (isCompleted) {
         // All workflow steps completed - go to history page
-        navigate(`/campaigns/${campaign.id}/history`);
+        navigate(`/app/campaigns/${campaign.id}/history`);
       } else {
         // Workflow incomplete - go to workflow page to continue
-        navigate(`/campaigns/${campaign.id}/workflow`);
+        navigate(`/app/campaigns/${campaign.id}/workflow`);
       }
     } catch (error) {
       console.error('Error checking workflow status:', error);
       // Fallback to workflow if there's an error
-      navigate(`/campaigns/${campaign.id}/workflow`);
+      navigate(`/app/campaigns/${campaign.id}/workflow`);
     }
   };
 
@@ -398,12 +397,7 @@ const CampaignsList = React.memo(() => {
 });
 
 const Campaigns = () => {
-  return (
-    <Routes>
-      <Route path="/" element={<CampaignsList />} />
-      <Route path="/create" element={<CampaignCreate />} />
-    </Routes>
-  );
+  return <CampaignsList />;
 };
 
 export default Campaigns;

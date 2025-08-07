@@ -30,7 +30,7 @@ const SearchResults = ({
 
     // Navigate based on result type
     if (result.type === 'campaign') {
-      navigate(`/campaigns/${result.id}/workflow`);
+      navigate(`/app/campaigns/${result.id}/workflow`);
     } else if (result.type === 'employee') {
       // For now, just close the search - could navigate to employee detail page
       console.log('Employee selected:', result);
