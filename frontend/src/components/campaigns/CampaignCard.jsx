@@ -1,8 +1,9 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarDaysIcon, UserGroupIcon, CheckCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { CalendarDaysIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import CampaignCardMenu from './CampaignCardMenu';
 
-const CampaignCard = React.memo(({ campaign, onClick }) => {
+const CampaignCard = React.memo(({ campaign, onClick, onDelete }) => {
   const navigate = useNavigate();
   const [campaignStatus, setCampaignStatus] = useState({ isCompleted: false, isLoading: true });
 
@@ -54,7 +55,7 @@ const CampaignCard = React.memo(({ campaign, onClick }) => {
       onClick(campaign);
     } else {
       // Fallback to workflow page if no onClick handler provided
-      navigate(`/campaigns/${campaign.id}/workflow`);
+      navigate(`/app/campaigns/${campaign.id}/workflow`);
     }
   }, [onClick, campaign, navigate]);
 
@@ -63,22 +64,29 @@ const CampaignCard = React.memo(({ campaign, onClick }) => {
       onClick={handleCardClick}
       className="bg-white border border-warmGray-200 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow duration-200"
     >
-      {/* Simple Status Badge */}
+      {/* Header with Title, Status and Menu */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-warmGray-800">
           {campaign.title}
         </h3>
-        {campaignStatus.isLoading ? (
-          <div className="w-2 h-2 bg-warmGray-300 rounded-full"></div>
-        ) : (
-          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-            campaignStatus.isCompleted
-              ? 'bg-green-100 text-green-700'
-              : 'bg-orange-100 text-orange-700'
-          }`}>
-            {campaignStatus.isCompleted ? 'Terminée' : 'Active'}
-          </span>
-        )}
+        <div className="flex items-center space-x-2">
+          {campaignStatus.isLoading ? (
+            <div className="w-2 h-2 bg-warmGray-300 rounded-full"></div>
+          ) : (
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+              campaignStatus.isCompleted
+                ? 'bg-green-100 text-green-700'
+                : 'bg-orange-100 text-orange-700'
+            }`}>
+              {campaignStatus.isCompleted ? 'Completed' : 'Active'}
+            </span>
+          )}
+          <CampaignCardMenu
+            campaign={campaign}
+            isCompleted={campaignStatus.isCompleted}
+            onDelete={onDelete}
+          />
+        </div>
       </div>
 
       {/* Description */}

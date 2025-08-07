@@ -7,14 +7,27 @@ const ProtectedRoute = ({ children }) => {
   const { user, loading, logout } = useAuth();
   const location = useLocation();
 
+  // Debug logging
+  console.log('🔍 ProtectedRoute Debug:', {
+    user: user ? { id: user.id, email: user.email } : null,
+    loading,
+    pathname: location.pathname,
+    hasAccessToken: !!localStorage.getItem('access_token'),
+    hasRefreshToken: !!localStorage.getItem('refresh_token')
+  });
+
   useEffect(() => {
-    // Validate session when component mounts
+    // Validate session when component mounts - but only check basic requirements
     if (user && !loading) {
-      const isValidSession = authService.validateSession();
-      if (!isValidSession) {
-        console.log('🔄 Invalid session detected, logging out');
+      const accessToken = localStorage.getItem('access_token');
+      const refreshToken = localStorage.getItem('refresh_token');
+
+      // Only logout if we have no tokens at all
+      if (!accessToken && !refreshToken) {
+        console.log('🔄 No authentication tokens found, logging out');
         logout();
       }
+      // If we have at least one token, let the API interceptor handle token refresh
     }
   }, [user, loading, logout]);
 

@@ -1,19 +1,125 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeftIcon,
-  CalendarDaysIcon,
+  CalendarIcon,
   UserGroupIcon,
-  CheckCircleIcon,
-  EnvelopeIcon,
-  Cog6ToothIcon,
+  CheckIcon,
   DocumentTextIcon,
-  ChatBubbleLeftRightIcon
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { campaignService } from '../services/campaignService';
 import { workflowService } from '../services/workflowService';
-import { SkeletonCampaignHistory } from '../components/ui/Skeleton';
 import { matchingService } from '../services/matchingService';
+import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
+
+// Lazy load heavy components
+const LazyWorkflowProgress = lazy(() => import('../components/ui/LazyWorkflowProgress'));
+const LazyMatchingCriteria = lazy(() => import('../components/ui/LazyMatchingCriteria'));
+
+// Loading component for lazy sections
+const SectionSkeleton = ({ height = "h-32" }) => (
+  <div className={`bg-white rounded-xl border border-warmGray-200 p-4 sm:p-6 shadow-md ${height}`}>
+    <div className="animate-pulse space-y-4">
+      <div className="h-6 bg-warmGray-200 rounded w-1/3"></div>
+      <div className="h-4 bg-warmGray-200 rounded w-2/3"></div>
+      <div className="h-4 bg-warmGray-200 rounded w-1/2"></div>
+    </div>
+  </div>
+);
+
+// Compact table row component with lazy loading
+const PairTableRow = React.memo(({ pair, index, onVisible }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [ref, inView] = useIntersectionObserver({
+    threshold: 0.1,
+    triggerOnce: true
+  });
+
+  useEffect(() => {
+    if (inView && !isVisible) {
+      setIsVisible(true);
+      onVisible && onVisible(index);
+    }
+  }, [inView, isVisible, index, onVisible]);
+
+  if (!isVisible) {
+    return (
+      <tr ref={ref} className="animate-pulse">
+        <td className="px-2 sm:px-4 py-2 sm:py-3 text-sm border-b border-warmGray-200">
+          <div className="h-4 bg-warmGray-200 rounded w-6"></div>
+        </td>
+        <td className="px-2 sm:px-4 py-2 sm:py-3 text-sm border-b border-warmGray-200">
+          <div className="h-4 bg-warmGray-200 rounded w-20"></div>
+        </td>
+        <td className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3 text-sm border-b border-warmGray-200">
+          <div className="h-4 bg-warmGray-200 rounded w-32"></div>
+        </td>
+        <td className="px-2 sm:px-4 py-2 sm:py-3 text-sm border-b border-warmGray-200">
+          <div className="h-4 bg-warmGray-200 rounded w-20"></div>
+        </td>
+        <td className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3 text-sm border-b border-warmGray-200">
+          <div className="h-4 bg-warmGray-200 rounded w-32"></div>
+        </td>
+      </tr>
+    );
+  }
+
+  const getEmployeeName = (employee, fallbackId) => {
+    return employee?.name || employee?.full_name || `Employee ${fallbackId || 'N/A'}`;
+  };
+
+  const getEmployeeEmail = (employee) => {
+    return employee?.email || 'N/A';
+  };
+
+  const employee1 = pair.employee_1 || pair.employee1;
+  const employee2 = pair.employee_2 || pair.employee2;
+  const employee1Name = getEmployeeName(employee1, pair.employee1_id || pair.employee_1_id);
+  const employee2Name = getEmployeeName(employee2, pair.employee2_id || pair.employee_2_id);
+  const employee1Email = getEmployeeEmail(employee1);
+  const employee2Email = getEmployeeEmail(employee2);
+
+  return (
+    <tr ref={ref} className="hover:bg-warmGray-50 transition-colors">
+      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-warmGray-500 border-b border-warmGray-200">
+        {index + 1}
+      </td>
+      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm border-b border-warmGray-200">
+        <div className="font-medium text-warmGray-900 truncate max-w-[120px] sm:max-w-none">
+          {employee1Name}
+        </div>
+        {employee1?.department && (
+          <div className="text-xs text-warmGray-500 truncate hidden sm:block">
+            {employee1.department}
+          </div>
+        )}
+        <div className="text-xs text-warmGray-600 sm:hidden truncate">
+          {employee1Email}
+        </div>
+      </td>
+      <td className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-warmGray-600 border-b border-warmGray-200 max-w-[200px] truncate">
+        {employee1Email}
+      </td>
+      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm border-b border-warmGray-200">
+        <div className="font-medium text-warmGray-900 truncate max-w-[120px] sm:max-w-none">
+          {employee2Name}
+        </div>
+        {employee2?.department && (
+          <div className="text-xs text-warmGray-500 truncate hidden sm:block">
+            {employee2.department}
+          </div>
+        )}
+        <div className="text-xs text-warmGray-600 sm:hidden truncate">
+          {employee2Email}
+        </div>
+      </td>
+      <td className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-warmGray-600 border-b border-warmGray-200 max-w-[200px] truncate">
+        {employee2Email}
+      </td>
+    </tr>
+  );
+});
 
 const CampaignHistory = () => {
   const { id: campaignId } = useParams();
@@ -24,54 +130,49 @@ const CampaignHistory = () => {
   const [pairsData, setPairsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [visiblePairs, setVisiblePairs] = useState(8); // Reduced for mobile
 
   useEffect(() => {
     const loadCampaignHistory = async () => {
       try {
         setLoading(true);
         
-        // Load campaign details
-        const campaignData = await campaignService.getCampaign(campaignId);
-        setCampaign(campaignData);
+        const campaignResponse = await campaignService.getCampaign(campaignId);
+        console.log('🔍 Campaign Response Debug:', campaignResponse);
         
-        // Load workflow state
+        if (campaignResponse.success) {
+          const campaignData = campaignResponse.data;
+          console.log('🔍 Campaign Data Debug:', campaignData);
+          console.log('🔍 Start Date:', campaignData?.start_date);
+          console.log('🔍 End Date:', campaignData?.end_date);
+          setCampaign(campaignData);
+        } else {
+          console.error('❌ Failed to fetch campaign:', campaignResponse.error);
+          setError('Failed to load campaign details');
+        }
+        
         const workflowData = await workflowService.getCampaignWorkflowStatus(campaignId);
-        console.log('🔍 DEBUG: Workflow data:', workflowData);
         setWorkflowState(workflowData);
         
-        // Load pairs data from multiple sources
         try {
-          // Try to get confirmed pairs from history first
           const pairsHistory = await matchingService.getMatchingHistory(campaignId);
-          console.log('🔍 DEBUG: Pairs history:', pairsHistory);
-
           if (pairsHistory.pairs && pairsHistory.pairs.length > 0) {
-            console.log('✅ DEBUG: Using pairs from history');
             setPairsData(pairsHistory);
           } else {
-            // Fallback to workflow state data (step 4)
             const step4Data = workflowData.step_data['4'];
-            console.log('🔍 DEBUG: Step 4 data:', step4Data);
-
             if (step4Data && step4Data.pairs) {
-              console.log('✅ DEBUG: Using pairs from workflow step 4');
-              console.log('🔍 DEBUG: Step 4 pairs structure:', step4Data.pairs);
               setPairsData({
                 pairs: step4Data.pairs,
                 pairs_count: step4Data.pairs_count || step4Data.pairs.length,
                 total_possible: step4Data.total_possible || 0,
                 criteria_used: step4Data.criteria_used || []
               });
-            } else {
-              console.log('❌ DEBUG: No pairs found in step 4 data');
             }
           }
         } catch (pairsError) {
-          console.warn('❌ DEBUG: Could not load pairs data:', pairsError);
-          // Try to get from workflow state as fallback
+          console.warn('Could not load pairs data:', pairsError);
           const step4Data = workflowData.step_data['4'];
           if (step4Data && step4Data.pairs) {
-            console.log('✅ DEBUG: Using pairs from workflow step 4 (fallback)');
             setPairsData({
               pairs: step4Data.pairs,
               pairs_count: step4Data.pairs_count || step4Data.pairs.length,
@@ -84,10 +185,7 @@ const CampaignHistory = () => {
       } catch (err) {
         setError(err.message || 'Failed to load campaign history');
       } finally {
-        // Add a small delay to see the skeleton (remove in production)
-        setTimeout(() => {
-          setLoading(false);
-        }, 1000);
+        setLoading(false);
       }
     };
 
@@ -96,34 +194,76 @@ const CampaignHistory = () => {
     }
   }, [campaignId]);
 
-  const handleBackToCampaigns = () => {
-    navigate('/campaigns');
-  };
+  const handleBackToCampaigns = useCallback(() => {
+    navigate('/app/campaigns');
+  }, [navigate]);
 
-  const formatDate = (dateString) => {
+  const handlePairVisible = useCallback((index) => {
+    if (index >= visiblePairs - 3) {
+      setVisiblePairs(prev => Math.min(prev + 8, pairsData?.pairs?.length || 0));
+    }
+  }, [visiblePairs, pairsData?.pairs?.length]);
+
+  const formatDate = useCallback((dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
     });
-  };
+  }, []);
 
+  const campaignDates = useMemo(() => {
+    console.log('🔍 Campaign Dates Debug:', {
+      campaign: campaign,
+      start_date: campaign?.start_date,
+      end_date: campaign?.end_date,
+      typeof_start: typeof campaign?.start_date,
+      typeof_end: typeof campaign?.end_date
+    });
+    
+    if (!campaign?.start_date || !campaign?.end_date) {
+      console.log('❌ Missing campaign dates');
+      return { start: 'N/A', end: 'N/A' };
+    }
+    
+    try {
+      const formattedStart = formatDate(campaign.start_date);
+      const formattedEnd = formatDate(campaign.end_date);
+      console.log('✅ Formatted dates:', { start: formattedStart, end: formattedEnd });
+      return {
+        start: formattedStart,
+        end: formattedEnd
+      };
+    } catch (error) {
+      console.error('❌ Error formatting dates:', error);
+      return { start: 'Invalid Date', end: 'Invalid Date' };
+    }
+  }, [campaign?.start_date, campaign?.end_date, formatDate]);
 
+  const completedSteps = workflowState?.completed_steps?.length || 0;
 
   if (loading) {
-    return <SkeletonCampaignHistory />;
+    return (
+      <div className="p-3 sm:p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center py-8 sm:py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B6F47]"></div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-            <p className="text-red-600">{error}</p>
+      <div className="p-3 sm:p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 sm:p-6 text-center">
+            <p className="text-red-600 text-sm sm:text-base">{error}</p>
             <button
               onClick={handleBackToCampaigns}
-              className="mt-4 bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-2 px-4 rounded-lg transition-all duration-200"
+              className="mt-4 bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-2 px-4 rounded-lg transition-all duration-200 text-sm sm:text-base"
             >
               Back to Campaigns
             </button>
@@ -134,193 +274,149 @@ const CampaignHistory = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        
+        {/* Compact Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <button
             onClick={handleBackToCampaigns}
-            className="flex items-center space-x-2 text-warmGray-600 hover:text-warmGray-800 transition-colors duration-200"
+            className="flex items-center space-x-2 text-warmGray-600 hover:text-warmGray-800 transition-colors duration-200 self-start"
           >
-            <ArrowLeftIcon className="h-5 w-5" />
-            <span>Back to Campaigns</span>
+            <ArrowLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="text-sm sm:text-base">Back to Campaigns</span>
           </button>
-
-          <div className="flex items-center space-x-4">
+          
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <div className="flex items-center space-x-2">
-              <CheckCircleIcon className="h-6 w-6 text-green-600" />
-              <span className="text-green-800 font-medium">Campaign Completed</span>
+              <DocumentTextIcon className="h-5 w-5 sm:h-6 sm:w-6 text-[#E8C4A0]" />
+              <span className="text-warmGray-800 font-medium text-sm sm:text-base">Campaign History</span>
             </div>
-
             <button
-              onClick={() => navigate(`/campaigns/${campaignId}/feedback`)}
-              className="flex items-center space-x-2 bg-gradient-to-r from-[#E8C4A0] to-[#DDB892] hover:from-[#DDB892] hover:to-[#D4A574] text-[#8B6F47] font-medium py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-sm"
+              onClick={() => navigate(`/app/campaigns/${campaignId}/evaluations`)}
+              className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-2 px-3 sm:px-4 rounded-lg transition-all duration-200 flex items-center space-x-2 text-sm sm:text-base"
             >
-              <ChatBubbleLeftRightIcon className="h-5 w-5" />
+              <ChartBarIcon className="h-4 w-4" />
               <span>View Feedback</span>
             </button>
           </div>
         </div>
 
-        {/* Campaign Overview Card */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-warmGray-100/50 p-8 shadow-md hover:shadow-lg transition-all duration-300">
-          <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-warmGray-800 mb-2">
-              {campaign?.title}
-            </h1>
-            {campaign?.description && (
-              <p className="text-warmGray-600 text-lg">
-                {campaign.description}
-              </p>
-            )}
+        {/* Compact Campaign Info Card */}
+        <div className="bg-white rounded-xl border border-warmGray-200 p-4 sm:p-6 shadow-md">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-warmGray-900 truncate">
+              {campaign?.title || 'Campaign Details'}
+            </h2>
+            <span className="inline-flex items-center px-2 sm:px-3 py-1 bg-green-100 text-green-800 text-xs sm:text-sm font-medium rounded-full self-start sm:self-auto">
+              <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              Completed
+            </span>
           </div>
-
-          {/* Campaign Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <CalendarDaysIcon className="h-6 w-6 text-blue-600" />
-              </div>
-              <p className="text-sm text-warmGray-500 mb-1">Duration</p>
-              <p className="font-semibold text-warmGray-800">
-                {campaign && `${formatDate(campaign.start_date)} - ${formatDate(campaign.end_date)}`}
+          
+          {campaign?.description && (
+            <p className="text-warmGray-600 mb-4 text-sm sm:text-base line-clamp-2">{campaign.description}</p>
+          )}
+          
+          {/* Compact Statistics Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="bg-warmGray-50 rounded-lg border border-warmGray-200 p-3 sm:p-4 text-center">
+              <CalendarIcon className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mx-auto mb-2" />
+              <p className="text-sm sm:text-lg font-bold text-warmGray-800 truncate">
+                {campaignDates.start} - {campaignDates.end}
               </p>
+              <p className="text-xs sm:text-sm text-warmGray-600">Campaign Period</p>
             </div>
-
-            <div className="text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <UserGroupIcon className="h-6 w-6 text-green-600" />
-              </div>
-              <p className="text-sm text-warmGray-500 mb-1">Participants</p>
-              <p className="font-semibold text-warmGray-800">
-                {workflowState?.step_data?.['2']?.employees_count || campaign?.employees_count || 0} employees
+            
+            <div className="bg-warmGray-50 rounded-lg border border-warmGray-200 p-3 sm:p-4 text-center">
+              <UserGroupIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 mx-auto mb-2" />
+              <p className="text-xl sm:text-2xl font-bold text-warmGray-800">
+                {workflowState?.step_data?.['2']?.employees_count || campaign?.employees_count || 0}
               </p>
+              <p className="text-xs sm:text-sm text-warmGray-600">Participants</p>
             </div>
-
-            <div className="text-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <EnvelopeIcon className="h-6 w-6 text-purple-600" />
-              </div>
-              <p className="text-sm text-warmGray-500 mb-1">Pairs Created</p>
-              <p className="font-semibold text-warmGray-800">
-                {pairsData?.pairs_count || pairsData?.pairs?.length || 0} pairs
+            
+            <div className="bg-warmGray-50 rounded-lg border border-warmGray-200 p-3 sm:p-4 text-center">
+              <DocumentTextIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 mx-auto mb-2" />
+              <p className="text-xl sm:text-2xl font-bold text-warmGray-800">
+                {pairsData?.pairs_count || pairsData?.pairs?.length || 0}
               </p>
-            </div>
-          </div>
-
-
-
-          {/* Workflow Steps Summary */}
-          <div className="border-t border-warmGray-200 pt-6">
-            <h3 className="text-lg font-semibold text-warmGray-800 mb-4">Résumé du Workflow</h3>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {[
-                { id: 1, title: 'Campagne Créée', icon: DocumentTextIcon, color: 'blue' },
-                { id: 2, title: 'Employés Téléchargés', icon: UserGroupIcon, color: 'green' },
-                { id: 3, title: 'Critères Définis', icon: Cog6ToothIcon, color: 'purple' },
-                { id: 4, title: 'Paires Générées', icon: UserGroupIcon, color: 'orange' },
-                { id: 5, title: 'Invitations Envoyées', icon: EnvelopeIcon, color: 'pink' }
-              ].map((step) => {
-                const isCompleted = workflowState?.completed_steps?.includes(step.id);
-                const IconComponent = step.icon;
-                
-                return (
-                  <div key={step.id} className="text-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 ${
-                      isCompleted 
-                        ? 'bg-green-100' 
-                        : 'bg-warmGray-100'
-                    }`}>
-                      {isCompleted ? (
-                        <CheckCircleIcon className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <IconComponent className="h-5 w-5 text-warmGray-400" />
-                      )}
-                    </div>
-                    <p className={`text-xs font-medium ${
-                      isCompleted ? 'text-green-800' : 'text-warmGray-500'
-                    }`}>
-                      {step.title}
-                    </p>
-                  </div>
-                );
-              })}
+              <p className="text-xs sm:text-sm text-warmGray-600">Pairs Created</p>
             </div>
           </div>
         </div>
 
-        {/* Pairs Details */}
+        {/* Lazy Loaded Workflow Progress */}
+        <Suspense fallback={<SectionSkeleton height="h-40" />}>
+          <LazyWorkflowProgress workflowState={workflowState} completedSteps={completedSteps} />
+        </Suspense>
+
+        {/* Compact Employee Pairs Table */}
         {pairsData && pairsData.pairs && pairsData.pairs.length > 0 && (
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-warmGray-100/50 p-6 shadow-md hover:shadow-lg transition-all duration-300">
-            <h3 className="text-lg font-semibold text-warmGray-800 mb-4">
-              Generated Pairs ({pairsData.pairs.length})
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {pairsData.pairs.map((pair, index) => {
-                console.log(`🔍 DEBUG: Pair ${index + 1} structure:`, pair);
-                return (
-                <div key={index} className="bg-warmGray-50/70 backdrop-blur-sm border border-warmGray-100/50 rounded-lg p-4 hover:bg-warmGray-50/90 transition-all duration-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-6 h-6 bg-gradient-to-r from-[#E8C4A0] to-[#DDB892] rounded-full flex items-center justify-center">
-                        <span className="text-xs font-bold text-[#8B6F47]">{index + 1}</span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <div className="text-center">
-                          <p className="font-medium text-warmGray-800 text-sm">
-                            {pair.employee_1?.name ||
-                             pair.employee1_name ||
-                             pair.employee1?.name ||
-                             pair.employee_1_name ||
-                             `Employee ${pair.employee1_id || pair.employee_1_id || '1'}`}
-                          </p>
-                        </div>
-                        <div className="text-warmGray-400">
-                          <span className="text-lg font-medium">×</span>
-                        </div>
-                        <div className="text-center">
-                          <p className="font-medium text-warmGray-800 text-sm">
-                            {pair.employee_2?.name ||
-                             pair.employee2_name ||
-                             pair.employee2?.name ||
-                             pair.employee_2_name ||
-                             `Employee ${pair.employee2_id || pair.employee_2_id || '2'}`}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    {pair.matching_score && (
-                      <div className="text-center">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <span className="text-xs font-bold text-green-700">
-                            {Math.round(pair.matching_score * 100)}%
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+          <div className="bg-white rounded-xl border border-warmGray-200 shadow-md overflow-hidden">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-warmGray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <h3 className="text-base sm:text-lg font-semibold text-warmGray-900">
+                  Employee Pairs ({pairsData.pairs.length})
+                </h3>
+                <div className="text-xs sm:text-sm text-warmGray-500">
+                  Showing {Math.min(visiblePairs, pairsData.pairs.length)} of {pairsData.pairs.length}
                 </div>
-                );
-              })}
+              </div>
             </div>
+            
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead className="bg-warmGray-50">
+                  <tr>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
+                      #
+                    </th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
+                      Employee 1
+                    </th>
+                    <th className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
+                      Email 1
+                    </th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
+                      Employee 2
+                    </th>
+                    <th className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
+                      Email 2
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {pairsData.pairs.slice(0, visiblePairs).map((pair, index) => (
+                    <PairTableRow
+                      key={index}
+                      pair={pair}
+                      index={index}
+                      onVisible={handlePairVisible}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {visiblePairs < pairsData.pairs.length && (
+              <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-warmGray-200 text-center">
+                <button
+                  onClick={() => setVisiblePairs(prev => Math.min(prev + 8, pairsData.pairs.length))}
+                  className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-2 px-3 sm:px-4 rounded-lg transition-all duration-200 text-sm sm:text-base"
+                >
+                  Load More ({pairsData.pairs.length - visiblePairs} remaining)
+                </button>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Applied Criteria */}
+        {/* Lazy Loaded Matching Criteria */}
         {pairsData?.criteria_used && pairsData.criteria_used.length > 0 && (
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-warmGray-100/50 p-6 shadow-md hover:shadow-lg transition-all duration-300">
-            <h3 className="text-lg font-semibold text-warmGray-800 mb-4">Applied Matching Criteria</h3>
-            <div className="flex flex-wrap gap-2">
-              {pairsData.criteria_used.map((criteria, index) => (
-                <span 
-                  key={index}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700"
-                >
-                  {criteria.attribute_key}: {criteria.rule === 'same' ? 'Same' : 'Different'}
-                </span>
-              ))}
-            </div>
-          </div>
+          <Suspense fallback={<SectionSkeleton />}>
+            <LazyMatchingCriteria criteria={pairsData.criteria_used} />
+          </Suspense>
         )}
       </div>
     </div>

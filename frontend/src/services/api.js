@@ -19,10 +19,14 @@ const apiClient = axios.create({
   },
 });
 
+// Import tokenUtils for consistent token management
+const getStoredToken = () => localStorage.getItem('access_token');
+const getStoredRefreshToken = () => localStorage.getItem('refresh_token');
+
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const token = getStoredToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -44,8 +48,8 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        const accessToken = localStorage.getItem('access_token');
+        const refreshToken = getStoredRefreshToken();
+        const accessToken = getStoredToken();
 
         // If no refresh token or access token, immediately logout
         if (!refreshToken || !accessToken) {
@@ -184,6 +188,22 @@ export const authAPI = {
     }
   },
 
+  // Register user
+  register: async (userData) => {
+    try {
+      const response = await apiClient.post('/users/register/', userData);
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Registration failed' },
+      };
+    }
+  },
+
   // Request password reset
   requestPasswordReset: async (email) => {
     try {
@@ -196,6 +216,22 @@ export const authAPI = {
       return {
         success: false,
         error: error.response?.data || { message: 'Failed to request password reset' },
+      };
+    }
+  },
+
+  // Confirm password reset
+  confirmPasswordReset: async (resetData) => {
+    try {
+      const response = await apiClient.post('/users/password-reset-confirm/', resetData);
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Failed to reset password' },
       };
     }
   },

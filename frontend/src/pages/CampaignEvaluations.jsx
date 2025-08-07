@@ -53,7 +53,7 @@ const CampaignEvaluations = () => {
   }, [campaignId]);
 
   const handleBackToCampaigns = () => {
-    navigate('/campaigns');
+    navigate('/app/campaigns');
   };
 
   const formatDate = (dateString) => {

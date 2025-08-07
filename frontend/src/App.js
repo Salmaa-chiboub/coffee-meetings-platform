@@ -5,9 +5,9 @@ import QueryProvider from './contexts/QueryProvider';
 import { NotificationProvider } from './contexts/NotificationContext';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import { SkeletonDashboard, SkeletonCard } from './components/ui/Skeleton';
+import { SkeletonDashboard } from './components/ui/Skeleton';
 
-// Eager load critical components (auth pages and public pages)
+// Eager load critical components
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -15,19 +15,19 @@ import ResetPassword from './pages/ResetPassword';
 import LandingPage from './pages/LandingPage';
 import PublicEvaluation from './components/evaluation/PublicEvaluation';
 
-// Lazy load heavy components for code splitting
+// Lazy load heavy components
 const Dashboard = lazy(() => import('./pages/DashboardModern'));
 const Campaigns = lazy(() => import('./pages/Campaigns'));
+const CampaignCreate = lazy(() => import('./pages/CampaignCreate'));
 const CampaignWorkflow = lazy(() => import('./pages/CampaignWorkflow'));
 const CampaignHistory = lazy(() => import('./pages/CampaignHistory'));
-const GlobalHistory = lazy(() => import('./pages/GlobalHistory'));
-const GlobalCampaignHistory = lazy(() => import('./pages/GlobalCampaignHistory'));
 const CampaignEvaluations = lazy(() => import('./pages/CampaignEvaluations'));
-const CampaignEvaluationsView = lazy(() => import('./pages/CampaignEvaluationsView'));
 const Employees = lazy(() => import('./pages/Employees'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Profile = lazy(() => import('./pages/Profile'));
 const Notifications = lazy(() => import('./pages/Notifications'));
-
+const GlobalHistory = lazy(() => import('./pages/GlobalHistory'));
+const GlobalCampaignHistory = lazy(() => import('./pages/GlobalCampaignHistory'));
 
 function App() {
   return (
@@ -35,143 +35,134 @@ function App() {
       <AuthProvider>
         <NotificationProvider>
           <Router>
-          <Routes>
-            {/* Public evaluation route - no authentication required */}
-            <Route path="/evaluation/:token" element={<PublicEvaluation />} />
+            <Routes>
+              {/* Public routes */}
+              <Route path="/evaluation/:token" element={<PublicEvaluation />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Landing page as default route */}
-            <Route path="/" element={<LandingPage />} />
+              {/* Protected routes */}
+              <Route
+                path="/app"
+                element={
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route
+                  index
+                  element={
+                    <Suspense fallback={<SkeletonDashboard />}>
+                      <Dashboard />
+                    </Suspense>
+                  }
+                />
 
-            {/* Public auth routes - without layout */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+                <Route
+                  path="campaigns"
+                  element={
+                    <Suspense fallback={<SkeletonDashboard />}>
+                      <Campaigns />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="campaigns/create"
+                  element={
+                    <Suspense fallback={<SkeletonDashboard />}>
+                      <CampaignCreate />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="campaigns/:id/workflow"
+                  element={
+                    <Suspense fallback={<SkeletonDashboard />}>
+                      <CampaignWorkflow />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="campaigns/:id/history"
+                  element={
+                    <Suspense fallback={<SkeletonDashboard />}>
+                      <CampaignHistory />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="campaigns/:id/evaluations"
+                  element={
+                    <Suspense fallback={<SkeletonDashboard />}>
+                      <CampaignEvaluations />
+                    </Suspense>
+                  }
+                />
 
-            {/* Protected routes - with layout and protection */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Suspense fallback={<SkeletonDashboard />}>
-                    <Dashboard />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
+                <Route
+                  path="employees/*"
+                  element={
+                    <Suspense fallback={<SkeletonDashboard />}>
+                      <Employees />
+                    </Suspense>
+                  }
+                />
 
-            <Route path="/campaigns/*" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Suspense fallback={
-                    <div className="max-w-7xl mx-auto p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                          <SkeletonCard key={i} />
-                        ))}
-                      </div>
-                    </div>
-                  }>
-                    <Campaigns />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
+                <Route path="history/*">
+                  <Route
+                    index
+                    element={
+                      <Suspense fallback={<SkeletonDashboard />}>
+                        <GlobalHistory />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="campaigns"
+                    element={
+                      <Suspense fallback={<SkeletonDashboard />}>
+                        <GlobalCampaignHistory />
+                      </Suspense>
+                    }
+                  />
+                </Route>
 
-            <Route path="/campaigns/:id/workflow" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Suspense fallback={<SkeletonDashboard />}>
-                    <CampaignWorkflow />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
+                <Route
+                  path="profile"
+                  element={
+                    <Suspense fallback={<SkeletonDashboard />}>
+                      <Profile />
+                    </Suspense>
+                  }
+                />
 
-            <Route path="/campaigns/:id/history" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Suspense fallback={<SkeletonDashboard />}>
-                    <CampaignHistory />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
+                <Route
+                  path="settings"
+                  element={
+                    <Suspense fallback={<SkeletonDashboard />}>
+                      <Settings />
+                    </Suspense>
+                  }
+                />
 
-            <Route path="/campaigns/:id/evaluations" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Suspense fallback={<SkeletonDashboard />}>
-                    <CampaignEvaluations />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
+                <Route
+                  path="notifications"
+                  element={
+                    <Suspense fallback={<SkeletonDashboard />}>
+                      <Notifications />
+                    </Suspense>
+                  }
+                />
+              </Route>
 
-            <Route path="/campaigns/:id/feedback" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Suspense fallback={<SkeletonDashboard />}>
-                    <CampaignEvaluationsView />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-
-            <Route path="/employees/*" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Suspense fallback={<SkeletonDashboard />}>
-                    <Employees />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-
-            <Route path="/history" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Suspense fallback={<SkeletonDashboard />}>
-                    <GlobalHistory />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-
-            {/* Global Campaign History */}
-            <Route path="/history/campaigns" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Suspense fallback={<SkeletonDashboard />}>
-                    <GlobalCampaignHistory />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Suspense fallback={<SkeletonDashboard />}>
-                    <Settings />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-
-            <Route path="/notifications" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Suspense fallback={<SkeletonDashboard />}>
-                    <Notifications />
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            } />
-
-            {/* Catch all route - redirect to login */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </Router>
+              {/* Catch all route */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </Router>
         </NotificationProvider>
       </AuthProvider>
     </QueryProvider>

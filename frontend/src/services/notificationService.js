@@ -1,16 +1,28 @@
 import apiClient from './api';
 
+// Simple cache to prevent duplicate requests
+const cache = {
+  notifications: null,
+  notificationsTimestamp: 0,
+  unreadCount: null,
+  unreadCountTimestamp: 0,
+  pendingRequests: new Map()
+};
+
+// Cache duration (5 seconds)
+const CACHE_DURATION = 5000;
+
 // Notification API service
 export const notificationAPI = {
   // Get notifications with filtering and pagination
   getNotifications: async (params = {}) => {
     try {
       const queryParams = new URLSearchParams();
-      
+
       // Add pagination parameters
       if (params.page) queryParams.append('page', params.page);
       if (params.limit) queryParams.append('limit', params.limit);
-      
+
       // Add filter parameters
       if (params.type && params.type !== 'all') queryParams.append('type', params.type);
       if (params.status && params.status !== 'all') queryParams.append('status', params.status);
@@ -18,12 +30,56 @@ export const notificationAPI = {
       if (params.is_read !== undefined) queryParams.append('is_read', params.is_read);
 
       const url = `/notifications/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const response = await apiClient.get(url);
 
-      return {
-        success: true,
-        data: response.data,
-      };
+      // Check cache for simple requests (no complex filters)
+      const isSimpleRequest = !params.page && !params.type && !params.status && !params.dateRange && params.is_read === undefined;
+      const now = Date.now();
+
+      if (isSimpleRequest && cache.notifications && (now - cache.notificationsTimestamp) < CACHE_DURATION) {
+        console.log('📋 Using cached notifications');
+        return {
+          success: true,
+          data: cache.notifications,
+        };
+      }
+
+      // Check for pending request to avoid duplicates
+      if (cache.pendingRequests.has(url)) {
+        console.log('⏳ Waiting for pending notification request');
+        return cache.pendingRequests.get(url);
+      }
+
+      // Create promise for this request
+      const requestPromise = (async () => {
+        try {
+          const response = await apiClient.get(url);
+          const data = response.data;
+
+          // Cache simple requests
+          if (isSimpleRequest) {
+            cache.notifications = data;
+            cache.notificationsTimestamp = now;
+          }
+
+          return {
+            success: true,
+            data: data,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error.response?.data || { message: 'Failed to fetch notifications' },
+          };
+        } finally {
+          // Remove from pending requests
+          cache.pendingRequests.delete(url);
+        }
+      })();
+
+      // Store pending request
+      cache.pendingRequests.set(url, requestPromise);
+
+      return requestPromise;
     } catch (error) {
       return {
         success: false,
@@ -35,11 +91,53 @@ export const notificationAPI = {
   // Get unread notification count
   getUnreadCount: async () => {
     try {
-      const response = await apiClient.get('/notifications/unread-count/');
-      return {
-        success: true,
-        data: response.data,
-      };
+      const now = Date.now();
+      const url = '/notifications/unread-count/';
+
+      // Check cache
+      if (cache.unreadCount && (now - cache.unreadCountTimestamp) < CACHE_DURATION) {
+        console.log('🔔 Using cached unread count');
+        return {
+          success: true,
+          data: cache.unreadCount,
+        };
+      }
+
+      // Check for pending request
+      if (cache.pendingRequests.has(url)) {
+        console.log('⏳ Waiting for pending unread count request');
+        return cache.pendingRequests.get(url);
+      }
+
+      // Create promise for this request
+      const requestPromise = (async () => {
+        try {
+          const response = await apiClient.get(url);
+          const data = response.data;
+
+          // Cache the result
+          cache.unreadCount = data;
+          cache.unreadCountTimestamp = now;
+
+          return {
+            success: true,
+            data: data,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error.response?.data || { message: 'Failed to fetch unread count' },
+          };
+        } finally {
+          // Remove from pending requests
+          cache.pendingRequests.delete(url);
+        }
+      })();
+
+      // Store pending request
+      cache.pendingRequests.set(url, requestPromise);
+
+      return requestPromise;
     } catch (error) {
       return {
         success: false,
@@ -52,6 +150,9 @@ export const notificationAPI = {
   markAsRead: async (notificationId) => {
     try {
       const response = await apiClient.patch(`/notifications/${notificationId}/mark-read/`);
+      // Invalidate cache after successful update
+      notificationAPI.invalidateNotificationsCache();
+      notificationAPI.invalidateUnreadCountCache();
       return {
         success: true,
         data: response.data,
@@ -68,6 +169,9 @@ export const notificationAPI = {
   markAsUnread: async (notificationId) => {
     try {
       const response = await apiClient.patch(`/notifications/${notificationId}/mark-unread/`);
+      // Invalidate cache after successful update
+      notificationAPI.invalidateNotificationsCache();
+      notificationAPI.invalidateUnreadCountCache();
       return {
         success: true,
         data: response.data,
@@ -84,6 +188,9 @@ export const notificationAPI = {
   markAllAsRead: async () => {
     try {
       const response = await apiClient.post('/notifications/mark-all-read/');
+      // Invalidate cache after successful update
+      notificationAPI.invalidateNotificationsCache();
+      notificationAPI.invalidateUnreadCountCache();
       return {
         success: true,
         data: response.data,
@@ -100,11 +207,27 @@ export const notificationAPI = {
   deleteNotification: async (notificationId) => {
     try {
       await apiClient.delete(`/notifications/${notificationId}/`);
+      // Invalidate cache after successful deletion
+      notificationAPI.invalidateNotificationsCache();
+      notificationAPI.invalidateUnreadCountCache();
       return {
         success: true,
         data: { message: 'Notification deleted successfully' },
       };
     } catch (error) {
+      console.error(`Failed to delete notification ${notificationId}:`, error);
+
+      // Handle specific error cases
+      if (error.response?.status === 404) {
+        // Still invalidate cache in case of 404 (might be deleted elsewhere)
+        notificationAPI.invalidateNotificationsCache();
+        notificationAPI.invalidateUnreadCountCache();
+        return {
+          success: false,
+          error: { message: 'Notification not found or already deleted' },
+        };
+      }
+
       return {
         success: false,
         error: error.response?.data || { message: 'Failed to delete notification' },
@@ -178,6 +301,25 @@ export const notificationAPI = {
         error: error.response?.data || { message: 'Failed to update notification preferences' },
       };
     }
+  },
+
+  // Cache management
+  clearCache: () => {
+    cache.notifications = null;
+    cache.notificationsTimestamp = 0;
+    cache.unreadCount = null;
+    cache.unreadCountTimestamp = 0;
+    cache.pendingRequests.clear();
+  },
+
+  invalidateNotificationsCache: () => {
+    cache.notifications = null;
+    cache.notificationsTimestamp = 0;
+  },
+
+  invalidateUnreadCountCache: () => {
+    cache.unreadCount = null;
+    cache.unreadCountTimestamp = 0;
   }
 };
 

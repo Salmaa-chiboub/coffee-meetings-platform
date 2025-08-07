@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useState, useRef } from 'react';
 import { notificationAPI } from '../services/notificationService';
 
 // Initial state
@@ -140,15 +140,20 @@ const NotificationContext = createContext();
 export const NotificationProvider = ({ children }) => {
   const [state, dispatch] = useReducer(notificationReducer, initialState);
 
+  // Use ref to access current state without causing re-renders
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
   // Fetch notifications
   const fetchNotifications = useCallback(async (options = {}) => {
     try {
       dispatch({ type: NOTIFICATION_ACTIONS.SET_LOADING, payload: true });
 
+      const currentState = stateRef.current;
       const params = {
-        page: options.page || state.pagination.page,
-        limit: options.limit || state.pagination.limit,
-        ...state.filters,
+        page: options.page || currentState.pagination.page,
+        limit: options.limit || currentState.pagination.limit,
+        ...currentState.filters,
         ...options.filters
       };
 
@@ -158,7 +163,7 @@ export const NotificationProvider = ({ children }) => {
         dispatch({
           type: NOTIFICATION_ACTIONS.SET_NOTIFICATIONS,
           payload: {
-            notifications: options.append ? [...state.notifications, ...result.data.results] : result.data.results,
+            notifications: options.append ? [...currentState.notifications, ...result.data.results] : result.data.results,
             unreadCount: result.data.unread_count,
             pagination: {
               page: result.data.page,
@@ -175,7 +180,7 @@ export const NotificationProvider = ({ children }) => {
       console.error('Notification API error:', error.message);
       dispatch({ type: NOTIFICATION_ACTIONS.SET_ERROR, payload: error.message });
     }
-  }, [state.filters, state.pagination.page, state.pagination.limit]);
+  }, []); // No dependencies - function is stable
 
   // Fetch unread count
   const fetchUnreadCount = useCallback(async () => {
@@ -249,13 +254,14 @@ export const NotificationProvider = ({ children }) => {
 
   // Load more notifications (pagination)
   const loadMore = useCallback(() => {
-    if (state.pagination.hasMore && !state.loading) {
+    const currentState = stateRef.current;
+    if (currentState.pagination.hasMore && !currentState.loading) {
       fetchNotifications({
-        page: state.pagination.page + 1,
+        page: currentState.pagination.page + 1,
         append: true
       });
     }
-  }, [state.pagination.hasMore, state.loading, state.pagination.page, fetchNotifications]);
+  }, [fetchNotifications]);
 
   // Add new notification (for real-time updates)
   const addNotification = useCallback((notification) => {
@@ -297,35 +303,48 @@ export const NotificationProvider = ({ children }) => {
   );
 };
 
+// Default functions that never change
+const defaultFunctions = {
+  fetchNotifications: () => Promise.resolve(),
+  fetchUnreadCount: () => Promise.resolve(),
+  markAsRead: () => Promise.resolve(),
+  markAsUnread: () => Promise.resolve(),
+  markAllAsRead: () => Promise.resolve(),
+  deleteNotification: () => Promise.resolve(),
+  loadMore: () => {},
+  addNotification: () => {},
+};
+
 // Custom hook to use notification context
 export const useNotifications = () => {
   const context = useContext(NotificationContext);
-  if (!context) {
-    // Return a default context instead of throwing an error
-    console.warn('useNotifications must be used within a NotificationProvider. Using default values.');
-    return {
-      notifications: [],
-      unreadCount: 0,
-      loading: false,
-      error: null,
-      // filters: { type: 'all', status: 'all', dateRange: 'all' },
-      pagination: { page: 1, limit: 20, total: 0, hasMore: false },
-      lastFetch: null,
-      fetchNotifications: () => Promise.resolve(),
-      fetchUnreadCount: () => Promise.resolve(),
-      markAsRead: () => Promise.resolve(),
-      markAsUnread: () => Promise.resolve(),
-      markAllAsRead: () => Promise.resolve(),
-      deleteNotification: () => Promise.resolve(),
 
-      // setFilters: () => {},
-      loadMore: () => {},
-      addNotification: () => {},
-      hasUnreadNotifications: false,
-      isFirstLoad: true
-    };
+  // Always return stable functions, even when context is not available
+  const stableContext = {
+    notifications: context?.notifications || [],
+    unreadCount: context?.unreadCount || 0,
+    loading: context?.loading || false,
+    error: context?.error || null,
+    pagination: context?.pagination || { page: 1, limit: 20, total: 0, hasMore: false },
+    lastFetch: context?.lastFetch || null,
+    hasUnreadNotifications: context?.hasUnreadNotifications || false,
+    isFirstLoad: context?.isFirstLoad !== undefined ? context.isFirstLoad : true,
+    // Always use stable functions - either from context or defaults
+    fetchNotifications: context?.fetchNotifications || defaultFunctions.fetchNotifications,
+    fetchUnreadCount: context?.fetchUnreadCount || defaultFunctions.fetchUnreadCount,
+    markAsRead: context?.markAsRead || defaultFunctions.markAsRead,
+    markAsUnread: context?.markAsUnread || defaultFunctions.markAsUnread,
+    markAllAsRead: context?.markAllAsRead || defaultFunctions.markAllAsRead,
+    deleteNotification: context?.deleteNotification || defaultFunctions.deleteNotification,
+    loadMore: context?.loadMore || defaultFunctions.loadMore,
+    addNotification: context?.addNotification || defaultFunctions.addNotification,
+  };
+
+  if (!context) {
+    console.warn('useNotifications used outside NotificationProvider. Using default values.');
   }
-  return context;
+
+  return stableContext;
 };
 
 export default NotificationContext;

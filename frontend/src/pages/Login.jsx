@@ -22,7 +22,7 @@ const Login = () => {
     setIsLoading(true);
     try {
       await login(data);
-      navigate('/dashboard');
+      navigate('/app');
     } catch (error) {
       setError('root', {
         type: 'manual',

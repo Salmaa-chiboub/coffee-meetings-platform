@@ -61,7 +61,7 @@ const CampaignCreate = () => {
   };
 
   const handleBack = () => {
-    navigate('/campaigns');
+    navigate('/app/campaigns');
   };
 
   return (

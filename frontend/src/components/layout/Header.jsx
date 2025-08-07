@@ -26,7 +26,7 @@ const Header = ({ isHovered = false }) => {
   const searchRef = useRef(null);
 
   // Check if user is on profile page
-  const isOnProfilePage = location.pathname.startsWith('/settings');
+  const isOnProfilePage = location.pathname.startsWith('/profile');
 
 
 
@@ -74,7 +74,7 @@ const Header = ({ isHovered = false }) => {
 
   // Handle profile navigation
   const handleProfileClick = () => {
-    navigate('/settings');
+    navigate('/app/profile');
     setIsDropdownOpen(false);
   };
 
@@ -111,7 +111,7 @@ const Header = ({ isHovered = false }) => {
     if (value && value.trim()) {
       // If there are results, navigate to the first one
       if (searchResults.campaigns.length > 0) {
-        navigate(`/campaigns/${searchResults.campaigns[0].id}/workflow`);
+        navigate(`/app/campaigns/${searchResults.campaigns[0].id}/workflow`);
       } else if (searchResults.employees.length > 0) {
         console.log('Navigate to employee:', searchResults.employees[0]);
       }
@@ -211,7 +211,7 @@ const Header = ({ isHovered = false }) => {
                     className="flex items-center w-full px-4 py-3 text-sm text-warmGray-700 hover:bg-gradient-to-r hover:from-[#E8C4A0]/10 hover:to-cream/10 hover:text-[#8B6F47] transition-all duration-200 group"
                   >
                     <UserIcon className="w-4 h-4 mr-3 text-[#8B6F47]/60 group-hover:text-[#8B6F47] transition-colors" />
-                    <span className="font-medium">Profil & Paramètres</span>
+                    <span className="font-medium">Profile</span>
                   </button>
 
                   <div className="mx-4 my-2 border-t border-[#E8C4A0]/20"></div>

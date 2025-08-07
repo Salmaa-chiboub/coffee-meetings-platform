@@ -1,16 +1,16 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useCampaigns } from '../hooks/useCampaigns';
 import { useDebouncedSearch } from '../hooks/useDebounce';
+import { campaignService } from '../services/campaignService';
 
-import { sorter, performanceMonitor } from '../utils/dataProcessing';
+// Utilitaires de tri et performance intégrés
 import CampaignCard from '../components/campaigns/CampaignCard';
 import { SkeletonCard, SkeletonTitle, SkeletonButton } from '../components/ui/Skeleton';
 import Skeleton from '../components/ui/Skeleton';
 import Pagination from '../components/ui/Pagination';
-import VirtualScrollGrid from '../components/ui/VirtualScrollList';
-import CampaignCreate from './CampaignCreate';
+import VirtualScrollList from '../components/ui/VirtualScrollList';
 
 const CampaignsList = React.memo(() => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,7 +38,7 @@ const CampaignsList = React.memo(() => {
 
   // Prepare query parameters for campaigns - charger toutes les campagnes pour pagination côté client
   const queryParams = useMemo(() => ({
-    page: 1, // Toujours page 1 pour récupérer toutes les données
+    page: 1, // Toujours page 1 pour récup��rer toutes les données
     page_size: 1000, // Grande taille pour récupérer toutes les campagnes
     // Pas de paramètre search - on utilise JavaScript côté client pour filtrer
   }), []);
@@ -97,33 +97,57 @@ const CampaignsList = React.memo(() => {
     loadWorkflowStatus();
   }, [campaigns]);
 
+  // Ajout de la fonction de suppression
+  const handleDeleteCampaign = async (campaignId) => {
+    try {
+      const result = await campaignService.deleteCampaign(campaignId);
+
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Erreur lors de la suppression de la campagne');
+      }
+
+      // Mise à jour de l'état local après la suppression
+      setCampaignsWithStatus(prev => prev.filter(camp => camp.id !== campaignId));
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      alert(error.message);
+    }
+  };
+
   // Filtrage et tri côté client avec JavaScript (pas de requêtes HTTP)
   const filteredAndSortedCampaigns = useMemo(() => {
-    return performanceMonitor.measure('campaigns-filter-sort', () => {
-      let result = campaignsWithStatus;
+    // Filtrage et tri des campagnes
+    let result = campaignsWithStatus;
 
-      // Filtrage par recherche
-      if (debouncedSearchTerm.trim()) {
-        result = result.filter(campaign =>
-          campaign.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-          campaign.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-        );
-      }
+    // Filtrage par recherche
+    if (debouncedSearchTerm.trim()) {
+      result = result.filter(campaign =>
+        campaign.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        campaign.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+      );
+    }
 
-      // Filtrage par statut (completed/incomplete)
-      if (statusFilter !== 'all') {
-        result = result.filter(campaign => {
-          return statusFilter === 'completed' ? campaign.isCompleted : !campaign.isCompleted;
-        });
-      }
+    // Filtrage par statut (completed/incomplete)
+    if (statusFilter !== 'all') {
+      result = result.filter(campaign => {
+        return statusFilter === 'completed' ? campaign.isCompleted : !campaign.isCompleted;
+      });
+    }
 
-      // Appliquer le tri côté client
-      if (sortConfig.length > 0) {
-        result = sorter.sort(result, sortConfig);
-      }
+    // Appliquer le tri côté client
+    if (sortConfig.length > 0) {
+      result = result.sort((a, b) => {
+        const config = sortConfig[0];
+        const field = config.field;
+        const direction = config.direction === 'desc' ? -1 : 1;
 
-      return result;
-    });
+        if (a[field] < b[field]) return -1 * direction;
+        if (a[field] > b[field]) return 1 * direction;
+        return 0;
+      });
+    }
+
+    return result;
   }, [campaignsWithStatus, debouncedSearchTerm, sortConfig, statusFilter]);
 
   // Pagination côté client pour les résultats filtrés
@@ -142,7 +166,7 @@ const CampaignsList = React.memo(() => {
   }, [debouncedSearchTerm, searchTerm]);
 
   const handleCreateCampaign = useCallback(() => {
-    navigate('/campaigns/create');
+    navigate('/app/campaigns/create');
   }, [navigate]);
 
   // Handle page change
@@ -185,18 +209,15 @@ const CampaignsList = React.memo(() => {
 
       if (isCompleted) {
         // All workflow steps completed - go to history page
-        console.log('🎯 Navigating to history:', `/campaigns/${campaign.id}/history`);
-        navigate(`/campaigns/${campaign.id}/history`);
+        navigate(`/app/campaigns/${campaign.id}/history`);
       } else {
         // Workflow incomplete - go to workflow page to continue
-        console.log('🎯 Navigating to workflow:', `/campaigns/${campaign.id}/workflow`);
-        navigate(`/campaigns/${campaign.id}/workflow`);
+        navigate(`/app/campaigns/${campaign.id}/workflow`);
       }
     } catch (error) {
       console.error('Error checking workflow status:', error);
       // Fallback to workflow if there's an error
-      console.log('🎯 Fallback navigation to workflow:', `/campaigns/${campaign.id}/workflow`);
-      navigate(`/campaigns/${campaign.id}/workflow`);
+      navigate(`/app/campaigns/${campaign.id}/workflow`);
     }
   };
 
@@ -360,6 +381,7 @@ const CampaignsList = React.memo(() => {
                 key={campaign.id}
                 campaign={campaign}
                 onClick={handleCampaignClick}
+                onDelete={handleDeleteCampaign}
               />
             ))}
           </div>
@@ -383,12 +405,7 @@ const CampaignsList = React.memo(() => {
 });
 
 const Campaigns = () => {
-  return (
-    <Routes>
-      <Route path="/" element={<CampaignsList />} />
-      <Route path="/create" element={<CampaignCreate />} />
-    </Routes>
-  );
+  return <CampaignsList />;
 };
 
 export default Campaigns;

@@ -1,15 +1,19 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   UserGroupIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
-  UserIcon
+  UserIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { useEmployees } from '../hooks/useEmployees';
 import { useCampaigns } from '../hooks/useCampaigns';
+import { useAuth } from '../contexts/AuthContext';
 import Pagination from '../components/ui/Pagination';
 
 const Employees = () => {
+  const { user, isAuthenticated } = useAuth();
+
   // State for filters and pagination
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCampaign, setSelectedCampaign] = useState('');
@@ -17,9 +21,25 @@ const Employees = () => {
 
   const pageSize = 6; // Selon vos préférences mémoire
 
+  // Debug authentication
+  useEffect(() => {
+    console.log('🔍 Auth Debug:', {
+      user,
+      isAuthenticated,
+      accessToken: localStorage.getItem('access_token'),
+      refreshToken: localStorage.getItem('refresh_token')
+    });
+  }, [user, isAuthenticated]);
+
   // Fetch campaigns for filter dropdown
   const { data: campaignsResponse } = useCampaigns({ page_size: 1000 });
   const campaigns = campaignsResponse?.data || [];
+
+  // Debug campaigns
+  console.log('🔍 Campaigns Debug:', {
+    campaignsResponse,
+    campaigns: campaigns.length
+  });
 
   // Helper function to get campaign name
   const getCampaignName = (campaignId) => {
@@ -36,6 +56,15 @@ const Employees = () => {
   }), [selectedCampaign]);
 
   const { data: employeesResponse, isLoading, error } = useEmployees(queryParams);
+
+  // Debug logging
+  console.log('🔍 Employees Debug:', {
+    queryParams,
+    employeesResponse,
+    isLoading,
+    error
+  });
+
   const employees = employeesResponse?.results || employeesResponse || [];
 
   // Group employees by email to avoid duplicates and filter
@@ -121,11 +150,69 @@ const Employees = () => {
   };
 
   if (error) {
+    const isAuthError = error?.status === 403 || error?.status === 401 ||
+                       (typeof error === 'string' && error.includes('403')) ||
+                       (typeof error === 'string' && error.includes('401'));
+
     return (
       <div className="max-w-7xl mx-auto">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <div className="text-red-600 mb-2">⚠️ Erreur lors du chargement des employés</div>
-          <div className="text-red-500 text-sm">{error.message || 'Une erreur s\'est produite'}</div>
+        <div className={`border-2 rounded-xl p-6 ${
+          isAuthError ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'
+        }`}>
+          <div className="flex items-center justify-center mb-4">
+            <ExclamationTriangleIcon className={`h-8 w-8 ${
+              isAuthError ? 'text-amber-500' : 'text-red-500'
+            }`} />
+          </div>
+
+          <div className="text-center">
+            <h3 className={`text-lg font-medium mb-2 ${
+              isAuthError ? 'text-amber-800' : 'text-red-800'
+            }`}>
+              {isAuthError ? '🔐 Authentication Required' : '⚠️ Error Loading Employees'}
+            </h3>
+
+            <div className={`text-sm mb-4 ${
+              isAuthError ? 'text-amber-600' : 'text-red-500'
+            }`}>
+              {isAuthError
+                ? 'You need to be logged in to view employees data'
+                : error.message || JSON.stringify(error) || 'Something went wrong'
+              }
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+              <div className="bg-white p-4 rounded-lg">
+                <h4 className="font-medium text-gray-700 mb-2">Authentication Status:</h4>
+                <ul className="text-xs text-gray-600 space-y-1">
+                  <li>• User: {user ? `✅ ${user.email}` : '❌ Not logged in'}</li>
+                  <li>• Access Token: {localStorage.getItem('access_token') ? '✅ Present' : '❌ Missing'}</li>
+                  <li>• Refresh Token: {localStorage.getItem('refresh_token') ? '✅ Present' : '❌ Missing'}</li>
+                </ul>
+              </div>
+
+              <div className="bg-white p-4 rounded-lg">
+                <h4 className="font-medium text-gray-700 mb-2">Backend Status:</h4>
+                <ul className="text-xs text-gray-600 space-y-1">
+                  <li>• API URL: {process.env.REACT_APP_API_URL || 'http://localhost:8000'}</li>
+                  <li>• Endpoint: GET /employees/</li>
+                  <li>• Expected: 200 OK with employee data</li>
+                  <li>• Actual: {error?.status || 'Network error'}</li>
+                </ul>
+              </div>
+            </div>
+
+            {isAuthError && (
+              <div className="mt-4">
+                <button
+                  onClick={() => window.location.href = '/login'}
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  Go to Login
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -226,14 +313,23 @@ const Employees = () => {
           <div className="text-center py-12">
             <UserGroupIcon className="h-12 w-12 text-warmGray-400 mx-auto mb-3" />
             <h3 className="text-lg font-medium text-warmGray-800 mb-1">
-              {searchTerm || selectedCampaign ? 'Aucun employé trouvé' : 'Aucun employé pour le moment'}
+              {searchTerm || selectedCampaign ? 'No employees found' : 'No employees data'}
             </h3>
-            <p className="text-warmGray-600 text-sm">
+            <p className="text-warmGray-600 text-sm mb-4">
               {searchTerm || selectedCampaign
                 ? 'Essayez d\'ajuster vos critères de recherche ou de filtre'
                 : 'Les employés apparaîtront ici une fois qu\'ils seront importés dans les campagnes'
               }
             </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">How to add employees:</h4>
+              <ol className="text-xs text-blue-700 space-y-1 text-left">
+                <li>1. Create a campaign</li>
+                <li>2. Go to campaign workflow</li>
+                <li>3. Upload Excel file with employee data</li>
+                <li>4. Employees will appear here automatically</li>
+              </ol>
+            </div>
           </div>
         ) : (
           <div className="overflow-x-auto">

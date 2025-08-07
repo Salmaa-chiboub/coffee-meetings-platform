@@ -1,199 +1,146 @@
-import React from 'react';
-
 /**
- * Advanced search and filtering optimization utilities
- * Provides high-performance search algorithms and caching mechanisms
- */
-
-/**
- * Fuzzy search implementation for better user experience
- * Uses Levenshtein distance for approximate string matching
+ * Fuzzy search utility for optimized searching
  */
 export class FuzzySearch {
-  constructor(options = {}) {
-    this.threshold = options.threshold || 0.6; // Similarity threshold (0-1)
-    this.caseSensitive = options.caseSensitive || false;
-    this.cache = new Map(); // Cache for performance
+  constructor(items = [], keys = []) {
+    this.items = items;
+    this.keys = keys;
   }
 
-  // Calculate Levenshtein distance between two strings
-  levenshteinDistance(str1, str2) {
-    const cacheKey = `${str1}:${str2}`;
-    if (this.cache.has(cacheKey)) {
-      return this.cache.get(cacheKey);
-    }
-
-    if (!this.caseSensitive) {
-      str1 = str1.toLowerCase();
-      str2 = str2.toLowerCase();
-    }
-
+  /**
+   * Calculate Levenshtein distance between two strings
+   */
+  static levenshteinDistance(str1, str2) {
     const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
-
+    
     for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
     for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
-
+    
     for (let j = 1; j <= str2.length; j++) {
       for (let i = 1; i <= str1.length; i++) {
-        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        const substitutionCost = str1[i - 1] === str2[j - 1] ? 0 : 1;
         matrix[j][i] = Math.min(
-          matrix[j][i - 1] + 1, // deletion
-          matrix[j - 1][i] + 1, // insertion
-          matrix[j - 1][i - 1] + indicator // substitution
+          matrix[j][i - 1] + 1,
+          matrix[j - 1][i] + 1,
+          matrix[j - 1][i - 1] + substitutionCost
         );
       }
     }
-
-    const distance = matrix[str2.length][str1.length];
-    this.cache.set(cacheKey, distance);
-    return distance;
-  }
-
-  // Calculate similarity score (0-1, where 1 is exact match)
-  similarity(str1, str2) {
-    const maxLength = Math.max(str1.length, str2.length);
-    if (maxLength === 0) return 1;
     
-    const distance = this.levenshteinDistance(str1, str2);
-    return 1 - distance / maxLength;
+    return matrix[str2.length][str1.length];
   }
 
-  // Search for matches in a dataset
-  search(query, items, fields = ['title', 'name']) {
-    if (!query || query.trim() === '') return items;
+  /**
+   * Calculate similarity score between query and text
+   */
+  static calculateScore(query, text) {
+    if (!query || !text) return 0;
+    
+    const queryLower = query.toLowerCase();
+    const textLower = text.toLowerCase();
+    
+    // Exact match gets highest score
+    if (textLower === queryLower) return 1;
+    
+    // Starts with query gets high score
+    if (textLower.startsWith(queryLower)) return 0.9;
+    
+    // Contains query gets medium score
+    if (textLower.includes(queryLower)) return 0.7;
+    
+    // Use Levenshtein distance for fuzzy matching
+    const distance = FuzzySearch.levenshteinDistance(queryLower, textLower);
+    const maxLength = Math.max(queryLower.length, textLower.length);
+    
+    if (maxLength === 0) return 0;
+    
+    const similarity = 1 - (distance / maxLength);
+    return similarity > 0.5 ? similarity * 0.5 : 0; // Scale down fuzzy matches
+  }
 
-    const results = items.map(item => {
-      let maxScore = 0;
-      
-      fields.forEach(field => {
-        const value = this.getNestedValue(item, field);
-        if (value && typeof value === 'string') {
-          const score = this.similarity(query, value);
-          maxScore = Math.max(maxScore, score);
+  /**
+   * Search through items with fuzzy matching
+   */
+  search(query, options = {}) {
+    const { threshold = 0.3, limit = 50 } = options;
+    
+    if (!query || query.trim() === '') {
+      return this.items.slice(0, limit);
+    }
+
+    const results = this.items
+      .map(item => {
+        let maxScore = 0;
+        let matchedKey = '';
+
+        // Search in specified keys or all string properties
+        const searchKeys = this.keys.length > 0 ? this.keys : Object.keys(item);
+        
+        for (const key of searchKeys) {
+          const value = this.getNestedValue(item, key);
+          if (typeof value === 'string') {
+            const score = FuzzySearch.calculateScore(query, value);
+            if (score > maxScore) {
+              maxScore = score;
+              matchedKey = key;
+            }
+          }
         }
-      });
 
-      return { item, score: maxScore };
-    });
-
-    return results
-      .filter(result => result.score >= this.threshold)
+        return {
+          item,
+          score: maxScore,
+          matchedKey
+        };
+      })
+      .filter(result => result.score >= threshold)
       .sort((a, b) => b.score - a.score)
-      .map(result => result.item);
+      .slice(0, limit);
+
+    return results.map(result => result.item);
   }
 
-  // Helper to get nested object values
-  getNestedValue(obj, path) {
-    return path.split('.').reduce((current, key) => current?.[key], obj);
+  /**
+   * Get nested value from object using dot notation
+   */
+  getNestedValue(obj, key) {
+    return key.split('.').reduce((current, prop) => {
+      return current && current[prop] !== undefined ? current[prop] : '';
+    }, obj);
   }
 
-  // Clear cache to prevent memory leaks
-  clearCache() {
-    this.cache.clear();
+  /**
+   * Update search items
+   */
+  updateItems(items) {
+    this.items = items;
+  }
+
+  /**
+   * Update search keys
+   */
+  updateKeys(keys) {
+    this.keys = keys;
   }
 }
 
 /**
- * High-performance filtering with indexing
+ * Debounce function for search optimization
  */
-export class IndexedFilter {
-  constructor() {
-    this.indexes = new Map();
-    this.data = [];
-  }
+export const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(null, args), delay);
+  };
+};
 
-  // Build indexes for fast filtering
-  buildIndexes(data, indexFields = []) {
-    this.data = data;
-    this.indexes.clear();
-
-    indexFields.forEach(field => {
-      const index = new Map();
-      
-      data.forEach((item, itemIndex) => {
-        const value = this.getNestedValue(item, field);
-        if (value !== null && value !== undefined) {
-          const key = String(value).toLowerCase();
-          if (!index.has(key)) {
-            index.set(key, []);
-          }
-          index.get(key).push(itemIndex);
-        }
-      });
-
-      this.indexes.set(field, index);
-    });
-  }
-
-  // Fast filtering using indexes
-  filter(filters = {}) {
-    if (Object.keys(filters).length === 0) return this.data;
-
-    let resultIndexes = null;
-
-    Object.entries(filters).forEach(([field, value]) => {
-      if (value === null || value === undefined || value === '') return;
-
-      const index = this.indexes.get(field);
-      if (!index) {
-        // Fallback to linear search if no index
-        const fieldIndexes = this.data
-          .map((item, idx) => ({ item, idx }))
-          .filter(({ item }) => {
-            const itemValue = this.getNestedValue(item, field);
-            return this.matchesFilter(itemValue, value);
-          })
-          .map(({ idx }) => idx);
-
-        resultIndexes = resultIndexes 
-          ? resultIndexes.filter(idx => fieldIndexes.includes(idx))
-          : fieldIndexes;
-        return;
-      }
-
-      // Use index for fast lookup
-      const searchKey = String(value).toLowerCase();
-      let fieldIndexes = [];
-
-      if (typeof value === 'string' && value.includes('*')) {
-        // Wildcard search
-        const pattern = value.replace(/\*/g, '.*');
-        const regex = new RegExp(pattern, 'i');
-        
-        for (const [key, indexes] of index.entries()) {
-          if (regex.test(key)) {
-            fieldIndexes.push(...indexes);
-          }
-        }
-      } else {
-        // Exact match
-        fieldIndexes = index.get(searchKey) || [];
-      }
-
-      resultIndexes = resultIndexes 
-        ? resultIndexes.filter(idx => fieldIndexes.includes(idx))
-        : fieldIndexes;
-    });
-
-    return resultIndexes ? resultIndexes.map(idx => this.data[idx]) : [];
-  }
-
-  // Helper methods
-  getNestedValue(obj, path) {
-    return path.split('.').reduce((current, key) => current?.[key], obj);
-  }
-
-  matchesFilter(itemValue, filterValue) {
-    if (typeof filterValue === 'string') {
-      return String(itemValue).toLowerCase().includes(filterValue.toLowerCase());
-    }
-    return itemValue === filterValue;
-  }
-}
-
-// Note: useOptimizedSearch hook moved to separate file to avoid ESLint issues
-
-export default {
-  FuzzySearch,
-  IndexedFilter
+/**
+ * Highlight search terms in text
+ */
+export const highlightSearchTerms = (text, query) => {
+  if (!query || !text) return text;
+  
+  const regex = new RegExp(`(${query})`, 'gi');
+  return text.replace(regex, '<mark>$1</mark>');
 };

@@ -132,24 +132,21 @@ export const authService = {
     const refreshToken = tokenUtils.getRefreshToken();
     const user = authService.getCurrentUser();
 
-    // Must have all three: access token, refresh token, and user data
-    if (!accessToken || !refreshToken || !user) {
+    // Must have at least refresh token and user data
+    if (!refreshToken || !user) {
       return false;
     }
 
-    // Check if access token is expired
-    if (tokenUtils.isTokenExpired(accessToken)) {
-      // If access token is expired, check refresh token
-      if (tokenUtils.isTokenExpired(refreshToken)) {
-        // Both tokens expired, user needs to login again
-        console.log('🔄 Both tokens expired, clearing auth data');
-        tokenUtils.clearTokens();
-        return false;
-      }
-      // Access token expired but refresh token is valid - let interceptor handle refresh
-      console.log('🔄 Access token expired, refresh token still valid');
+    // If we have a refresh token, check if it's expired
+    if (tokenUtils.isTokenExpired(refreshToken)) {
+      // Refresh token expired, user needs to login again
+      console.log('🔄 Refresh token expired, clearing auth data');
+      tokenUtils.clearTokens();
+      return false;
     }
 
+    // If access token is expired but refresh token is valid, that's OK
+    // The API interceptor will handle refreshing the access token
     return true;
   },
 
@@ -261,30 +258,24 @@ export const authService = {
 
   // Validate current session
   validateSession: () => {
-    const accessToken = tokenUtils.getAccessToken();
     const refreshToken = tokenUtils.getRefreshToken();
     const user = authService.getCurrentUser();
 
-    if (!accessToken || !refreshToken || !user) {
-      console.log('🔄 Session invalid: missing tokens or user data');
+    // Only require refresh token and user data
+    if (!refreshToken || !user) {
+      console.log('🔄 Session invalid: missing refresh token or user data');
       return false;
     }
 
-    // Check token expiration
-    const accessExpired = tokenUtils.isTokenExpired(accessToken);
-    const refreshExpired = tokenUtils.isTokenExpired(refreshToken);
-
-    if (refreshExpired) {
+    // Check if refresh token is expired
+    if (tokenUtils.isTokenExpired(refreshToken)) {
       console.log('🔄 Session invalid: refresh token expired');
       tokenUtils.clearTokens();
       return false;
     }
 
-    if (accessExpired) {
-      console.log('🔄 Access token expired, but refresh token valid');
-      // Let the interceptor handle the refresh
-    }
-
+    // Session is valid if we have a valid refresh token and user data
+    // Access token expiration is handled by the API interceptor
     return true;
   },
 

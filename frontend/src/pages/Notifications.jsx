@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNotifications } from '../contexts/NotificationContext';
+import { notificationAPI } from '../services/notificationService';
 import {
   BellIcon,
   CheckIcon,
@@ -7,30 +7,45 @@ import {
   CalendarDaysIcon,
   UserGroupIcon,
   ChartBarIcon,
-  ExclamationTriangleIcon
+  ExclamationCircleIcon,
+  ChatBubbleBottomCenterTextIcon,
+  UserIcon,
+  CogIcon
 } from '@heroicons/react/24/outline';
 import { CheckIcon as CheckIconSolid } from '@heroicons/react/24/solid';
 
 const Notifications = () => {
-  // Use notification context
-  const {
-    notifications,
-    unreadCount,
-    fetchNotifications,
-    markAsRead,
-    markAsUnread,
-    markAllAsRead,
-    deleteNotification
-  } = useNotifications();
-
+  // Local state instead of context to avoid loops
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
+  const [showCheckboxes, setShowCheckboxes] = useState(false);
+  const [longPressTimer, setLongPressTimer] = useState(null);
 
-  // Fetch notifications on component mount
+  // Fetch notifications function
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const result = await notificationAPI.getNotifications();
+      if (result.success) {
+        const notifications = result.data.results || [];
+        setNotifications(notifications);
+        setUnreadCount(result.data.unread_count || 0);
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch notifications on component mount only
   useEffect(() => {
     fetchNotifications();
-  }, [fetchNotifications]);
+  }, []); // No dependencies to prevent loops
 
-  // Get notification type icon
+  // Get notification type icon with improved mapping
   const getNotificationIcon = (type) => {
     switch (type) {
       case 'campaign':
@@ -38,8 +53,17 @@ const Notifications = () => {
       case 'evaluation':
         return ChartBarIcon;
       case 'system':
-        return ExclamationTriangleIcon;
+        return CogIcon;
       case 'user':
+      case 'profile':
+        return UserIcon;
+      case 'message':
+      case 'chat':
+        return ChatBubbleBottomCenterTextIcon;
+      case 'alert':
+      case 'warning':
+        return ExclamationCircleIcon;
+      case 'meeting':
         return UserGroupIcon;
       default:
         return BellIcon;
@@ -50,24 +74,54 @@ const Notifications = () => {
   const getTypeColor = (type) => {
     const colorMap = {
       campaign: {
+        bg: 'bg-blue-50',
+        text: 'text-blue-700',
+        border: 'border-blue-200'
+      },
+      evaluation: {
+        bg: 'bg-green-50',
+        text: 'text-green-700',
+        border: 'border-green-200'
+      },
+      system: {
+        bg: 'bg-gray-50',
+        text: 'text-gray-700',
+        border: 'border-gray-200'
+      },
+      user: {
+        bg: 'bg-purple-50',
+        text: 'text-purple-700',
+        border: 'border-purple-200'
+      },
+      profile: {
+        bg: 'bg-purple-50',
+        text: 'text-purple-700',
+        border: 'border-purple-200'
+      },
+      message: {
+        bg: 'bg-indigo-50',
+        text: 'text-indigo-700',
+        border: 'border-indigo-200'
+      },
+      chat: {
+        bg: 'bg-indigo-50',
+        text: 'text-indigo-700',
+        border: 'border-indigo-200'
+      },
+      alert: {
+        bg: 'bg-red-50',
+        text: 'text-red-700',
+        border: 'border-red-200'
+      },
+      warning: {
+        bg: 'bg-yellow-50',
+        text: 'text-yellow-700',
+        border: 'border-yellow-200'
+      },
+      meeting: {
         bg: 'bg-[#E8C4A0]/20',
         text: 'text-[#8B6F47]',
         border: 'border-[#E8C4A0]/30'
-      },
-      evaluation: {
-        bg: 'bg-peach-100/20',
-        text: 'text-peach-700',
-        border: 'border-peach-200/30'
-      },
-      system: {
-        bg: 'bg-warmGray-100/20',
-        text: 'text-warmGray-700',
-        border: 'border-warmGray-200/30'
-      },
-      user: {
-        bg: 'bg-cream/40',
-        text: 'text-warmGray-800',
-        border: 'border-warmGray-200/30'
       }
     };
     return colorMap[type] || colorMap.system;
@@ -91,12 +145,40 @@ const Notifications = () => {
     return notificationTime.toLocaleDateString('fr-FR');
   };
 
+  // Handle long press for mobile
+  const handleTouchStart = (notificationId) => {
+    const timer = setTimeout(() => {
+      setShowCheckboxes(true);
+      setSelectedNotifications([notificationId]);
+    }, 800); // 800ms long press
+    setLongPressTimer(timer);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  // Handle desktop click to show checkboxes
+  const handleDesktopClick = (e, notificationId) => {
+    if (e.detail === 1) { // Single click
+      if (!showCheckboxes) {
+        setShowCheckboxes(true);
+        setSelectedNotifications([notificationId]);
+      } else {
+        handleSelectNotification(notificationId);
+      }
+    }
+  };
+
   // Handle select all
   const handleSelectAll = () => {
-    if (selectedNotifications.length === filteredNotifications.length) {
+    if (selectedNotifications.length === notifications.length) {
       setSelectedNotifications([]);
     } else {
-      setSelectedNotifications(filteredNotifications.map(n => n.id));
+      setSelectedNotifications(notifications.map(n => n.id));
     }
   };
 
@@ -109,51 +191,114 @@ const Notifications = () => {
     );
   };
 
-  // No filtering, just show all notifications
-  const filteredNotifications = notifications;
+  // Close selection mode
+  const handleCloseSelection = () => {
+    setShowCheckboxes(false);
+    setSelectedNotifications([]);
+  };
 
   // Handle mark as read
   const handleMarkAsRead = async (id) => {
-    await markAsRead(id);
+    try {
+      const result = await notificationAPI.markAsRead(id);
+      if (result.success) {
+        setNotifications(prev => prev.map(n => 
+          n.id === id ? { ...n, is_read: true } : n
+        ));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error('Failed to mark as read:', error);
+    }
   };
 
   // Handle mark as unread
   const handleMarkAsUnread = async (id) => {
-    await markAsUnread(id);
+    try {
+      const result = await notificationAPI.markAsUnread(id);
+      if (result.success) {
+        setNotifications(prev => prev.map(n => 
+          n.id === id ? { ...n, is_read: false } : n
+        ));
+        setUnreadCount(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Failed to mark as unread:', error);
+    }
   };
 
   // Handle delete
   const handleDelete = async (id) => {
-    await deleteNotification(id);
-    setSelectedNotifications(prev => prev.filter(nId => nId !== id));
+    try {
+      const result = await notificationAPI.deleteNotification(id);
+      if (result.success) {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+        setSelectedNotifications(prev => prev.filter(nId => nId !== id));
+        // Update unread count if notification was unread
+        const notification = notifications.find(n => n.id === id);
+        if (notification && !notification.is_read) {
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+      } else {
+        // Handle deletion failure - remove from UI if it was a 404 (already deleted)
+        if (result.error?.message?.includes('not found')) {
+          console.warn('Notification was already deleted, removing from UI');
+          setNotifications(prev => prev.filter(n => n.id !== id));
+          setSelectedNotifications(prev => prev.filter(nId => nId !== id));
+        } else {
+          console.error('Failed to delete notification:', result.error);
+          // Could show a toast notification here
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
+    }
   };
 
   // Handle bulk actions
   const handleBulkMarkAsRead = async () => {
-    // TODO: Implement bulk mark as read API call
     for (const id of selectedNotifications) {
-      await markAsRead(id);
+      await handleMarkAsRead(id);
     }
     setSelectedNotifications([]);
   };
 
   const handleBulkDelete = async () => {
-    // TODO: Implement bulk delete API call
     for (const id of selectedNotifications) {
-      await deleteNotification(id);
+      await handleDelete(id);
     }
     setSelectedNotifications([]);
   };
 
   const handleMarkAllAsRead = async () => {
-    await markAllAsRead();
+    try {
+      const result = await notificationAPI.markAllAsRead();
+      if (result.success) {
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-cream">
+        <div className="max-w-4xl mx-auto px-3 py-4 sm:px-4 sm:py-6">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B6F47]"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-cream">
-      <div className="max-w-4xl mx-auto p-6">
-        {/* Header */}
-        <div className="mb-8">
+      <div className="max-w-4xl mx-auto px-3 py-4 sm:px-4 sm:py-6">
+        {/* Header with reduced margins */}
+        <div className="mb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-r from-[#E8C4A0]/20 to-cream/30 rounded-xl">
@@ -192,29 +337,59 @@ const Notifications = () => {
           </div>
         </div>
 
-        {/* No search or filter UI */}
-
-        {/* Select All Checkbox */}
-        {filteredNotifications.length > 0 && (
-          <div className="mb-4 flex items-center space-x-3 px-4 py-2 bg-white/50 backdrop-blur-sm border border-[#E8C4A0]/20 rounded-lg">
-            <button
-              onClick={handleSelectAll}
-              className="flex items-center justify-center w-5 h-5 border-2 border-[#E8C4A0] rounded transition-all duration-200 hover:bg-[#E8C4A0]/10"
-            >
-              {selectedNotifications.length === filteredNotifications.length && (
-                <CheckIconSolid className="w-3 h-3 text-[#8B6F47]" />
-              )}
-            </button>
-            <span className="text-sm text-[#8B6F47] font-medium">
-              Sélectionner toutes les notifications
-            </span>
+        {/* Bulk actions bar - only show when checkboxes are visible */}
+        {showCheckboxes && (
+          <div className="mb-4 p-3 bg-white/70 backdrop-blur-sm border border-[#E8C4A0]/20 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleSelectAll}
+                  className="flex items-center justify-center w-5 h-5 border-2 border-[#E8C4A0] rounded transition-all duration-200 hover:bg-[#E8C4A0]/10"
+                >
+                  {selectedNotifications.length === notifications.length && (
+                    <CheckIconSolid className="w-3 h-3 text-[#8B6F47]" />
+                  )}
+                </button>
+                <span className="text-sm text-[#8B6F47] font-medium">
+                  {selectedNotifications.length > 0 
+                    ? `${selectedNotifications.length} selected`
+                    : 'Select all notifications'
+                  }
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                {selectedNotifications.length > 0 && (
+                  <>
+                    <button
+                      onClick={handleBulkMarkAsRead}
+                      className="px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm"
+                    >
+                      Mark as read
+                    </button>
+                    <button
+                      onClick={handleBulkDelete}
+                      className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={handleCloseSelection}
+                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Notifications List */}
-        <div className="space-y-3">
-          {filteredNotifications.length > 0 ? (
-            filteredNotifications.map((notification) => {
+        {/* Notifications List with reduced spacing */}
+        <div className="space-y-2">
+          {notifications.length > 0 ? (
+            notifications.map((notification) => {
               const IconComponent = getNotificationIcon(notification.type);
               const typeColors = getTypeColor(notification.type);
               const isSelected = selectedNotifications.includes(notification.id);
@@ -222,25 +397,33 @@ const Notifications = () => {
               return (
                 <div
                   key={notification.id}
-                  className={`group relative bg-white/70 backdrop-blur-sm border rounded-xl p-4 transition-all duration-200 hover:shadow-md hover:bg-white/80 ${
+                  className={`group relative bg-white/70 backdrop-blur-sm border rounded-xl p-3 transition-all duration-200 hover:shadow-md hover:bg-white/80 ${
                     !notification.is_read
                       ? 'border-[#E8C4A0]/40 bg-gradient-to-r from-peach-50/30 to-cream/20'
                       : 'border-[#E8C4A0]/20'
                   } ${isSelected ? 'ring-2 ring-[#E8C4A0] border-[#E8C4A0]' : ''}`}
+                  onTouchStart={() => handleTouchStart(notification.id)}
+                  onTouchEnd={handleTouchEnd}
+                  onClick={(e) => handleDesktopClick(e, notification.id)}
                 >
-                  <div className="flex items-start space-x-4">
-                    {/* Selection Checkbox */}
-                    <button
-                      onClick={() => handleSelectNotification(notification.id)}
-                      className="flex items-center justify-center w-5 h-5 border-2 border-[#E8C4A0] rounded transition-all duration-200 hover:bg-[#E8C4A0]/10 mt-1"
-                    >
-                      {isSelected && (
-                        <CheckIconSolid className="w-3 h-3 text-[#8B6F47]" />
-                      )}
-                    </button>
+                  <div className="flex items-start space-x-3">
+                    {/* Selection Checkbox - only show when in selection mode */}
+                    {showCheckboxes && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectNotification(notification.id);
+                        }}
+                        className="flex items-center justify-center w-5 h-5 border-2 border-[#E8C4A0] rounded transition-all duration-200 hover:bg-[#E8C4A0]/10 mt-1"
+                      >
+                        {isSelected && (
+                          <CheckIconSolid className="w-3 h-3 text-[#8B6F47]" />
+                        )}
+                      </button>
+                    )}
 
                     {/* Notification Icon */}
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${typeColors.bg} ${typeColors.border} border transition-all duration-200 group-hover:scale-110`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${typeColors.bg} ${typeColors.border} border transition-all duration-200 group-hover:scale-110 flex-shrink-0`}>
                       <IconComponent className={`w-5 h-5 ${typeColors.text}`} />
                     </div>
 
@@ -269,33 +452,44 @@ const Notifications = () => {
                           </div>
                         </div>
 
-                        {/* Action Menu */}
-                        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          {!notification.is_read ? (
+                        {/* Action Menu - only show when not in selection mode */}
+                        {!showCheckboxes && (
+                          <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            {!notification.is_read ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMarkAsRead(notification.id);
+                                }}
+                                className="p-1.5 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                                title="Mark as read"
+                              >
+                                <CheckIcon className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMarkAsUnread(notification.id);
+                                }}
+                                className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                                title="Mark as unread"
+                              >
+                                <BellIcon className="w-4 h-4" />
+                              </button>
+                            )}
                             <button
-                              onClick={() => handleMarkAsRead(notification.id)}
-                              className="p-1.5 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
-                              title="Mark as read"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(notification.id);
+                              }}
+                              className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                              title="Delete notification"
                             >
-                              <CheckIcon className="w-4 h-4" />
+                              <TrashIcon className="w-4 h-4" />
                             </button>
-                          ) : (
-                            <button
-                              onClick={() => handleMarkAsUnread(notification.id)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                              title="Mark as unread"
-                            >
-                              <BellIcon className="w-4 h-4" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDelete(notification.id)}
-                            className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                            title="Delete notification"
-                          >
-                            <TrashIcon className="w-4 h-4" />
-                          </button>
-                        </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -316,8 +510,8 @@ const Notifications = () => {
         </div>
 
         {/* Load More Button - TODO: Implement pagination */}
-        {filteredNotifications.length > 10 && (
-          <div className="mt-8 text-center">
+        {notifications.length > 10 && (
+          <div className="mt-6 text-center">
             <button
               className="px-6 py-3 bg-gradient-to-r from-[#E8C4A0] to-peach-200 text-[#8B6F47] rounded-lg hover:from-[#E8C4A0]/80 hover:to-peach-200/80 transition-all duration-200 font-medium"
             >

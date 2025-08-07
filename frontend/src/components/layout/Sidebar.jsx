@@ -6,11 +6,12 @@ import {
   CalendarDaysIcon,
   UserGroupIcon,
   ChartPieIcon,
-  CogIcon,
+  UserIcon,
   ArrowRightOnRectangleIcon,
   PlusIcon,
   ViewColumnsIcon,
-  ClockIcon
+  ClockIcon,
+  BellIcon
 } from '@heroicons/react/24/outline';
 
 const Sidebar = ({ onHoverChange }) => {
@@ -77,36 +78,43 @@ const Sidebar = ({ onHoverChange }) => {
       id: 'dashboard',
       label: 'Tableau de bord',
       icon: ChartBarIcon,
-      path: '/dashboard',
-      active: location.pathname === '/dashboard'
+      path: '/app',
+      active: location.pathname === '/app'
     },
     {
       id: 'campaigns',
       label: 'Campagnes',
       icon: CalendarDaysIcon,
-      path: '/campaigns',
-      active: location.pathname.startsWith('/campaigns') && !location.pathname.startsWith('/campaigns/history')
+      path: '/app/campaigns',
+      active: location.pathname.startsWith('/app/campaigns') && !location.pathname.startsWith('/app/campaigns/history')
     },
     {
       id: 'employees',
       label: 'Employés',
       icon: UserGroupIcon,
-      path: '/employees',
-      active: location.pathname.startsWith('/employees')
+      path: '/app/employees',
+      active: location.pathname.startsWith('/app/employees')
     },
     {
       id: 'history',
       label: 'Historique',
       icon: ClockIcon,
-      path: '/history',
-      active: location.pathname.startsWith('/history')
+      path: '/app/history',
+      active: location.pathname.startsWith('/app/history')
     },
     {
-      id: 'settings',
-      label: 'Paramètres',
-      icon: CogIcon,
-      path: '/settings',
-      active: location.pathname.startsWith('/settings')
+      id: 'notifications',
+      label: 'Notifications',
+      icon: BellIcon,
+      path: '/app/notifications',
+      active: location.pathname.startsWith('/app/notifications')
+    },
+    {
+      id: 'profile',
+      label: 'Profile',
+      icon: UserIcon,
+      path: '/app/profile',
+      active: location.pathname.startsWith('/app/profile')
     }
   ];
 

@@ -26,11 +26,16 @@ const NotificationButton = () => {
     markAllAsRead
   } = useNotifications();
 
-  // Fetch notifications on component mount
+  // Fetch notifications on component mount only (no polling)
   useEffect(() => {
-    fetchNotifications({ limit: 5 });
-    fetchUnreadCount();
-  }, [fetchNotifications, fetchUnreadCount]);
+    // Only try to fetch if we have the context functions
+    if (fetchNotifications && fetchUnreadCount) {
+      // Initial fetch only - no aggressive polling
+      fetchNotifications({ limit: 5 }); // Only fetch first 5 for dropdown
+      fetchUnreadCount();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount, no polling to reduce server load
 
   // Use only real notifications from the API
   const displayNotifications = notifications || [];
@@ -80,13 +85,13 @@ const NotificationButton = () => {
     // Navigate based on notification type
     switch (notification.type) {
       case 'campaign':
-        navigate('/campaigns');
+        navigate('/app/campaigns');
         break;
       case 'evaluation':
-        navigate('/campaigns/history');
+        navigate('/app/history/campaigns');
         break;
       default:
-        navigate('/notifications');
+        navigate('/app/notifications');
     }
   };
 
@@ -102,7 +107,7 @@ const NotificationButton = () => {
   // Handle view all notifications
   const handleViewAll = () => {
     setIsOpen(false);
-    navigate('/notifications');
+    navigate('/app/notifications');
   };
 
   // Handle mark all as read
