@@ -26,7 +26,7 @@ const Login = () => {
     } catch (error) {
       setError('root', {
         type: 'manual',
-        message: error.message || 'Login failed. Please try again.',
+        message: error.message || 'Connexion échouée. Veuillez réessayer.',
       });
     } finally {
       setIsLoading(false);
@@ -55,10 +55,10 @@ const Login = () => {
                 </div>
                 <input
                   {...register('email', {
-                    required: 'Email is required',
+                    required: 'L\'email est requis',
                     pattern: {
                       value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                      message: 'Please enter a valid email address',
+                      message: 'Veuillez entrer une adresse email valide',
                     },
                   })}
                   type="email"
@@ -119,7 +119,7 @@ const Login = () => {
                 onClick={() => navigate('/forgot-password')}
                 className="text-warmGray-500 hover:text-warmGray-700 font-medium transition-colors duration-200 text-sm"
               >
-                Forgot Password?
+                Mot de passe oublié ?
               </button>
             </div>
 
@@ -151,13 +151,13 @@ const Login = () => {
             {/* Sign Up Link */}
             <div className="text-center pt-8 pb-12">
               <span className="text-warmGray-500 text-sm">
-                Don't have an account?{' '}
+                Vous n'avez pas de compte ?{' '}
                 <button
                   type="button"
                   onClick={() => navigate('/register')}
                   className="text-peach-600 hover:text-peach-700 font-medium transition-colors duration-200"
                 >
-                  Sign up
+                  S'inscrire
                 </button>
               </span>
             </div>

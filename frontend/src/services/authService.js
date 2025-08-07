@@ -76,7 +76,7 @@ export const authService = {
       } else {
         // Handle API errors from backend
         const errors = result.error;
-        let errorMessage = 'Registration failed. Please try again.';
+        let errorMessage = 'Inscription échouée. Veuillez réessayer.';
 
         if (errors) {
           if (errors.email?.[0]) errorMessage = errors.email[0];

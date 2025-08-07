@@ -50,10 +50,10 @@ const Pagination = React.memo(({
       {/* Modern Page Info */}
       <div className="text-center">
         <p className="text-sm text-warmGray-500 font-medium">
-          Page <span className="text-[#8B6F47] font-semibold">{currentPage}</span> of{' '}
+          Page <span className="text-[#8B6F47] font-semibold">{currentPage}</span> sur{' '}
           <span className="text-[#8B6F47] font-semibold">{totalPages}</span>
           <span className="mx-2">•</span>
-          <span className="text-warmGray-400">{totalItems} total items</span>
+          <span className="text-warmGray-400">{totalItems} élément{totalItems !== 1 ? 's' : ''} au total</span>
         </p>
       </div>
 

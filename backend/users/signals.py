@@ -1,36 +1,24 @@
-from django.db.models.signals import pre_save
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import HRManager
 from notifications.services import NotificationService
 
-@receiver(pre_save, sender=HRManager)
-def hrmanager_profile_update_notification(sender, instance, **kwargs):
-    if not instance.pk:
-        # New HRManager, do not notify
-        return
+@receiver(post_save, sender=HRManager)
+def hr_manager_profile_updated(sender, instance, created, **kwargs):
+    """Create notification when HR manager profile is updated"""
+    if created:
+        return  # Don't create notification for new users
+
+    # Simple notification for any profile update
     try:
-        prev = HRManager.objects.get(pk=instance.pk)
-    except HRManager.DoesNotExist:
-        return
-
-    changed_fields = []
-    if prev.name != instance.name:
-        changed_fields.append('name')
-    if prev.email != instance.email:
-        changed_fields.append('email')
-    if prev.password_hash != instance.password_hash:
-        changed_fields.append('password')
-    if prev.profile_picture != instance.profile_picture:
-        changed_fields.append('profile')
-
-    if changed_fields:
-        NotificationService.create_notification(
+        notification = NotificationService.create_notification(
             recipient=instance,
-            title="Profile Updated",
-            message=f"Your profile has been updated: {', '.join(changed_fields)}.",
+            title="Profil Mis à Jour",
+            message="Votre profil a été mis à jour avec succès.",
             notification_type='system',
             priority='low',
             related_object_type='hrmanager',
-            related_object_id=instance.id,
-            extra_data={'changed_fields': changed_fields}
+            related_object_id=instance.id
         )
+    except Exception as e:
+        print(f"[ERROR] Failed to create profile update notification: {str(e)}")

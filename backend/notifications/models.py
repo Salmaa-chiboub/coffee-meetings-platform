@@ -107,14 +107,14 @@ class Notification(models.Model):
         diff = now - self.created_at
         
         if diff.days > 0:
-            return f"{diff.days} day{'s' if diff.days > 1 else ''} ago"
+            return f"Il y a {diff.days} jour{'s' if diff.days > 1 else ''}"
         elif diff.seconds > 3600:
             hours = diff.seconds // 3600
-            return f"{hours} hour{'s' if hours > 1 else ''} ago"
+            return f"Il y a {hours} heure{'s' if hours > 1 else ''}"
         elif diff.seconds > 60:
             minutes = diff.seconds // 60
-            return f"{minutes} minute{'s' if minutes > 1 else ''} ago"
+            return f"Il y a {minutes} minute{'s' if minutes > 1 else ''}"
         else:
-            return "Just now"
+            return "À l'instant"
 
 

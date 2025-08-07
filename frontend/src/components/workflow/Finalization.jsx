@@ -87,10 +87,10 @@ const Finalization = ({ campaignId, campaign, workflowState, onComplete, onError
           campaign_completed: true
         });
       } else {
-        onError(result.error || 'Failed to confirm pairs');
+        onError(result.error || 'Échec de la confirmation des paires');
       }
     } catch (error) {
-      onError(error.message || 'Failed to confirm and send pairs');
+      onError(error.message || 'Échec de la confirmation et de l\'envoi des paires');
     } finally {
       setConfirming(false);
     }
@@ -114,7 +114,7 @@ const Finalization = ({ campaignId, campaign, workflowState, onComplete, onError
             {/* Success Icon and Title */}
             <CheckCircleIcon className="h-16 w-16 text-green-600 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-green-800 mb-6">
-              Campaign Completed Successfully!
+              Campagne Terminée avec Succès !
             </h2>
 
             {/* Compact Statistics */}
@@ -122,11 +122,11 @@ const Finalization = ({ campaignId, campaign, workflowState, onComplete, onError
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
                 <div>
                   <p className="text-xl font-bold text-green-800">{pairsSummary?.pairs_count || 0}</p>
-                  <p className="text-sm text-green-600">Pairs Confirmed</p>
+                  <p className="text-sm text-green-600">Paires Confirmées</p>
                 </div>
                 <div>
                   <p className="text-xl font-bold text-green-800">{(pairsSummary?.pairs_count || 0) * 2}</p>
-                  <p className="text-sm text-green-600">Emails Sent</p>
+                  <p className="text-sm text-green-600">Emails Envoyés</p>
                 </div>
               </div>
             </div>
@@ -134,7 +134,7 @@ const Finalization = ({ campaignId, campaign, workflowState, onComplete, onError
             {/* Next Steps - Compact */}
             <div className="bg-blue-50 rounded-lg p-4 mb-6">
               <p className="text-sm text-blue-800">
-                <span className="font-medium">Next:</span> Employees will receive invitations and can provide feedback after their meetings.
+                <span className="font-medium">Suivant :</span> Les employés recevront des invitations et pourront donner leur avis après leurs rencontres.
               </p>
             </div>
 
@@ -143,7 +143,7 @@ const Finalization = ({ campaignId, campaign, workflowState, onComplete, onError
               onClick={() => window.location.href = '/campaigns'}
               className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-sm"
             >
-              Return to Campaigns
+              Retour aux Campagnes
             </button>
           </div>
         </div>
@@ -159,33 +159,33 @@ const Finalization = ({ campaignId, campaign, workflowState, onComplete, onError
           <div className="text-center mb-6">
             <PaperAirplaneIcon className="h-12 w-12 text-[#E8C4A0] mx-auto mb-3" />
             <h2 className="text-xl font-bold text-warmGray-800 mb-2">
-              Finalize & Send Invitations
+              Finaliser et Envoyer les Invitations
             </h2>
             <p className="text-warmGray-600 text-sm">
-              Review your campaign and send coffee meeting invitations to employees
+              Examinez votre campagne et envoyez les invitations de rencontres café aux employés
             </p>
           </div>
 
           {/* Campaign Summary - Compact */}
           <div className="bg-warmGray-50 rounded-lg p-4 mb-6">
-            <h3 className="text-base font-semibold text-warmGray-800 mb-3">Campaign Summary</h3>
+            <h3 className="text-base font-semibold text-warmGray-800 mb-3">Résumé de la Campagne</h3>
           
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
               <div>
                 <p className="text-lg font-bold text-warmGray-800">{pairsSummary?.pairs_count || 0}</p>
-                <p className="text-xs text-warmGray-600">Final Pairs</p>
+                <p className="text-xs text-warmGray-600">Paires Finales</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-warmGray-800">{(pairsSummary?.pairs_count || 0) * 2}</p>
-                <p className="text-xs text-warmGray-600">Employees</p>
+                <p className="text-xs text-warmGray-600">Employés</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-warmGray-800">{(pairsSummary?.pairs_count || 0) * 2}</p>
-                <p className="text-xs text-warmGray-600">Emails to Send</p>
+                <p className="text-xs text-warmGray-600">Emails à Envoyer</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-warmGray-800">{pairsSummary?.criteria_used?.length || 0}</p>
-                <p className="text-xs text-warmGray-600">Criteria Applied</p>
+                <p className="text-xs text-warmGray-600">Critères Appliqués</p>
               </div>
             </div>
           </div>
@@ -196,8 +196,8 @@ const Finalization = ({ campaignId, campaign, workflowState, onComplete, onError
               <div className="flex items-center space-x-2">
                 <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600" />
                 <div>
-                  <p className="text-sm font-medium text-yellow-800">No pairs available</p>
-                  <p className="text-xs text-yellow-600">Please generate employee pairs first</p>
+                  <p className="text-sm font-medium text-yellow-800">Aucune paire disponible</p>
+                  <p className="text-xs text-yellow-600">Veuillez d'abord générer les paires d'employés</p>
                 </div>
               </div>
             </div>
@@ -215,10 +215,10 @@ const Finalization = ({ campaignId, campaign, workflowState, onComplete, onError
               {confirming ? (
                 <div className="flex items-center space-x-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#8B6F47]"></div>
-                  <span>Confirming & Sending...</span>
+                  <span>Confirmation et envoi...</span>
                 </div>
               ) : (
-                'Confirm & Send Invitations'
+                'Confirmer et Envoyer les Invitations'
               )}
             </button>
           </div>

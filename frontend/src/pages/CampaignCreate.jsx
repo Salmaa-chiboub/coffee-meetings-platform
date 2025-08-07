@@ -73,14 +73,14 @@ const CampaignCreate = () => {
           className="flex items-center space-x-2 text-warmGray-600 hover:text-warmGray-800 transition-colors duration-200 mb-4"
         >
           <ArrowLeftIcon className="h-5 w-5" />
-          <span>Back to Campaigns</span>
+          <span>Retour aux Campagnes</span>
         </button>
         
         <h1 className="text-4xl font-bold text-warmGray-800">
-          Create New Campaign
+          Créer une Nouvelle Campagne
         </h1>
         <p className="text-warmGray-600 mt-0.5">
-          Set up a new coffee meeting campaign for your employees
+          Configurez une nouvelle campagne de rencontres café pour vos employés
         </p>
       </div>
 
@@ -95,18 +95,18 @@ const CampaignCreate = () => {
               </div>
               <input
                 {...register('title', {
-                  required: 'Campaign title is required',
+                  required: 'Le titre de la campagne est requis',
                   maxLength: {
                     value: 100,
-                    message: 'Title must be less than 100 characters',
+                    message: 'Le titre doit contenir moins de 100 caractères',
                   },
                 })}
                 type="text"
-                placeholder="Enter campaign title"
+                placeholder="Entrez le titre de la campagne"
                 className="w-full pl-12 pr-4 py-4 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-warmGray-600 transition-all duration-200"
               />
               <label className="absolute -top-3 left-6 bg-white px-2 text-sm font-medium text-warmGray-600">
-                Campaign Title *
+                Titre de la Campagne *
               </label>
             </div>
             {errors.title && (
@@ -118,7 +118,7 @@ const CampaignCreate = () => {
           <div className="relative">
             <textarea
               {...register('description')}
-              placeholder="Enter campaign description (optional)"
+              placeholder="Entrez la description de la campagne (optionnel)"
               rows={4}
               className="w-full px-4 py-4 bg-transparent border-2 border-warmGray-400 rounded-2xl text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-warmGray-600 transition-all duration-200 resize-none"
             />
@@ -140,15 +140,15 @@ const CampaignCreate = () => {
                 </div>
                 <input
                   {...register('start_date', {
-                    required: 'Start date is required',
+                    required: 'La date de début est requise',
                     validate: (value) => {
                       const today = new Date();
                       const selectedDate = new Date(value);
                       today.setHours(0, 0, 0, 0);
                       selectedDate.setHours(0, 0, 0, 0);
-                      
+
                       if (selectedDate < today) {
-                        return 'Start date cannot be in the past';
+                        return 'La date de début ne peut pas être dans le passé';
                       }
                       return true;
                     },
@@ -157,7 +157,7 @@ const CampaignCreate = () => {
                   className="w-full pl-12 pr-4 py-4 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 focus:outline-none focus:border-warmGray-600 transition-all duration-200"
                 />
                 <label className="absolute -top-3 left-6 bg-white px-2 text-sm font-medium text-warmGray-600">
-                  Start Date *
+                  Date de Début *
                 </label>
               </div>
               {errors.start_date && (
@@ -173,15 +173,15 @@ const CampaignCreate = () => {
                 </div>
                 <input
                   {...register('end_date', {
-                    required: 'End date is required',
+                    required: 'La date de fin est requise',
                     validate: (value) => {
                       if (!startDate) return true;
-                      
+
                       const start = new Date(startDate);
                       const end = new Date(value);
-                      
+
                       if (end <= start) {
-                        return 'End date must be after start date';
+                        return 'La date de fin doit être après la date de début';
                       }
                       return true;
                     },
@@ -190,7 +190,7 @@ const CampaignCreate = () => {
                   className="w-full pl-12 pr-4 py-4 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 focus:outline-none focus:border-warmGray-600 transition-all duration-200"
                 />
                 <label className="absolute -top-3 left-6 bg-white px-2 text-sm font-medium text-warmGray-600">
-                  End Date *
+                  Date de Fin *
                 </label>
               </div>
               {errors.end_date && (
@@ -213,7 +213,7 @@ const CampaignCreate = () => {
               onClick={handleBack}
               className="flex-1 border-2 border-warmGray-400 hover:border-warmGray-600 text-warmGray-600 hover:text-warmGray-800 font-medium py-4 px-6 rounded-full transition-all duration-200"
             >
-              Cancel
+              Annuler
             </button>
             <button
               type="submit"
@@ -223,10 +223,10 @@ const CampaignCreate = () => {
               {isLoading ? (
                 <div className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#8B6F47] mr-2"></div>
-                  Creating...
+                  Création...
                 </div>
               ) : (
-                'Create Campaign'
+                'Créer la Campagne'
               )}
             </button>
           </div>

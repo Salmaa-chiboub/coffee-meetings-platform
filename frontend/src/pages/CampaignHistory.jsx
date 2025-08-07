@@ -212,14 +212,14 @@ const CampaignHistory = () => {
 
           {/* Workflow Steps Summary */}
           <div className="border-t border-warmGray-200 pt-6">
-            <h3 className="text-lg font-semibold text-warmGray-800 mb-4">Workflow Summary</h3>
+            <h3 className="text-lg font-semibold text-warmGray-800 mb-4">Résumé du Workflow</h3>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {[
-                { id: 1, title: 'Campaign Created', icon: DocumentTextIcon, color: 'blue' },
-                { id: 2, title: 'Employees Uploaded', icon: UserGroupIcon, color: 'green' },
-                { id: 3, title: 'Criteria Defined', icon: Cog6ToothIcon, color: 'purple' },
-                { id: 4, title: 'Pairs Generated', icon: UserGroupIcon, color: 'orange' },
-                { id: 5, title: 'Invitations Sent', icon: EnvelopeIcon, color: 'pink' }
+                { id: 1, title: 'Campagne Créée', icon: DocumentTextIcon, color: 'blue' },
+                { id: 2, title: 'Employés Téléchargés', icon: UserGroupIcon, color: 'green' },
+                { id: 3, title: 'Critères Définis', icon: Cog6ToothIcon, color: 'purple' },
+                { id: 4, title: 'Paires Générées', icon: UserGroupIcon, color: 'orange' },
+                { id: 5, title: 'Invitations Envoyées', icon: EnvelopeIcon, color: 'pink' }
               ].map((step) => {
                 const isCompleted = workflowState?.completed_steps?.includes(step.id);
                 const IconComponent = step.icon;

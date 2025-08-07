@@ -13,33 +13,33 @@ const StepNavigation = ({ currentStep, completedSteps = [], onStepClick, campaig
   const steps = [
     {
       id: 1,
-      title: 'Campaign Created',
+      title: 'Campagne Créée',
       icon: DocumentTextIcon,
-      description: 'Campaign details defined'
+      description: 'Détails de la campagne définis'
     },
     {
       id: 2,
-      title: 'Upload Employees',
+      title: 'Télécharger Employés',
       icon: CloudArrowUpIcon,
-      description: 'Import employee data'
+      description: 'Importer les données des employés'
     },
     {
       id: 3,
-      title: 'Define Criteria',
+      title: 'Définir Critères',
       icon: Cog6ToothIcon,
-      description: 'Set matching rules'
+      description: 'Définir les règles d\'appariement'
     },
     {
       id: 4,
-      title: 'Generate Pairs',
+      title: 'Générer Paires',
       icon: UserGroupIcon,
-      description: 'Create employee pairs'
+      description: 'Créer les paires d\'employés'
     },
     {
       id: 5,
-      title: 'Finalize & Send',
+      title: 'Finaliser et Envoyer',
       icon: PaperAirplaneIcon,
-      description: 'Confirm and notify'
+      description: 'Confirmer et notifier'
     }
   ];
 

@@ -25,10 +25,10 @@ export const CAMPAIGN_STATUS = {
 
 // Campaign status labels
 export const CAMPAIGN_STATUS_LABELS = {
-  [CAMPAIGN_STATUS.DRAFT]: 'Draft',
+  [CAMPAIGN_STATUS.DRAFT]: 'Brouillon',
   [CAMPAIGN_STATUS.ACTIVE]: 'Active',
-  [CAMPAIGN_STATUS.COMPLETED]: 'Completed',
-  [CAMPAIGN_STATUS.CANCELLED]: 'Cancelled',
+  [CAMPAIGN_STATUS.COMPLETED]: 'Terminée',
+  [CAMPAIGN_STATUS.CANCELLED]: 'Annulée',
 };
 
 // File upload constraints

@@ -15,8 +15,7 @@ const NotificationButton = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Use notification context with error handling
-  const notificationContext = useNotifications();
+  // Use notification context
   const {
     notifications = [],
     unreadCount = 0,
@@ -24,26 +23,13 @@ const NotificationButton = () => {
     fetchNotifications,
     fetchUnreadCount,
     markAsRead,
-    markAllAsRead,
-    isFirstLoad = true
-  } = notificationContext || {};
+    markAllAsRead
+  } = useNotifications();
 
-  // Fetch notifications on component mount and set up polling
+  // Fetch notifications on component mount
   useEffect(() => {
-    // Only try to fetch if we have the context functions
-    if (fetchNotifications && fetchUnreadCount) {
-      // Initial fetch
-      fetchNotifications({ limit: 5 }); // Only fetch first 5 for dropdown
-      fetchUnreadCount();
-
-      // Set up polling for unread count every 5 seconds for testing
-      const pollInterval = setInterval(() => {
-        fetchUnreadCount();
-        fetchNotifications({ limit: 5 }); // Also refresh notifications
-      }, 5000);
-
-      return () => clearInterval(pollInterval);
-    }
+    fetchNotifications({ limit: 5 });
+    fetchUnreadCount();
   }, [fetchNotifications, fetchUnreadCount]);
 
   // Use only real notifications from the API
@@ -72,14 +58,14 @@ const NotificationButton = () => {
     const notificationTime = new Date(timestamp);
     const diffInMinutes = Math.floor((now - notificationTime) / (1000 * 60));
 
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+    if (diffInMinutes < 1) return 'À l\'instant';
+    if (diffInMinutes < 60) return `Il y a ${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''}`;
 
     const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+    if (diffInHours < 24) return `Il y a ${diffInHours} heure${diffInHours > 1 ? 's' : ''}`;
 
     const diffInDays = Math.floor(diffInHours / 24);
-    return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+    return `Il y a ${diffInDays} jour${diffInDays > 1 ? 's' : ''}`;
   };
 
   // Handle notification click
@@ -104,6 +90,15 @@ const NotificationButton = () => {
     }
   };
 
+  // Handle dropdown toggle with fresh data fetch
+  const handleToggleDropdown = () => {
+    if (!isOpen && fetchNotifications) {
+      // Only refresh notifications when opening dropdown
+      fetchNotifications({ limit: 5 });
+    }
+    setIsOpen(!isOpen);
+  };
+
   // Handle view all notifications
   const handleViewAll = () => {
     setIsOpen(false);
@@ -120,7 +115,7 @@ const NotificationButton = () => {
     <div className="relative">
       {/* Notification Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggleDropdown}
         className="group relative p-2 rounded-full transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#E8C4A0] focus:ring-offset-2 transform hover:scale-[1.05] active:scale-[0.95] bg-gradient-to-r from-[#E8C4A0]/10 to-cream/20 hover:from-[#E8C4A0]/20 hover:to-cream/30 border border-[#E8C4A0]/20 backdrop-blur-sm"
         title="Notifications"
       >
@@ -149,7 +144,7 @@ const NotificationButton = () => {
               <h3 className="text-sm font-semibold text-[#8B6F47]">Notifications</h3>
               {displayUnreadCount > 0 && (
                 <span className="px-2 py-0.5 bg-gradient-to-r from-peach-100 to-peach-200 text-peach-800 text-xs font-medium rounded-full">
-                  {displayUnreadCount} new
+                  {displayUnreadCount} nouveau{displayUnreadCount > 1 ? 'x' : ''}
                 </span>
               )}
             </div>
@@ -210,8 +205,8 @@ const NotificationButton = () => {
             ) : (
               <div className="px-4 py-8 text-center">
                 <BellIcon className="w-8 h-8 text-[#E8C4A0]/40 mx-auto mb-2" />
-                <p className="text-sm text-warmGray-500">No notifications</p>
-                <p className="text-xs text-warmGray-400 mt-1">You're all caught up!</p>
+                <p className="text-sm text-warmGray-500">Aucune notification</p>
+                <p className="text-xs text-warmGray-400 mt-1">Vous êtes à jour !</p>
               </div>
             )}
           </div>
@@ -227,14 +222,14 @@ const NotificationButton = () => {
                     disabled={loading}
                   >
                     <CheckIcon className="w-3 h-3" />
-                    <span>Mark all read</span>
+                    <span>Tout marquer comme lu</span>
                   </button>
                 )}
                 <button
                   onClick={handleViewAll}
                   className="flex-1 text-sm text-[#8B6F47] hover:text-[#6B5537] font-medium transition-colors duration-200 text-center py-1 px-3 rounded-lg hover:bg-[#E8C4A0]/10"
                 >
-                  View all notifications
+                  Voir toutes les notifications
                 </button>
               </div>
             </div>

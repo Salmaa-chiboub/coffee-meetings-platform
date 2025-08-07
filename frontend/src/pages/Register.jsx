@@ -38,7 +38,7 @@ const Register = () => {
     } catch (error) {
       setError('root', {
         type: 'manual',
-        message: error.message || 'Registration failed. Please try again.',
+        message: error.message || 'Inscription échouée. Veuillez réessayer.',
       });
     } finally {
       setIsLoading(false);
@@ -67,10 +67,10 @@ const Register = () => {
                 </div>
                 <input
                   {...register('fullName', {
-                    required: 'Full name is required',
+                    required: 'Le nom complet est requis',
                     minLength: {
                       value: 2,
-                      message: 'Full name must be at least 2 characters',
+                      message: 'Le nom complet doit contenir au moins 2 caractères',
                     },
                   })}
                   type="text"
@@ -94,10 +94,10 @@ const Register = () => {
                 </div>
                 <input
                   {...register('email', {
-                    required: 'Email is required',
+                    required: 'L\'email est requis',
                     pattern: {
                       value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                      message: 'Please enter a valid email address',
+                      message: 'Veuillez entrer une adresse email valide',
                     },
                   })}
                   type="email"
@@ -121,10 +121,10 @@ const Register = () => {
                 </div>
                 <input
                   {...register('companyName', {
-                    required: 'Company name is required',
+                    required: 'Le nom de l\'entreprise est requis',
                     minLength: {
                       value: 2,
-                      message: 'Company name must be at least 2 characters',
+                      message: 'Le nom de l\'entreprise doit contenir au moins 2 caractères',
                     },
                   })}
                   type="text"
@@ -148,14 +148,14 @@ const Register = () => {
                 </div>
                 <input
                   {...register('password', {
-                    required: 'Password is required',
+                    required: 'Le mot de passe est requis',
                     minLength: {
                       value: 8,
-                      message: 'Password must be at least 8 characters',
+                      message: 'Le mot de passe doit contenir au moins 8 caractères',
                     },
                     pattern: {
                       value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-                      message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+                      message: 'Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre',
                     },
                   })}
                   type={showPassword ? 'text' : 'password'}
@@ -190,9 +190,9 @@ const Register = () => {
                 </div>
                 <input
                   {...register('confirmPassword', {
-                    required: 'Please confirm your password',
+                    required: 'Veuillez confirmer votre mot de passe',
                     validate: (value) =>
-                      value === password || 'Passwords do not match',
+                      value === password || 'Les mots de passe ne correspondent pas',
                   })}
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="Confirm your password"

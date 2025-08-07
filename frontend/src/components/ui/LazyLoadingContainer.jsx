@@ -17,8 +17,8 @@ const LazyLoadingContainer = ({
   emptyState = null,
   loadingState = null,
   errorState = null,
-  loadMoreText = "Loading more...",
-  endText = "You've reached the end",
+  loadMoreText = "Chargement...",
+  endText = "Vous avez atteint la fin",
   className = "",
   showPerformanceInfo = false,
   performanceData = null
@@ -31,8 +31,8 @@ const LazyLoadingContainer = ({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m13-4h-2M4 9h2" />
         </svg>
       </div>
-      <h3 className="text-lg font-medium text-gray-900 mb-2">No items found</h3>
-      <p className="text-gray-500">There are no items to display at the moment.</p>
+      <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun élément trouvé</h3>
+      <p className="text-gray-500">Il n'y a aucun élément à afficher pour le moment.</p>
     </div>
   );
 
@@ -63,14 +63,14 @@ const LazyLoadingContainer = ({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
-      <h3 className="text-lg font-medium text-gray-900 mb-2">Something went wrong</h3>
+      <h3 className="text-lg font-medium text-gray-900 mb-2">Une erreur s'est produite</h3>
       <p className="text-gray-500 mb-4">{error}</p>
       {onRetry && (
         <button
           onClick={onRetry}
           className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
         >
-          Try Again
+          Réessayer
         </button>
       )}
     </div>

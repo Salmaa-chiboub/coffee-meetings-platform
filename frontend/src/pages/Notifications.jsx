@@ -16,8 +16,6 @@ const Notifications = () => {
   const {
     notifications,
     unreadCount,
-    // filters,
-    // setFilters,
     fetchNotifications,
     markAsRead,
     markAsUnread,
@@ -26,10 +24,6 @@ const Notifications = () => {
   } = useNotifications();
 
   const [selectedNotifications, setSelectedNotifications] = useState([]);
-  // const [searchTerm, setSearchTerm] = useState('');
-  // const [showFilters, setShowFilters] = useState(false);
-
-  // No mock data - use only real notifications from API
 
   // Fetch notifications on component mount
   useEffect(() => {
@@ -85,16 +79,16 @@ const Notifications = () => {
     const notificationTime = new Date(timestamp);
     const diffInMinutes = Math.floor((now - notificationTime) / (1000 * 60));
 
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
-    
+    if (diffInMinutes < 1) return 'À l\'instant';
+    if (diffInMinutes < 60) return `Il y a ${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''}`;
+
     const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-    
+    if (diffInHours < 24) return `Il y a ${diffInHours} heure${diffInHours > 1 ? 's' : ''}`;
+
     const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
-    
-    return notificationTime.toLocaleDateString();
+    if (diffInDays < 7) return `Il y a ${diffInDays} jour${diffInDays > 1 ? 's' : ''}`;
+
+    return notificationTime.toLocaleDateString('fr-FR');
   };
 
   // Handle select all
@@ -168,20 +162,33 @@ const Notifications = () => {
               <div>
                 <h1 className="text-2xl font-bold text-[#8B6F47]">Notifications</h1>
                 <p className="text-sm text-warmGray-600">
-                  {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'All caught up!'}
+                  {unreadCount > 0 ? `${unreadCount} notification${unreadCount > 1 ? 's' : ''} non lue${unreadCount > 1 ? 's' : ''}` : 'Tout est à jour !'}
                 </p>
               </div>
             </div>
             
-            {unreadCount > 0 && (
+            <div className="flex items-center space-x-2">
+              {/* Refresh Button */}
               <button
-                onClick={handleMarkAllAsRead}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#E8C4A0] to-peach-200 text-[#8B6F47] rounded-lg hover:from-[#E8C4A0]/80 hover:to-peach-200/80 transition-all duration-200 font-medium"
+                onClick={() => fetchNotifications()}
+                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cream to-[#E8C4A0]/30 text-[#8B6F47] rounded-lg hover:from-cream/80 hover:to-[#E8C4A0]/40 transition-all duration-200 font-medium"
               >
-                <CheckIcon className="w-4 h-4" />
-                <span>Mark all as read</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Actualiser</span>
               </button>
-            )}
+
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllAsRead}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#E8C4A0] to-peach-200 text-[#8B6F47] rounded-lg hover:from-[#E8C4A0]/80 hover:to-peach-200/80 transition-all duration-200 font-medium"
+                >
+                  <CheckIcon className="w-4 h-4" />
+                  <span>Tout marquer comme lu</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -199,7 +206,7 @@ const Notifications = () => {
               )}
             </button>
             <span className="text-sm text-[#8B6F47] font-medium">
-              Select all notifications
+              Sélectionner toutes les notifications
             </span>
           </div>
         )}
@@ -300,9 +307,9 @@ const Notifications = () => {
               <div className="w-16 h-16 bg-[#E8C4A0]/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <BellIcon className="w-8 h-8 text-[#E8C4A0]" />
               </div>
-              <h3 className="text-lg font-medium text-[#8B6F47] mb-2">No notifications found</h3>
+              <h3 className="text-lg font-medium text-[#8B6F47] mb-2">Aucune notification trouvée</h3>
               <p className="text-warmGray-500">
-                You're all caught up! New notifications will appear here.
+                Vous êtes à jour ! Les nouvelles notifications apparaîtront ici.
               </p>
             </div>
           )}
@@ -314,7 +321,7 @@ const Notifications = () => {
             <button
               className="px-6 py-3 bg-gradient-to-r from-[#E8C4A0] to-peach-200 text-[#8B6F47] rounded-lg hover:from-[#E8C4A0]/80 hover:to-peach-200/80 transition-all duration-200 font-medium"
             >
-              Load More Notifications
+              Charger Plus de Notifications
             </button>
           </div>
         )}

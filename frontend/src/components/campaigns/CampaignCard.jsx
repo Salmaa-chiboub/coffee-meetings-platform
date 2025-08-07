@@ -34,7 +34,7 @@ const CampaignCard = React.memo(({ campaign, onClick }) => {
   const formattedDates = useMemo(() => {
     const formatDate = (dateString) => {
       const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
+      return date.toLocaleDateString('fr-FR', {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
@@ -76,14 +76,14 @@ const CampaignCard = React.memo(({ campaign, onClick }) => {
               ? 'bg-green-100 text-green-700'
               : 'bg-orange-100 text-orange-700'
           }`}>
-            {campaignStatus.isCompleted ? 'Completed' : 'Active'}
+            {campaignStatus.isCompleted ? 'Terminée' : 'Active'}
           </span>
         )}
       </div>
 
       {/* Description */}
       <p className="text-warmGray-600 text-sm mb-4 line-clamp-2">
-        {campaign.description || 'No description provided'}
+        {campaign.description || 'Aucune description fournie'}
       </p>
 
       {/* Simple Info */}

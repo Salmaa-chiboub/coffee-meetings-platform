@@ -47,8 +47,8 @@ if CAMPAIGN_MODEL_AVAILABLE:
                 if hr_manager:
                     NotificationService.create_notification(
                         recipient=hr_manager,
-                        title="New Campaign Created",
-                        message=f'Campaign "{instance.title}" has been created by {hr_manager.name}.',
+                        title="Nouvelle Campagne Créée",
+                        message=f'La campagne "{instance.title}" a été créée par {hr_manager.name}.',
                         notification_type='campaign',
                         priority='medium',
                         related_object_type='campaign',

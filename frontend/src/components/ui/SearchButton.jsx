@@ -129,7 +129,7 @@ const SearchButton = () => {
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            placeholder={isMobile ? "Search..." : "Search campaigns, employees, feedback..."}
+            placeholder={isMobile ? "Rechercher..." : "Rechercher campagnes, employés, commentaires..."}
             className={`transition-all duration-300 w-[200px] sm:w-[280px] md:w-[320px] lg:w-[360px] max-w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 bg-gradient-to-r from-white to-[#FDF9F5] rounded-full border text-gray-600 placeholder-gray-400 focus:outline-none text-xs sm:text-sm ${
               isFocused
                 ? 'border-[#E6C19A] ring-2 ring-[#F3E3CE]/60 shadow-[0_6px_24px_0_rgba(230,193,154,0.20)] scale-[1.01]'
@@ -145,7 +145,7 @@ const SearchButton = () => {
             {isSearching ? (
               <div className="px-4 py-6 text-center">
                 <div className="animate-spin w-5 h-5 border-2 border-[#EED2B3] border-t-transparent rounded-full mx-auto mb-2"></div>
-                <p className="text-sm text-gray-500 font-medium">Searching...</p>
+                <p className="text-sm text-gray-500 font-medium">Recherche en cours...</p>
               </div>
             ) : searchResults.length > 0 ? (
               <div className="py-2">
@@ -176,7 +176,7 @@ const SearchButton = () => {
                           </p>
                         </div>
                         <span className="text-xs text-[#D2A26F] capitalize font-medium bg-[#F3E3CE]/40 px-2 py-1 rounded-full">
-                          {result.type}
+                          {result.type === 'campaign' ? 'campagne' : result.type === 'employee' ? 'employé' : result.type === 'evaluation' ? 'évaluation' : result.type}
                         </span>
                       </div>
                     </button>
@@ -188,9 +188,9 @@ const SearchButton = () => {
                 <div className="w-10 h-10 bg-gradient-to-br from-[#F3E3CE]/30 to-[#EED2B3]/30 rounded-full flex items-center justify-center mx-auto mb-2">
                   <MagnifyingGlassIcon className="w-5 h-5 text-[#D2A26F]" />
                 </div>
-                <p className="text-sm text-gray-500 font-medium">No results found</p>
+                <p className="text-sm text-gray-500 font-medium">Aucun résultat trouvé</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Try different keywords
+                  Essayez des mots-clés différents
                 </p>
               </div>
             )}

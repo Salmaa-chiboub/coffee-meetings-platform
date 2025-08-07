@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -27,16 +27,33 @@ const Sidebar = ({ onHoverChange }) => {
   // Show expanded state when hovered or mobile is open
   const shouldShowExpanded = isHovered || isMobileOpen;
 
-  // Notify parent component of hover state changes
+  // Debounced hover handlers to prevent rapid layout shifts
+  const hoverTimeoutRef = useRef(null);
+
   const handleMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
     setIsHovered(true);
     if (onHoverChange) onHoverChange(true);
   };
 
   const handleMouseLeave = () => {
-    setIsHovered(false);
-    if (onHoverChange) onHoverChange(false);
+    // Add small delay to prevent flickering when moving between sidebar elements
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsHovered(false);
+      if (onHoverChange) onHoverChange(false);
+    }, 100);
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Close mobile sidebar when route changes
   useEffect(() => {
@@ -58,21 +75,21 @@ const Sidebar = ({ onHoverChange }) => {
   const navigationItems = [
     {
       id: 'dashboard',
-      label: 'Dashboard',
+      label: 'Tableau de bord',
       icon: ChartBarIcon,
       path: '/dashboard',
       active: location.pathname === '/dashboard'
     },
     {
       id: 'campaigns',
-      label: 'Campaigns',
+      label: 'Campagnes',
       icon: CalendarDaysIcon,
       path: '/campaigns',
       active: location.pathname.startsWith('/campaigns') && !location.pathname.startsWith('/campaigns/history')
     },
     {
       id: 'employees',
-      label: 'Employees',
+      label: 'Employés',
       icon: UserGroupIcon,
       path: '/employees',
       active: location.pathname.startsWith('/employees')
@@ -86,7 +103,7 @@ const Sidebar = ({ onHoverChange }) => {
     },
     {
       id: 'settings',
-      label: 'Settings',
+      label: 'Paramètres',
       icon: CogIcon,
       path: '/settings',
       active: location.pathname.startsWith('/settings')
@@ -204,7 +221,7 @@ const Sidebar = ({ onHoverChange }) => {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-[#8B6F47]">CoffeeMeet</h1>
-                <p className="text-xs text-warmGray-500">HR Platform</p>
+                <p className="text-xs text-warmGray-500">Plateforme RH</p>
               </div>
             </div>
           ) : (

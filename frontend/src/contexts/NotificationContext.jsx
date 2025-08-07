@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useCallback, useState } from 'react';
+import React, { createContext, useContext, useReducer, useCallback } from 'react';
 import { notificationAPI } from '../services/notificationService';
 
 // Initial state
@@ -139,7 +139,6 @@ const NotificationContext = createContext();
 // Provider component
 export const NotificationProvider = ({ children }) => {
   const [state, dispatch] = useReducer(notificationReducer, initialState);
-  const [hasError, setHasError] = useState(false);
 
   // Fetch notifications
   const fetchNotifications = useCallback(async (options = {}) => {
@@ -175,22 +174,18 @@ export const NotificationProvider = ({ children }) => {
     } catch (error) {
       console.error('Notification API error:', error.message);
       dispatch({ type: NOTIFICATION_ACTIONS.SET_ERROR, payload: error.message });
-      setHasError(true);
     }
-  }, [state.filters, state.pagination.page, state.pagination.limit, state.notifications]);
+  }, [state.filters, state.pagination.page, state.pagination.limit]);
 
-  // Fetch unread count only
+  // Fetch unread count
   const fetchUnreadCount = useCallback(async () => {
     try {
       const result = await notificationAPI.getUnreadCount();
       if (result.success) {
         dispatch({ type: NOTIFICATION_ACTIONS.SET_UNREAD_COUNT, payload: result.data.count });
-      } else {
-        console.error('Failed to fetch unread count:', result.error);
       }
     } catch (error) {
-      console.error('Unread count API error:', error);
-      setHasError(true);
+      console.error('Failed to fetch unread count:', error);
     }
   }, []);
 
@@ -204,7 +199,6 @@ export const NotificationProvider = ({ children }) => {
       return result.success;
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
-      setHasError(true);
       return false;
     }
   }, []);
@@ -219,7 +213,6 @@ export const NotificationProvider = ({ children }) => {
       return result.success;
     } catch (error) {
       console.error('Failed to mark notification as unread:', error);
-      setHasError(true);
       return false;
     }
   }, []);
@@ -234,7 +227,6 @@ export const NotificationProvider = ({ children }) => {
       return result.success;
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
-      setHasError(true);
       return false;
     }
   }, []);
@@ -249,7 +241,6 @@ export const NotificationProvider = ({ children }) => {
       return result.success;
     } catch (error) {
       console.error('Failed to delete notification:', error);
-      setHasError(true);
       return false;
     }
   }, []);
@@ -271,7 +262,6 @@ export const NotificationProvider = ({ children }) => {
     dispatch({ type: NOTIFICATION_ACTIONS.ADD_NOTIFICATION, payload: notification });
   }, []);
 
-  // Context value
   const value = {
     // State
     notifications: state.notifications,
@@ -298,11 +288,7 @@ export const NotificationProvider = ({ children }) => {
     isFirstLoad: !state.lastFetch
   };
 
-  // If there's an error, just render children without context
-  if (hasError) {
-    console.warn('NotificationProvider encountered an error, using fallback');
-    return children;
-  }
+
 
   return (
     <NotificationContext.Provider value={value}>
@@ -331,6 +317,7 @@ export const useNotifications = () => {
       markAsUnread: () => Promise.resolve(),
       markAllAsRead: () => Promise.resolve(),
       deleteNotification: () => Promise.resolve(),
+
       // setFilters: () => {},
       loadMore: () => {},
       addNotification: () => {},

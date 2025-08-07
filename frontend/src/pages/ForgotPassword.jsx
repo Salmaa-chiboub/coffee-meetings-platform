@@ -25,7 +25,7 @@ const ForgotPassword = () => {
     } catch (error) {
       setError('root', {
         type: 'manual',
-        message: error.message || 'Failed to send reset email. Please try again.',
+        message: error.message || 'Échec de l\'envoi de l\'email de réinitialisation. Veuillez réessayer.',
       });
     } finally {
       setIsLoading(false);
@@ -41,11 +41,11 @@ const ForgotPassword = () => {
             {/* Header */}
             <div className="text-center pt-12 pb-4">
               <h1 className="text-4xl font-bold text-warmGray-800">
-                Check Your Email
+                Vérifiez votre Email
               </h1>
               <p className="mt-4 text-warmGray-600">
-                We've sent a password reset link to your email address. 
-                Please check your inbox and follow the instructions to reset your password.
+                Nous avons envoyé un lien de réinitialisation de mot de passe à votre adresse email.
+                Veuillez vérifier votre boîte de réception et suivre les instructions pour réinitialiser votre mot de passe.
               </p>
             </div>
 
@@ -109,10 +109,10 @@ const ForgotPassword = () => {
                 </div>
                 <input
                   {...register('email', {
-                    required: 'Email is required',
+                    required: 'L\'email est requis',
                     pattern: {
                       value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                      message: 'Please enter a valid email address',
+                      message: 'Veuillez entrer une adresse email valide',
                     },
                   })}
                   type="email"

@@ -32,13 +32,13 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
     ];
     
     if (!allowedTypes.includes(selectedFile.type)) {
-      onError('Please select a valid Excel file (.xlsx or .xls)');
+      onError('Veuillez sélectionner un fichier Excel valide (.xlsx ou .xls)');
       return;
     }
 
     // Validate file size (max 10MB)
     if (selectedFile.size > 10 * 1024 * 1024) {
-      onError('File size must be less than 10MB');
+      onError('La taille du fichier doit être inférieure à 10 Mo');
       return;
     }
 
@@ -78,7 +78,7 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
   // Handle upload
   const handleUpload = async () => {
     if (!file) {
-      onError('Please select a file first');
+      onError('Veuillez d\'abord sélectionner un fichier');
       return;
     }
 
@@ -100,10 +100,10 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
         });
       } else {
         setUploadResult(result);
-        onError(result.error || 'Upload failed');
+        onError(result.error || 'Échec du téléchargement');
       }
     } catch (error) {
-      onError(error.message || 'Upload failed');
+      onError(error.message || 'Échec du téléchargement');
     } finally {
       setUploading(false);
     }
@@ -160,7 +160,7 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
       XLSX.writeFile(wb, 'employee_template.xlsx');
     } catch (error) {
       console.error('Error creating template:', error);
-      alert('Failed to download template. Please try again.');
+      alert('Échec du téléchargement du modèle. Veuillez réessayer.');
     } finally {
       setDownloadingTemplate(false);
     }
@@ -175,7 +175,7 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
             <div className="flex items-center space-x-3 mb-5">
               <InformationCircleIcon className="h-5 w-5 text-[#E8C4A0]" />
               <h3 className="text-base font-semibold text-warmGray-800">
-                Requirements
+                Exigences
               </h3>
             </div>
 
@@ -185,8 +185,8 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
               <div className="flex items-start space-x-3">
                 <DocumentTextIcon className="h-4 w-4 text-warmGray-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-warmGray-700">File Format</p>
-                  <p className="text-xs text-warmGray-600">Excel (.xlsx or .xls)</p>
+                  <p className="text-sm font-medium text-warmGray-700">Format de Fichier</p>
+                  <p className="text-xs text-warmGray-600">Excel (.xlsx ou .xls)</p>
                 </div>
               </div>
 
@@ -194,8 +194,8 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
               <div className="flex items-start space-x-3">
                 <DocumentIcon className="h-4 w-4 text-warmGray-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-warmGray-700">Required Columns</p>
-                  <p className="text-xs text-warmGray-600">Name, Email, Arrival Date</p>
+                  <p className="text-sm font-medium text-warmGray-700">Colonnes Requises</p>
+                  <p className="text-xs text-warmGray-600">Nom, Email, Date d'Arrivée</p>
                 </div>
               </div>
 
@@ -203,8 +203,8 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
               <div className="flex items-start space-x-3">
                 <CloudArrowUpIcon className="h-4 w-4 text-warmGray-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-warmGray-700">Maximum Size</p>
-                  <p className="text-xs text-warmGray-600">10MB per file</p>
+                  <p className="text-sm font-medium text-warmGray-700">Taille Maximale</p>
+                  <p className="text-xs text-warmGray-600">10 Mo par fichier</p>
                 </div>
               </div>
             </div>
@@ -215,7 +215,7 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
             {/* Help Section */}
             <div className="bg-warmGray-50 rounded-lg p-3 mb-4">
               <p className="text-xs text-warmGray-600 leading-relaxed">
-                <span className="font-medium">Tip:</span> Download the template below to ensure your file has the correct format and column headers.
+                <span className="font-medium">Conseil :</span> Téléchargez le modèle ci-dessous pour vous assurer que votre fichier a le bon format et les bons en-têtes de colonnes.
               </p>
             </div>
 
@@ -228,12 +228,12 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
               {downloadingTemplate ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#8B6F47]"></div>
-                  <span className="text-sm">Generating...</span>
+                  <span className="text-sm">Génération...</span>
                 </>
               ) : (
                 <>
                   <DocumentArrowDownIcon className="h-4 w-4" />
-                  <span className="text-sm">Download Template</span>
+                  <span className="text-sm">Télécharger le Modèle</span>
                 </>
               )}
             </button>
@@ -247,10 +247,10 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
             <div className="text-center mb-6">
               <CloudArrowUpIcon className="h-12 w-12 text-[#E8C4A0] mx-auto mb-3" />
               <h2 className="text-xl font-bold text-warmGray-800 mb-2">
-                Upload Employee Data
+                Télécharger les Données des Employés
               </h2>
               <p className="text-warmGray-600 text-sm">
-                Import your employee information using an Excel file
+                Importez les informations de vos employés à l'aide d'un fichier Excel
               </p>
             </div>
 
@@ -293,7 +293,7 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
                         className="inline-flex items-center space-x-2 text-warmGray-500 hover:text-warmGray-700 transition-colors"
                       >
                         <XMarkIcon className="h-4 w-4" />
-                        <span>Remove file</span>
+                        <span>Supprimer le fichier</span>
                       </button>
                     </div>
                   ) : (
@@ -301,10 +301,10 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
                       <CloudArrowUpIcon className="h-10 w-10 text-warmGray-400 mx-auto" />
                       <div>
                         <p className="text-warmGray-700 font-medium text-sm">
-                          Drop your Excel file here, or click to browse
+                          Déposez votre fichier Excel ici, ou cliquez pour parcourir
                         </p>
                         <p className="text-warmGray-500 text-xs">
-                          Supports .xlsx and .xls files up to 10MB
+                          Prend en charge les fichiers .xlsx et .xls jusqu'à 10 Mo
                         </p>
                       </div>
                     </div>
@@ -322,10 +322,10 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
                       {uploading ? (
                         <div className="flex items-center space-x-2">
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#8B6F47]"></div>
-                          <span>Uploading...</span>
+                          <span>Téléchargement...</span>
                         </div>
                       ) : (
-                        'Upload File'
+                        'Télécharger le Fichier'
                       )}
                     </button>
                   </div>
@@ -340,17 +340,17 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
                   <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center">
                     <CheckCircleIcon className="h-12 w-12 text-green-600 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-green-800 mb-2">
-                      Upload Successful!
+                      Téléchargement Réussi !
                     </h3>
                     <p className="text-green-600 mb-4">
-                      {uploadResult.employees_created || 0} employees imported successfully
+                      {uploadResult.employees_created || 0} employés importés avec succès
                     </p>
                     <div className="text-sm text-green-600 space-y-1">
                       {uploadResult.employees_updated > 0 && (
-                        <p>• {uploadResult.employees_updated} employees updated</p>
+                        <p>• {uploadResult.employees_updated} employés mis à jour</p>
                       )}
                       {uploadResult.duplicates_skipped > 0 && (
-                        <p>• {uploadResult.duplicates_skipped} duplicates skipped</p>
+                        <p>• {uploadResult.duplicates_skipped} doublons ignorés</p>
                       )}
                     </div>
                   </div>
@@ -358,14 +358,14 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
                   <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
                     <ExclamationTriangleIcon className="h-12 w-12 text-red-600 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-red-800 mb-2">
-                      Upload Failed
+                      Échec du Téléchargement
                     </h3>
                     <p className="text-red-600 mb-4">
-                      {uploadResult.error || 'An error occurred during upload'}
+                      {uploadResult.error || 'Une erreur s\'est produite lors du téléchargement'}
                     </p>
                     {uploadResult.errors && uploadResult.errors.length > 0 && (
                       <div className="text-sm text-red-600 text-left bg-red-100 rounded-lg p-3">
-                        <p className="font-medium mb-2">Errors:</p>
+                        <p className="font-medium mb-2">Erreurs :</p>
                         <ul className="space-y-1">
                           {uploadResult.errors.map((error, index) => (
                             <li key={index}>• {error}</li>
@@ -380,7 +380,7 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
                       }}
                       className="mt-4 bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-2 px-6 rounded-full transition-all duration-200"
                     >
-                      Try Again
+                      Réessayer
                     </button>
                   </div>
                 )}

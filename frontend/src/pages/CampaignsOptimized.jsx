@@ -74,12 +74,12 @@ const CampaignsOptimized = () => {
         <PlusIcon className="h-8 w-8 text-gray-400" />
       </div>
       <h3 className="text-lg font-medium text-gray-900 mb-2">
-        {searchTerm || statusFilter !== 'all' ? 'No campaigns found' : 'No campaigns yet'}
+        {searchTerm || statusFilter !== 'all' ? 'Aucune campagne trouvée' : 'Aucune campagne pour le moment'}
       </h3>
       <p className="text-gray-500 mb-6">
-        {searchTerm || statusFilter !== 'all' 
-          ? 'Try adjusting your search or filters'
-          : 'Get started by creating your first campaign'
+        {searchTerm || statusFilter !== 'all'
+          ? 'Essayez d\'ajuster votre recherche ou vos filtres'
+          : 'Commencez par créer votre première campagne'
         }
       </p>
       {(!searchTerm && statusFilter === 'all') && (
@@ -87,7 +87,7 @@ const CampaignsOptimized = () => {
           onClick={handleCreateCampaign}
           className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-2 px-4 rounded-full transition-colors"
         >
-          Create Campaign
+          Créer une Campagne
         </button>
       )}
     </div>
@@ -124,10 +124,10 @@ const CampaignsOptimized = () => {
         <div className="flex items-start justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-warmGray-800">
-              Coffee Meeting Campaigns
+              Campagnes de Rencontres Café
             </h1>
             <p className="text-warmGray-600 mt-0.5">
-              Manage your coffee meeting campaigns and track employee participation
+              Gérez vos campagnes de rencontres café et suivez la participation des employés
             </p>
           </div>
           
@@ -137,7 +137,7 @@ const CampaignsOptimized = () => {
             className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-4 px-6 rounded-full transition-all duration-200 transform hover:scale-[1.02] flex items-center space-x-2"
           >
             <PlusIcon className="h-5 w-5" />
-            <span>Add Campaign</span>
+            <span>Ajouter une Campagne</span>
           </button>
         </div>
 
@@ -151,7 +151,7 @@ const CampaignsOptimized = () => {
               </div>
               <input
                 type="text"
-                placeholder="Search campaigns..."
+                placeholder="Rechercher des campagnes..."
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="block w-full pl-10 pr-3 py-3 border-2 border-warmGray-300 rounded-lg focus:outline-none focus:border-warmGray-500 transition-all duration-200"
@@ -166,9 +166,9 @@ const CampaignsOptimized = () => {
                   onChange={handleStatusFilterChange}
                   className="w-full py-2 px-4 border-2 border-warmGray-400 rounded-full focus:outline-none focus:border-warmGray-600 transition-all duration-200 bg-white text-warmGray-700 text-sm"
                 >
-                  <option value="all">All Campaigns</option>
-                  <option value="completed">Completed</option>
-                  <option value="incomplete">In Progress</option>
+                  <option value="all">Toutes les Campagnes</option>
+                  <option value="completed">Terminées</option>
+                  <option value="incomplete">En Cours</option>
                 </select>
               </div>
             </div>

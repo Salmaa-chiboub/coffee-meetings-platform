@@ -29,7 +29,7 @@ class NotificationService:
     ) -> Notification:
         """
         Create a new notification
-        
+
         Args:
             recipient: HRManager who will receive the notification
             title: Notification title
@@ -39,7 +39,7 @@ class NotificationService:
             related_object_type: Type of related object
             related_object_id: ID of related object
             extra_data: Additional data for the notification
-            
+
         Returns:
             Created Notification instance
         """
@@ -145,8 +145,8 @@ class NotificationService:
         """
         return NotificationService.create_notification(
             recipient=creator,
-            title="Campaign Created Successfully",
-            message=f'Your campaign "{campaign.title}" has been created and is ready to launch.',
+            title="Campagne Créée avec Succès",
+            message=f'Votre campagne "{campaign.title}" a été créée et est prête à être lancée.',
             notification_type='campaign',
             priority='medium',
             related_object_type='campaign',
@@ -165,8 +165,8 @@ class NotificationService:
         """
         return NotificationService.create_notification(
             recipient=recipient,
-            title="Campaign Completed",
-            message=f'Campaign "{campaign.title}" has ended successfully.',
+            title="Campagne Terminée",
+            message=f'La campagne "{campaign.title}" s\'est terminée avec succès.',
             notification_type='campaign',
             priority='low',
             related_object_type='campaign',
@@ -183,12 +183,12 @@ class NotificationService:
         """
         Create notification when an evaluation is completed
         """
-        employee_name = evaluation.employee.name if hasattr(evaluation, 'employee') else 'An employee'
-        
+        employee_name = evaluation.employee.name if hasattr(evaluation, 'employee') else 'Un employé'
+
         return NotificationService.create_notification(
             recipient=recipient,
-            title="New Evaluation Completed",
-            message=f'{employee_name} has completed their coffee meeting evaluation.',
+            title="Nouvelle Évaluation Terminée",
+            message=f'{employee_name} a terminé son évaluation de rencontre café.',
             notification_type='evaluation',
             priority='low',
             related_object_type='evaluation',
@@ -207,7 +207,7 @@ class NotificationService:
         """
         return NotificationService.create_bulk_notifications(
             recipients=recipients,
-            title="System Update",
+            title="Mise à Jour Système",
             message=update_message,
             notification_type='system',
             priority='medium',

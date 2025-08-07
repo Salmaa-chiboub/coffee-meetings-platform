@@ -413,7 +413,7 @@ const GlobalCampaignHistory = () => {
                   <div className="flex items-center space-x-2">
                     <UsersIcon className="h-4 w-4 text-warmGray-400" />
                     <div>
-                      <p className="text-xs text-warmGray-500">Pairs</p>
+                      <p className="text-xs text-warmGray-500">Paires</p>
                       <p className="text-sm font-medium text-warmGray-800">
                         {campaign.total_pairs || 0}
                       </p>

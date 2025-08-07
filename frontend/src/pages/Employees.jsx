@@ -24,7 +24,7 @@ const Employees = () => {
   // Helper function to get campaign name
   const getCampaignName = (campaignId) => {
     const campaign = campaigns.find(c => c.id === campaignId);
-    return campaign?.title || 'Unknown Campaign';
+    return campaign?.title || 'Campagne Inconnue';
   };
 
   // Prepare query parameters for employees
@@ -112,7 +112,7 @@ const Employees = () => {
 
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return 'N/D';
     return new Date(dateString).toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
@@ -124,8 +124,8 @@ const Employees = () => {
     return (
       <div className="max-w-7xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <div className="text-red-600 mb-2">⚠️ Error loading employees</div>
-          <div className="text-red-500 text-sm">{error.message || 'Something went wrong'}</div>
+          <div className="text-red-600 mb-2">⚠️ Erreur lors du chargement des employés</div>
+          <div className="text-red-500 text-sm">{error.message || 'Une erreur s\'est produite'}</div>
         </div>
       </div>
     );
@@ -136,9 +136,9 @@ const Employees = () => {
       {/* Compact Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-warmGray-800">Employees</h1>
+          <h1 className="text-2xl font-bold text-warmGray-800">Employés</h1>
           <p className="text-sm text-warmGray-600 mt-1">
-            {totalItems} employee{totalItems !== 1 ? 's' : ''} total
+            {totalItems} employé{totalItems !== 1 ? 's' : ''} au total
           </p>
         </div>
       </div>
@@ -154,7 +154,7 @@ const Employees = () => {
               </div>
               <input
                 type="text"
-                placeholder="Search members by name or email..."
+                placeholder="Rechercher des membres par nom ou email..."
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="w-full pl-10 pr-3 py-2.5 bg-white/90 border-2 border-warmGray-300 rounded-xl text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-[#E8C4A0] focus:ring-2 focus:ring-[#E8C4A0]/20 transition-all duration-200 text-sm shadow-sm"
@@ -186,7 +186,7 @@ const Employees = () => {
                 onChange={handleCampaignFilter}
                 className="w-full pl-10 pr-8 py-2.5 bg-white/90 border-2 border-warmGray-300 rounded-xl text-warmGray-800 focus:outline-none focus:border-[#E8C4A0] focus:ring-2 focus:ring-[#E8C4A0]/20 transition-all duration-200 appearance-none text-sm shadow-sm"
               >
-                <option value="">Choose Campaign</option>
+                <option value="">Choisir une Campagne</option>
                 {campaigns.map(campaign => (
                   <option key={campaign.id} value={campaign.id}>
                     {campaign.title}
@@ -207,7 +207,7 @@ const Employees = () => {
               <div className="inline-flex items-center px-3 py-2 bg-gradient-to-r from-[#E8C4A0]/20 to-[#DDB892]/20 rounded-lg border border-[#E8C4A0]/30">
                 <div className="w-1.5 h-1.5 bg-[#8B6F47] rounded-full mr-2 animate-pulse"></div>
                 <span className="text-xs text-[#8B6F47] font-semibold whitespace-nowrap">
-                  {filteredEmployees.length} found
+                  {filteredEmployees.length} trouvé{filteredEmployees.length !== 1 ? 's' : ''}
                 </span>
               </div>
             </div>
@@ -220,18 +220,18 @@ const Employees = () => {
         {isLoading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#E8C4A0] border-t-transparent mx-auto mb-3"></div>
-            <div className="text-warmGray-600 text-sm">Loading employees...</div>
+            <div className="text-warmGray-600 text-sm">Chargement des employés...</div>
           </div>
         ) : paginatedEmployees.length === 0 ? (
           <div className="text-center py-12">
             <UserGroupIcon className="h-12 w-12 text-warmGray-400 mx-auto mb-3" />
             <h3 className="text-lg font-medium text-warmGray-800 mb-1">
-              {searchTerm || selectedCampaign ? 'No employees found' : 'No employees yet'}
+              {searchTerm || selectedCampaign ? 'Aucun employé trouvé' : 'Aucun employé pour le moment'}
             </h3>
             <p className="text-warmGray-600 text-sm">
               {searchTerm || selectedCampaign
-                ? 'Try adjusting your search or filter criteria'
-                : 'Employees will appear here once they are imported into campaigns'
+                ? 'Essayez d\'ajuster vos critères de recherche ou de filtre'
+                : 'Les employés apparaîtront ici une fois qu\'ils seront importés dans les campagnes'
               }
             </p>
           </div>
@@ -242,13 +242,13 @@ const Employees = () => {
               <thead>
                 <tr className="bg-warmGray-50/50 border-b border-warmGray-200">
                   <th className="text-left py-3 px-4 font-medium text-warmGray-600 text-xs uppercase tracking-wide">
-                    Member
+                    Membre
                   </th>
                   <th className="text-left py-3 px-4 font-medium text-warmGray-600 text-xs uppercase tracking-wide">
                     Email
                   </th>
                   <th className="text-left py-3 px-4 font-medium text-warmGray-600 text-xs uppercase tracking-wide">
-                    Join Date
+                    Date d'Arrivée
                   </th>
                 </tr>
               </thead>
@@ -268,16 +268,16 @@ const Employees = () => {
                         </div>
                         <div className="min-w-0">
                           <div className="font-medium text-warmGray-900 text-sm truncate">
-                            {employee.name || 'N/A'}
+                            {employee.name || 'N/D'}
                           </div>
                           <div className="flex items-center gap-2 mt-1">
                             {Object.keys(employee.attributes_dict || {}).length > 0 && (
                               <span className="text-xs text-warmGray-500">
-                                +{Object.keys(employee.attributes_dict).length} attributes
+                                +{Object.keys(employee.attributes_dict).length} attributs
                               </span>
                             )}
                             <span className="text-xs text-blue-600">
-                              {employee.campaigns.length} campaign{employee.campaigns.length !== 1 ? 's' : ''}
+                              {employee.campaigns.length} campagne{employee.campaigns.length !== 1 ? 's' : ''}
                             </span>
                           </div>
                         </div>
@@ -287,7 +287,7 @@ const Employees = () => {
                     {/* Email */}
                     <td className="py-3 px-4">
                       <span className="text-warmGray-700 text-sm">
-                        {employee.email || 'N/A'}
+                        {employee.email || 'N/D'}
                       </span>
                     </td>
 

@@ -47,32 +47,32 @@ class Command(BaseCommand):
         # Create different types of test notifications
         test_notifications = [
             {
-                'title': 'Campaign Created Successfully',
-                'message': 'Your campaign "Q1 Team Building" has been created and is ready to launch.',
+                'title': 'Campagne Créée avec Succès',
+                'message': 'Votre campagne "Renforcement d\'équipe T1" a été créée et est prête à être lancée.',
                 'type': 'campaign',
                 'priority': 'medium'
             },
             {
-                'title': 'New Evaluation Completed',
-                'message': 'John Doe has completed their coffee meeting evaluation.',
+                'title': 'Nouvelle Évaluation Terminée',
+                'message': 'Jean Dupont a terminé son évaluation de rencontre café.',
                 'type': 'evaluation',
                 'priority': 'low'
             },
             {
-                'title': 'Campaign Ended',
-                'message': 'Campaign "December Connections" has ended successfully with 85% participation rate.',
+                'title': 'Campagne Terminée',
+                'message': 'La campagne "Connexions Décembre" s\'est terminée avec succès avec un taux de participation de 85%.',
                 'type': 'campaign',
                 'priority': 'low'
             },
             {
-                'title': 'System Update',
-                'message': 'The CoffeeMeet platform has been updated with new features and improvements.',
+                'title': 'Mise à Jour Système',
+                'message': 'La plateforme CoffeeMeet a été mise à jour avec de nouvelles fonctionnalités et améliorations.',
                 'type': 'system',
                 'priority': 'medium'
             },
             {
-                'title': 'New Employee Added',
-                'message': 'Sarah Johnson has been added to your employee database.',
+                'title': 'Nouvel Employé Ajouté',
+                'message': 'Sarah Martin a été ajoutée à votre base de données d\'employés.',
                 'type': 'user',
                 'priority': 'low'
             }

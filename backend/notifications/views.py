@@ -128,7 +128,7 @@ def mark_all_read(request):
         is_read=True,
         read_at=timezone.now()
     )
-    
+
     return Response({
         'message': f'{updated_count} notifications marked as read',
         'updated_count': updated_count

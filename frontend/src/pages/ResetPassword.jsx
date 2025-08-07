@@ -37,7 +37,7 @@ const ResetPassword = () => {
         console.log('❌ Invalid token format:', token);
         setError('root', {
           type: 'manual',
-          message: 'Invalid reset token. Please request a new password reset.',
+          message: 'Token de réinitialisation invalide. Veuillez demander une nouvelle réinitialisation de mot de passe.',
         });
       } else {
         console.log('✅ Valid token format');
@@ -131,14 +131,14 @@ const ResetPassword = () => {
                 </div>
                 <input
                   {...register('password', {
-                    required: 'Password is required',
+                    required: 'Le mot de passe est requis',
                     minLength: {
                       value: 8,
-                      message: 'Password must be at least 8 characters',
+                      message: 'Le mot de passe doit contenir au moins 8 caractères',
                     },
                     pattern: {
                       value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-                      message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+                      message: 'Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre',
                     },
                   })}
                   type={showPassword ? 'text' : 'password'}
@@ -173,9 +173,9 @@ const ResetPassword = () => {
                 </div>
                 <input
                   {...register('confirmPassword', {
-                    required: 'Please confirm your password',
+                    required: 'Veuillez confirmer votre mot de passe',
                     validate: (value) =>
-                      value === password || 'Passwords do not match',
+                      value === password || 'Les mots de passe ne correspondent pas',
                   })}
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="Confirm your new password"

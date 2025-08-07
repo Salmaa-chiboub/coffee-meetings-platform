@@ -173,9 +173,9 @@ const DashboardModern = () => {
         {/* En-tête */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-3xl font-bold text-warmGray-800">Dashboard</h1>
+            <h1 className="text-3xl font-bold text-warmGray-800">Tableau de bord</h1>
             <p className="text-warmGray-600 mt-0.5">
-              Welcome back, {user?.name || 'User'}! Here's your platform overview.
+              Bon retour, {user?.name || 'Utilisateur'} ! Voici un aperçu de votre plateforme.
             </p>
           </div>
 
@@ -192,7 +192,7 @@ const DashboardModern = () => {
                   <ClipboardDocumentListIcon className="w-7 h-7 text-peach-600" />
                 </div>
                 <span className="text-sm font-bold text-warmGray-600 uppercase tracking-wider">
-                  Total Campaigns
+                  Total Campagnes
                 </span>
               </div>
             </div>
@@ -209,7 +209,7 @@ const DashboardModern = () => {
                   <UserGroupIcon className="w-7 h-7 text-amber-600" />
                 </div>
                 <span className="text-sm font-bold text-warmGray-600 uppercase tracking-wider">
-                  Total Employees
+                  Total Employés
                 </span>
               </div>
             </div>
@@ -226,7 +226,7 @@ const DashboardModern = () => {
                   <ChatBubbleLeftRightIcon className="w-7 h-7 text-orange-600" />
                 </div>
                 <span className="text-sm font-bold text-warmGray-600 uppercase tracking-wider">
-                  Total Evaluations
+                  Total Évaluations
                 </span>
               </div>
             </div>
@@ -243,7 +243,7 @@ const DashboardModern = () => {
                   <LinkIcon className="w-7 h-7 text-blue-600" />
                 </div>
                 <span className="text-sm font-bold text-warmGray-600 uppercase tracking-wider">
-                  Generated Pairs
+                  Paires Générées
                 </span>
               </div>
             </div>
@@ -260,7 +260,7 @@ const DashboardModern = () => {
                   <CheckCircleIcon className="w-7 h-7 text-green-600" />
                 </div>
                 <span className="text-sm font-bold text-warmGray-600 uppercase tracking-wider">
-                  Completed Campaigns
+                  Campagnes Terminées
                 </span>
               </div>
             </div>
@@ -278,14 +278,14 @@ const DashboardModern = () => {
             {/* Tendances des évaluations */}
             <EvaluationTrendsChart
               data={evaluationTrends}
-              title="Evaluation Trends Over Time"
+              title="Tendances des Évaluations dans le Temps"
             />
           </div>
 
           {/* Average Rating Card */}
           <div className="bg-blue-50/90 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-blue-200/50">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-warmGray-800">Average Rating</h2>
+              <h2 className="text-xl font-semibold text-warmGray-800">Note Moyenne</h2>
               <div className="bg-yellow-100 p-3 rounded-full">
                 <StarIcon className="h-6 w-6 text-yellow-600" />
               </div>
@@ -303,7 +303,7 @@ const DashboardModern = () => {
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div className="text-center">
                     <div className="text-sm text-warmGray-600 mb-1">
-                      Total Pairs
+                      Total Paires
                     </div>
                     <div className="text-xl font-semibold text-warmGray-800">
                       {dashboardStats.total_pairs || 0}
@@ -311,7 +311,7 @@ const DashboardModern = () => {
                   </div>
                   <div className="text-center">
                     <div className="text-sm text-warmGray-600 mb-1">
-                      Evaluated
+                      Évaluées
                     </div>
                     <div className="text-xl font-semibold text-green-600">
                       {dashboardStats.total_evaluations || 0}
@@ -320,13 +320,13 @@ const DashboardModern = () => {
                 </div>
 
                 <div className="text-xs text-warmGray-500 mt-4">
-                  Based on {dashboardStats.total_evaluations || 0} evaluations
+                  Basé sur {dashboardStats.total_evaluations || 0} évaluations
                 </div>
               </div>
             ) : (
               <div className="text-center py-8">
                 <StarIcon className="h-12 w-12 text-warmGray-400 mx-auto mb-4" />
-                <p className="text-warmGray-600">Loading statistics...</p>
+                <p className="text-warmGray-600">Chargement des statistiques...</p>
               </div>
             )}
           </div>
@@ -334,7 +334,7 @@ const DashboardModern = () => {
 
         {/* Recent Evaluations - Full Width */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-warmGray-100/50 mt-8">
-          <h2 className="text-xl font-semibold text-warmGray-800 mb-6">Recent Evaluations</h2>
+          <h2 className="text-xl font-semibold text-warmGray-800 mb-6">Évaluations Récentes</h2>
 
           {recentEvaluations && recentEvaluations.length > 0 ? (
             <div className="space-y-4">

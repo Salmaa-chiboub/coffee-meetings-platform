@@ -22,9 +22,9 @@ const CampaignMetricsChart = ({ campaigns }) => {
         <div className="bg-white p-3 border border-warmGray-200 rounded-lg shadow-lg">
           <p className="font-medium text-warmGray-800 mb-2">{campaign.title}</p>
           <div className="space-y-1 text-sm">
-            <p className="text-blue-600">Participants: {data.participants}</p>
-            <p className="text-green-600">Pairs: {data.pairs}</p>
-            <p className="text-purple-600">Criteria: {data.criteria}</p>
+            <p className="text-blue-600">Participants : {data.participants}</p>
+            <p className="text-green-600">Paires : {data.pairs}</p>
+            <p className="text-purple-600">Critères : {data.criteria}</p>
           </div>
         </div>
       );

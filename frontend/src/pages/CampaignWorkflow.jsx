@@ -185,7 +185,7 @@ const CampaignWorkflow = () => {
             default:
               return (
                 <div className="text-center py-12">
-                  <p className="text-warmGray-600">Invalid step</p>
+                  <p className="text-warmGray-600">Étape invalide</p>
                 </div>
               );
           }

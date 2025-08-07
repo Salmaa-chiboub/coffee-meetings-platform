@@ -249,10 +249,10 @@ const CampaignsList = React.memo(() => {
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-warmGray-800">
-            Coffee Meeting Campaigns
+            Campagnes de Rencontres Café
           </h1>
           <p className="text-warmGray-600 mt-0.5">
-            Manage your coffee meeting campaigns and track employee participation
+            Gérez vos campagnes de rencontres café et suivez la participation des employés
           </p>
         </div>
 
@@ -262,7 +262,7 @@ const CampaignsList = React.memo(() => {
           className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-4 px-6 rounded-full transition-all duration-200 transform hover:scale-[1.02] flex items-center space-x-2"
         >
           <PlusIcon className="h-5 w-5" />
-          <span>Add Campaign</span>
+          <span>Ajouter une Campagne</span>
         </button>
       </div>
 
@@ -278,13 +278,13 @@ const CampaignsList = React.memo(() => {
               </div>
               <input
                 type="text"
-                placeholder="Search campaigns..."
+                placeholder="Rechercher des campagnes..."
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="w-full pl-12 pr-4 py-2 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-warmGray-600 transition-all duration-200 text-sm"
               />
               <label className="absolute -top-3 left-6 bg-white px-2 text-sm font-medium text-warmGray-600">
-                Search Campaigns
+                Rechercher des Campagnes
               </label>
             </div>
           </div>
@@ -298,9 +298,9 @@ const CampaignsList = React.memo(() => {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full py-2 px-4 border-2 border-warmGray-400 rounded-full focus:outline-none focus:border-warmGray-600 transition-all duration-200 bg-white text-warmGray-700 text-sm"
               >
-                <option value="all">All Campaigns</option>
-                <option value="completed">Completed</option>
-                <option value="incomplete">In Progress</option>
+                <option value="all">Toutes les Campagnes</option>
+                <option value="completed">Terminées</option>
+                <option value="incomplete">En Cours</option>
               </select>
             </div>
 
@@ -329,16 +329,16 @@ const CampaignsList = React.memo(() => {
                   <PlusIcon className="h-8 w-8 text-[#8B6F47]" />
                 </div>
                 <h3 className="text-xl font-semibold text-warmGray-800 mb-2">
-                  No campaigns yet
+                  Aucune campagne pour le moment
                 </h3>
                 <p className="text-warmGray-600 mb-6">
-                  Create your first coffee meeting campaign to get started
+                  Créez votre première campagne de rencontres café pour commencer
                 </p>
                 <button
                   onClick={handleCreateCampaign}
                   className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-3 px-6 rounded-full transition-all duration-200 transform hover:scale-[1.02]"
                 >
-                  Create First Campaign
+                  Créer la Première Campagne
                 </button>
               </div>
             ) : (

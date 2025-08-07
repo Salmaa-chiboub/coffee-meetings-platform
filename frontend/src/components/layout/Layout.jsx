@@ -17,7 +17,7 @@ const Layout = ({ children }) => {
 
       {/* Main Content Area */}
       <div
-        className={`main-content-responsive content-container-responsive ${
+        className={`main-content-responsive content-container-responsive transition-all duration-300 ease-in-out ${
           // Mobile/Tablet: full width with top padding for toggle button and header
           'pt-32 lg:pt-16'
         } ${

@@ -57,13 +57,13 @@ const ProfilePictureUpload = ({
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      setError('Please select a JPG, PNG, or WebP image file');
+      setError('Veuillez sélectionner un fichier image JPG, PNG ou WebP');
       return;
     }
 
     // Validate file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be less than 5MB');
+      setError('L\'image doit faire moins de 5 Mo');
       return;
     }
 
@@ -83,16 +83,16 @@ const ProfilePictureUpload = ({
     try {
       const result = await onUpload(file);
       if (result.success) {
-        setSuccess('Profile picture updated successfully!');
+        setSuccess('Photo de profil mise à jour avec succès !');
         setPreview(result.data?.profile_picture_url || preview);
         
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(null), 3000);
       } else {
-        throw new Error(result.message || 'Upload failed');
+        throw new Error(result.message || 'Échec du téléchargement');
       }
     } catch (error) {
-      setError(error.message || 'Failed to upload image');
+      setError(error.message || 'Échec du téléchargement de l\'image');
       setPreview(currentPicture); // Reset preview on error
     }
   };
@@ -105,15 +105,15 @@ const ProfilePictureUpload = ({
       const result = await onDelete();
       if (result.success) {
         setPreview(null);
-        setSuccess('Profile picture removed successfully!');
+        setSuccess('Photo de profil supprimée avec succès !');
         
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(null), 3000);
       } else {
-        throw new Error(result.message || 'Delete failed');
+        throw new Error(result.message || 'Échec de la suppression');
       }
     } catch (error) {
-      setError(error.message || 'Failed to delete image');
+      setError(error.message || 'Échec de la suppression de l\'image');
     }
   };
 
@@ -148,7 +148,7 @@ const ProfilePictureUpload = ({
               onClick={handleDelete}
               disabled={isLoading}
               className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Remove profile picture"
+              title="Supprimer la photo de profil"
             >
               <TrashIcon className="w-4 h-4" />
             </button>
@@ -157,10 +157,10 @@ const ProfilePictureUpload = ({
 
         <div className="flex-1">
           <h3 className="text-lg font-medium text-warmGray-800 mb-2">
-            Profile Picture
+            Photo de Profil
           </h3>
           <p className="text-sm text-warmGray-600 mb-4">
-            Upload a photo to personalize your profile. JPG, PNG, or WebP formats supported (max 5MB).
+            Téléchargez une photo pour personnaliser votre profil. Formats JPG, PNG ou WebP supportés (max 5 Mo).
           </p>
         </div>
       </div>
@@ -180,13 +180,13 @@ const ProfilePictureUpload = ({
       >
         <PhotoIcon className="h-12 w-12 text-warmGray-400 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-warmGray-800 mb-2">
-          {isLoading ? 'Uploading...' : 'Upload Profile Picture'}
+          {isLoading ? 'Téléchargement...' : 'Télécharger une Photo de Profil'}
         </h3>
         <p className="text-sm text-warmGray-600 mb-4">
-          Drag and drop your image here, or click to browse
+          Glissez-déposez votre image ici, ou cliquez pour parcourir
         </p>
         <p className="text-xs text-warmGray-500">
-          Supports JPG, PNG, WebP • Max 5MB
+          Supporte JPG, PNG, WebP • Max 5 Mo
         </p>
         
         {isLoading && (
