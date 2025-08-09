@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../contexts/NotificationContext';
 import {
@@ -14,6 +14,7 @@ import {
 const NotificationButton = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   // Use notification context
   const {
@@ -43,6 +44,18 @@ const NotificationButton = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run on mount
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Use only real notifications from the API
   const displayNotifications = notifications || [];
@@ -151,7 +164,10 @@ const NotificationButton = () => {
 
       {/* Notification Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-3 w-96 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-[#E8C4A0]/30 z-50 animate-in slide-in-from-top-2 duration-200">
+        <div
+          ref={dropdownRef}
+          className="absolute right-0 mt-3 w-96 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-[#E8C4A0]/30 z-50 animate-in slide-in-from-top-2 duration-200"
+        >
           {/* Header */}
           <div className="px-4 py-3 border-b border-[#E8C4A0]/20 flex items-center justify-between">
             <div className="flex items-center space-x-2">

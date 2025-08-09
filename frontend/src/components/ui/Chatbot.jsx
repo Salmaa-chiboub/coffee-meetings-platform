@@ -115,16 +115,7 @@ const Chatbot = () => {
     }
   };
 
-  // Coffee cup icon component
-  const CoffeeCupIcon = ({ className }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M17 8h1a4 4 0 1 1 0 8h-1" />
-      <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" />
-      <line x1="6" x2="6" y1="2" y2="4" />
-      <line x1="10" x2="10" y1="2" y2="4" />
-      <line x1="14" x2="14" y1="2" y2="4" />
-    </svg>
-  );
+
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
@@ -134,8 +125,12 @@ const Chatbot = () => {
           {/* Header */}
           <div className="flex items-center justify-between p-4 bg-gradient-to-r from-peach-100 to-peach-200 rounded-t-2xl border-b border-peach-300">
             <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-8 h-8 bg-peach-600 rounded-full">
-                <CoffeeCupIcon className="w-5 h-5 text-white" />
+              <div className="flex items-center justify-center w-8 h-8">
+                <img
+                  src="/logo.png"
+                  alt="CoffeeMeet Logo"
+                  className="w-8 h-8 object-contain"
+                />
               </div>
               <div>
                 <h3 className="font-semibold text-warmGray-800">Assistant CoffeeMeet</h3>
