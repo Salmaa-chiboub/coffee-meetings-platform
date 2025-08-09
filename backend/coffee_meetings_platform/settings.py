@@ -232,11 +232,15 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Paris'  # Central European Time (CET/CEST)
 
 USE_I18N = True
 
 USE_TZ = True
+
+# Ensure datetime formatting uses local timezone
+import os
+os.environ['TZ'] = 'Europe/Paris'
 
 
 # Static files (CSS, JavaScript, Images)
@@ -267,6 +271,14 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
+    ],
+    # Ensure datetime fields are serialized in local timezone
+    'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S.%f%z',
+    'DATETIME_INPUT_FORMATS': [
+        '%Y-%m-%dT%H:%M:%S.%f%z',
+        '%Y-%m-%dT%H:%M:%S%z',
+        '%Y-%m-%dT%H:%M:%S.%f',
+        '%Y-%m-%dT%H:%M:%S',
     ],
 }
 

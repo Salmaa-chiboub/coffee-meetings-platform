@@ -1,5 +1,19 @@
 from rest_framework import serializers
+from django.utils import timezone
 from .models import Notification
+
+
+class LocalizedDateTimeField(serializers.DateTimeField):
+    """
+    Custom datetime field that always returns datetime in local timezone
+    """
+    def to_representation(self, value):
+        if value is None:
+            return None
+
+        # Convert to local timezone
+        local_value = timezone.localtime(value)
+        return super().to_representation(local_value)
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -7,11 +21,13 @@ class NotificationSerializer(serializers.ModelSerializer):
     Serializer for Notification model
     """
     time_since_created = serializers.ReadOnlyField()
-    
+    created_at = LocalizedDateTimeField(read_only=True)
+    read_at = LocalizedDateTimeField(read_only=True)
+
     class Meta:
         model = Notification
         fields = [
-            'id', 'title', 'message', 'type', 'priority', 
+            'id', 'title', 'message', 'type', 'priority',
             'is_read', 'created_at', 'read_at', 'time_since_created',
             'related_object_type', 'related_object_id', 'extra_data'
         ]
@@ -23,11 +39,12 @@ class NotificationListSerializer(serializers.ModelSerializer):
     Simplified serializer for notification lists
     """
     time_since_created = serializers.ReadOnlyField()
-    
+    created_at = LocalizedDateTimeField(read_only=True)
+
     class Meta:
         model = Notification
         fields = [
-            'id', 'title', 'message', 'type', 'priority', 
+            'id', 'title', 'message', 'type', 'priority',
             'is_read', 'created_at', 'time_since_created'
         ]
         read_only_fields = ['id', 'created_at', 'time_since_created']

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../services/api';
 import ProfilePictureUpload from '../components/ui/ProfilePictureUpload';
+import { useNotificationTrigger } from '../contexts/NotificationContext';
 import {
   CogIcon,
   UserIcon,
@@ -16,6 +17,7 @@ import {
 
 const Settings = () => {
   const { user, updateUser } = useAuth();
+  const { checkForNewNotifications } = useNotificationTrigger();
 
   // State management
   const [activeTab, setActiveTab] = useState('personal');
@@ -107,6 +109,8 @@ const Settings = () => {
           text: 'Profil mis à jour avec succès !'
         });
         setIsEditing(false);
+        // Trigger notification check after profile update
+        checkForNewNotifications();
       } else {
         throw new Error(result.error?.message || 'Échec de la mise à jour du profil');
       }
@@ -217,6 +221,9 @@ const Settings = () => {
           type: 'success',
           text: 'Photo de profil mise à jour avec succès !'
         });
+
+        // Trigger notification check after profile picture update
+        checkForNewNotifications();
 
         return result;
       } else {

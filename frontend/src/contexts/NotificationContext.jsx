@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useCallback, useState, useRef } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useState, useRef, useEffect } from 'react';
 import { notificationAPI } from '../services/notificationService';
 
 // Initial state
@@ -142,6 +142,9 @@ export const NotificationProvider = ({ children }) => {
 
   // Use ref to access current state without causing re-renders
   const stateRef = useRef(state);
+  const [isPollingActive, setIsPollingActive] = useState(true);
+  const pollingIntervalRef = useRef(null);
+
   stateRef.current = state;
 
   // Fetch notifications
@@ -152,12 +155,13 @@ export const NotificationProvider = ({ children }) => {
       const currentState = stateRef.current;
       const params = {
         page: options.page || currentState.pagination.page,
-        limit: options.limit || currentState.pagination.limit,
-        ...currentState.filters,
-        ...options.filters
+        limit: options.limit || currentState.pagination.limit
       };
 
-      const result = await notificationAPI.getNotifications(params);
+      // If forceRefresh is requested, use forceRefresh API
+      const result = options.forceRefresh
+        ? await notificationAPI.forceRefresh(params)
+        : await notificationAPI.getNotifications(params);
 
       if (result.success) {
         dispatch({
@@ -166,26 +170,26 @@ export const NotificationProvider = ({ children }) => {
             notifications: options.append ? [...currentState.notifications, ...result.data.results] : result.data.results,
             unreadCount: result.data.unread_count,
             pagination: {
-              page: result.data.page,
-              total: result.data.total,
-              hasMore: result.data.has_more
+              page: result.data.page || 1,
+              total: result.data.count || 0,
+              hasMore: result.data.has_more || false
             }
           }
         });
       } else {
-        console.error('Failed to fetch notifications:', result.error);
         dispatch({ type: NOTIFICATION_ACTIONS.SET_ERROR, payload: result.error });
       }
     } catch (error) {
-      console.error('Notification API error:', error.message);
       dispatch({ type: NOTIFICATION_ACTIONS.SET_ERROR, payload: error.message });
+    } finally {
+      dispatch({ type: NOTIFICATION_ACTIONS.SET_LOADING, payload: false });
     }
   }, []); // No dependencies - function is stable
 
   // Fetch unread count
-  const fetchUnreadCount = useCallback(async () => {
+  const fetchUnreadCount = useCallback(async (forceRefresh = false) => {
     try {
-      const result = await notificationAPI.getUnreadCount();
+      const result = await notificationAPI.getUnreadCount(forceRefresh);
       if (result.success) {
         dispatch({ type: NOTIFICATION_ACTIONS.SET_UNREAD_COUNT, payload: result.data.count });
       }
@@ -200,10 +204,11 @@ export const NotificationProvider = ({ children }) => {
       const result = await notificationAPI.markAsRead(notificationId);
       if (result.success) {
         dispatch({ type: NOTIFICATION_ACTIONS.MARK_AS_READ, payload: notificationId });
+        // Force refresh unread count to ensure badge updates immediately
+        await fetchUnreadCount(true);
       }
       return result.success;
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
       return false;
     }
   }, []);
@@ -214,10 +219,11 @@ export const NotificationProvider = ({ children }) => {
       const result = await notificationAPI.markAsUnread(notificationId);
       if (result.success) {
         dispatch({ type: NOTIFICATION_ACTIONS.MARK_AS_UNREAD, payload: notificationId });
+        // Force refresh unread count to ensure badge updates immediately
+        await fetchUnreadCount(true);
       }
       return result.success;
     } catch (error) {
-      console.error('Failed to mark notification as unread:', error);
       return false;
     }
   }, []);
@@ -227,14 +233,18 @@ export const NotificationProvider = ({ children }) => {
     try {
       const result = await notificationAPI.markAllAsRead();
       if (result.success) {
+        // Update local state immediately
         dispatch({ type: NOTIFICATION_ACTIONS.MARK_ALL_AS_READ });
+
+        // Force refresh from database to ensure consistency
+        await fetchNotifications({ forceRefresh: true });
+        await fetchUnreadCount(true);
       }
       return result.success;
     } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
       return false;
     }
-  }, []);
+  }, [fetchNotifications]);
 
   // Delete notification
   const deleteNotification = useCallback(async (notificationId) => {
@@ -242,10 +252,10 @@ export const NotificationProvider = ({ children }) => {
       const result = await notificationAPI.deleteNotification(notificationId);
       if (result.success) {
         dispatch({ type: NOTIFICATION_ACTIONS.REMOVE_NOTIFICATION, payload: notificationId });
+        await fetchUnreadCount(true);
       }
       return result.success;
     } catch (error) {
-      console.error('Failed to delete notification:', error);
       return false;
     }
   }, []);
@@ -268,6 +278,98 @@ export const NotificationProvider = ({ children }) => {
     dispatch({ type: NOTIFICATION_ACTIONS.ADD_NOTIFICATION, payload: notification });
   }, []);
 
+  // Smart refresh - only refresh if data is stale
+  const smartRefresh = useCallback(async () => {
+    const currentState = stateRef.current;
+    const now = Date.now();
+    const lastFetchTime = currentState.lastFetch ? new Date(currentState.lastFetch).getTime() : 0;
+    const timeSinceLastFetch = now - lastFetchTime;
+
+    // Only refresh if data is older than 30 seconds
+    if (timeSinceLastFetch > 30000) {
+      await fetchNotifications({ forceRefresh: true });
+      await fetchUnreadCount(true);
+    }
+  }, [fetchNotifications, fetchUnreadCount]);
+
+  // Automatic polling for new notifications
+  const startPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    // Poll every 15 seconds for new notifications (more responsive)
+    pollingIntervalRef.current = setInterval(async () => {
+      if (isPollingActive) {
+        try {
+          // Only check unread count to minimize server load
+          const currentUnreadCount = stateRef.current.unreadCount;
+          await fetchUnreadCount(true);
+
+          // If unread count increased, also refresh notifications for dropdown
+          const newUnreadCount = stateRef.current.unreadCount;
+          if (newUnreadCount > currentUnreadCount) {
+            // New notifications detected, refresh the first few for dropdown
+            await fetchNotifications({ limit: 5, forceRefresh: true });
+          }
+        } catch (error) {
+          console.error('Polling error:', error);
+        }
+      }
+    }, 15000); // 15 seconds for more responsive updates
+  }, [isPollingActive, fetchUnreadCount, fetchNotifications]);
+
+  const stopPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+  }, []);
+
+  // Trigger immediate check for new notifications (useful after user actions)
+  const triggerImmediateCheck = useCallback(async () => {
+    try {
+      await fetchUnreadCount(true);
+      // Also refresh notifications for dropdown
+      await fetchNotifications({ limit: 5, forceRefresh: true });
+    } catch (error) {
+      console.error('Immediate check error:', error);
+    }
+  }, [fetchUnreadCount, fetchNotifications]);
+
+  // Start/stop polling based on active state
+  useEffect(() => {
+    if (isPollingActive) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      stopPolling();
+    };
+  }, [isPollingActive, startPolling, stopPolling]);
+
+  // Pause polling when page is not visible to save resources
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setIsPollingActive(false);
+      } else {
+        setIsPollingActive(true);
+        // Immediately check for new notifications when page becomes visible
+        fetchUnreadCount(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchUnreadCount]);
+
   const value = {
     // State
     notifications: state.notifications,
@@ -288,6 +390,13 @@ export const NotificationProvider = ({ children }) => {
     // setFilters,
     loadMore,
     addNotification,
+    smartRefresh,
+
+    // Polling controls
+    startPolling,
+    stopPolling,
+    triggerImmediateCheck,
+    isPollingActive,
 
     // Utilities
     hasUnreadNotifications: state.unreadCount > 0,
@@ -313,6 +422,10 @@ const defaultFunctions = {
   deleteNotification: () => Promise.resolve(),
   loadMore: () => {},
   addNotification: () => {},
+  smartRefresh: () => Promise.resolve(),
+  startPolling: () => {},
+  stopPolling: () => {},
+  triggerImmediateCheck: () => Promise.resolve(),
 };
 
 // Custom hook to use notification context
@@ -338,6 +451,13 @@ export const useNotifications = () => {
     deleteNotification: context?.deleteNotification || defaultFunctions.deleteNotification,
     loadMore: context?.loadMore || defaultFunctions.loadMore,
     addNotification: context?.addNotification || defaultFunctions.addNotification,
+    smartRefresh: context?.smartRefresh || defaultFunctions.smartRefresh,
+
+    // Polling controls
+    startPolling: context?.startPolling || defaultFunctions.startPolling,
+    stopPolling: context?.stopPolling || defaultFunctions.stopPolling,
+    triggerImmediateCheck: context?.triggerImmediateCheck || defaultFunctions.triggerImmediateCheck,
+    isPollingActive: context?.isPollingActive || false,
   };
 
   if (!context) {
@@ -345,6 +465,21 @@ export const useNotifications = () => {
   }
 
   return stableContext;
+};
+
+// Hook for triggering notification checks after user actions
+export const useNotificationTrigger = () => {
+  const { triggerImmediateCheck } = useNotifications();
+
+  // Call this after any user action that might create a notification
+  const checkForNewNotifications = useCallback(async () => {
+    // Wait a moment for the backend to process and create the notification
+    setTimeout(async () => {
+      await triggerImmediateCheck();
+    }, 2000); // 2 second delay to allow backend processing
+  }, [triggerImmediateCheck]);
+
+  return { checkForNewNotifications };
 };
 
 export default NotificationContext;

@@ -29,24 +29,28 @@ class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationListSerializer
     pagination_class = NotificationPagination
     permission_classes = [permissions.IsAuthenticated]
-    
+
     def get_queryset(self):
         user = self.request.user
         queryset = Notification.objects.filter(recipient=user)
+
+        # Order by created_at descending (newest first)
+        queryset = queryset.order_by('-created_at')
+
         return queryset.select_related('recipient')
-    
+
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
-        
+
         # Add unread count to response
         unread_count = Notification.objects.filter(
-            recipient=request.user, 
+            recipient=request.user,
             is_read=False
         ).count()
-        
+
         response.data['unread_count'] = unread_count
         response.data['has_more'] = response.data.get('next') is not None
-        
+
         return response
 
 

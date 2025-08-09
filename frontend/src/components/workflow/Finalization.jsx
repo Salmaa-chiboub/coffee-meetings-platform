@@ -140,7 +140,7 @@ const Finalization = ({ campaignId, campaign, workflowState, onComplete, onError
 
             {/* Action Button */}
             <button
-              onClick={() => window.location.href = '/campaigns'}
+              onClick={() => window.location.href = '/app/campaigns'}
               className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-sm"
             >
               Retour aux Campagnes

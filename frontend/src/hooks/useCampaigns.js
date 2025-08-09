@@ -49,10 +49,59 @@ export const useCreateCampaign = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: campaignService.createCampaign,
+    mutationFn: async (campaignData) => {
+      console.log('🔍 useCreateCampaign: Starting campaign creation...');
+
+      // Check authentication state before making the request
+      const accessToken = localStorage.getItem('access_token');
+      const refreshToken = localStorage.getItem('refresh_token');
+
+      console.log('🔍 useCreateCampaign: Auth tokens check:', {
+        hasAccessToken: !!accessToken,
+        hasRefreshToken: !!refreshToken,
+        accessTokenLength: accessToken?.length,
+        refreshTokenLength: refreshToken?.length
+      });
+
+      if (!accessToken && !refreshToken) {
+        console.error('❌ useCreateCampaign: No authentication tokens found');
+        throw new Error('Authentication required. Please log in again.');
+      }
+
+      try {
+        const result = await campaignService.createCampaign(campaignData);
+        console.log('✅ useCreateCampaign: Campaign creation successful:', result);
+
+        if (!result.success) {
+          console.error('❌ useCreateCampaign: API returned error:', result.error);
+          throw result.error;
+        }
+
+        console.log('🔍 useCreateCampaign: Returning campaign data:', result.data);
+        console.log('🔍 useCreateCampaign: Campaign data keys:', Object.keys(result.data || {}));
+        console.log('🔍 useCreateCampaign: Campaign ID from data:', result.data?.id);
+
+        return result.data;
+      } catch (error) {
+        console.error('❌ useCreateCampaign: Campaign creation failed:', error);
+
+        // Check if it's an authentication error
+        if (error.response?.status === 401) {
+          console.error('❌ useCreateCampaign: Authentication failed during campaign creation');
+          // Trigger logout event
+          window.dispatchEvent(new CustomEvent('auth:logout'));
+        }
+
+        throw error;
+      }
+    },
     onSuccess: () => {
+      console.log('✅ useCreateCampaign: Invalidating campaign queries...');
       queryClient.invalidateQueries({ queryKey: campaignKeys.lists() });
     },
+    onError: (error) => {
+      console.error('❌ useCreateCampaign: Mutation error:', error);
+    }
   });
 };
 

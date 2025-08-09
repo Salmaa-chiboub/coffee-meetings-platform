@@ -12,9 +12,39 @@ export const workflowService = {
   // Get campaign workflow status
   getCampaignWorkflowStatus: async (campaignId) => {
     try {
+      console.log('🔍 workflowService.getCampaignWorkflowStatus: Starting request for campaign:', campaignId);
+
+      // Check authentication before making request
+      const accessToken = localStorage.getItem('access_token');
+      const refreshToken = localStorage.getItem('refresh_token');
+
+      console.log('🔍 workflowService.getCampaignWorkflowStatus: Auth check:', {
+        hasAccessToken: !!accessToken,
+        hasRefreshToken: !!refreshToken,
+        campaignId
+      });
+
+      if (!accessToken && !refreshToken) {
+        console.error('❌ workflowService.getCampaignWorkflowStatus: No authentication tokens');
+        throw new Error('Authentication required');
+      }
+
       const response = await api.get(`/campaigns/${campaignId}/workflow-status/`);
+      console.log('✅ workflowService.getCampaignWorkflowStatus: Success response:', response.data);
       return response.data;
     } catch (error) {
+      console.error('❌ workflowService.getCampaignWorkflowStatus: Request failed:', {
+        error: error.response?.data || error.message,
+        status: error.response?.status,
+        campaignId
+      });
+
+      // Check for authentication errors
+      if (error.response?.status === 401) {
+        console.error('❌ workflowService.getCampaignWorkflowStatus: 401 Unauthorized');
+        window.dispatchEvent(new CustomEvent('auth:logout'));
+      }
+
       throw error.response?.data || error.message;
     }
   },

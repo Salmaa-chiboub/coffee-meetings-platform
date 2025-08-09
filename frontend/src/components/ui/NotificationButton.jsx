@@ -23,19 +23,26 @@ const NotificationButton = () => {
     fetchNotifications,
     fetchUnreadCount,
     markAsRead,
-    markAllAsRead
+    markAllAsRead,
+    smartRefresh,
+    startPolling,
+    isPollingActive
   } = useNotifications();
 
-  // Fetch notifications on component mount only (no polling)
+  // Initialize notifications and start polling on component mount
   useEffect(() => {
-    // Only try to fetch if we have the context functions
+    // Initial fetch of notifications and unread count
     if (fetchNotifications && fetchUnreadCount) {
-      // Initial fetch only - no aggressive polling
       fetchNotifications({ limit: 5 }); // Only fetch first 5 for dropdown
       fetchUnreadCount();
+
+      // Start polling for new notifications if not already active
+      if (startPolling && !isPollingActive) {
+        startPolling();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount, no polling to reduce server load
+  }, []); // Only run on mount
 
   // Use only real notifications from the API
   const displayNotifications = notifications || [];
@@ -95,11 +102,11 @@ const NotificationButton = () => {
     }
   };
 
-  // Handle dropdown toggle with fresh data fetch
+  // Handle dropdown toggle with smart refresh
   const handleToggleDropdown = () => {
-    if (!isOpen && fetchNotifications) {
-      // Only refresh notifications when opening dropdown
-      fetchNotifications({ limit: 5 });
+    if (!isOpen && smartRefresh) {
+      // Use smart refresh to get latest notifications when opening dropdown
+      smartRefresh();
     }
     setIsOpen(!isOpen);
   };
@@ -112,8 +119,11 @@ const NotificationButton = () => {
 
   // Handle mark all as read
   const handleMarkAllAsRead = async () => {
-    await markAllAsRead();
-    setIsOpen(false);
+    const success = await markAllAsRead();
+    if (success) {
+      // Close dropdown immediately to show the updated state
+      setIsOpen(false);
+    }
   };
 
   return (

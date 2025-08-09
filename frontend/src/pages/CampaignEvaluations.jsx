@@ -58,7 +58,7 @@ const CampaignEvaluations = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('fr-FR', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -106,7 +106,7 @@ const CampaignEvaluations = () => {
               onClick={handleBackToCampaigns}
               className="mt-4 bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-2 px-4 rounded-lg transition-all duration-200"
             >
-              Back to Campaigns
+              Retour aux Campagnes
             </button>
           </div>
         </div>
@@ -124,12 +124,12 @@ const CampaignEvaluations = () => {
             className="flex items-center space-x-2 text-warmGray-600 hover:text-warmGray-800 transition-colors duration-200"
           >
             <ArrowLeftIcon className="h-5 w-5" />
-            <span>Back to Campaigns</span>
+            <span>Retour aux Campagnes</span>
           </button>
-          
+
           <div className="flex items-center space-x-2">
             <ChartBarIcon className="h-6 w-6 text-[#E8C4A0]" />
-            <span className="text-warmGray-800 font-medium">Evaluation Results</span>
+            <span className="text-warmGray-800 font-medium">Résultats d'Évaluation</span>
           </div>
         </div>
 
@@ -139,27 +139,27 @@ const CampaignEvaluations = () => {
             <div className="bg-white rounded-lg border border-warmGray-200 p-4 text-center">
               <UserGroupIcon className="h-8 w-8 text-blue-600 mx-auto mb-2" />
               <p className="text-2xl font-bold text-warmGray-800">{statistics.total_pairs}</p>
-              <p className="text-sm text-warmGray-600">Total Pairs</p>
+              <p className="text-sm text-warmGray-600">Total Paires</p>
             </div>
-            
+
             <div className="bg-white rounded-lg border border-warmGray-200 p-4 text-center">
               <ChatBubbleLeftRightIcon className="h-8 w-8 text-green-600 mx-auto mb-2" />
               <p className="text-2xl font-bold text-warmGray-800">{statistics.evaluations_submitted}</p>
-              <p className="text-sm text-warmGray-600">Responses</p>
+              <p className="text-sm text-warmGray-600">Réponses</p>
             </div>
-            
+
             <div className="bg-white rounded-lg border border-warmGray-200 p-4 text-center">
               <ChartBarIcon className="h-8 w-8 text-purple-600 mx-auto mb-2" />
               <p className="text-2xl font-bold text-warmGray-800">{statistics.response_rate}%</p>
-              <p className="text-sm text-warmGray-600">Response Rate</p>
+              <p className="text-sm text-warmGray-600">Taux de Réponse</p>
             </div>
-            
+
             <div className="bg-white rounded-lg border border-warmGray-200 p-4 text-center">
               <StarIcon className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
               <p className="text-2xl font-bold text-warmGray-800">
                 {statistics.average_rating ? statistics.average_rating.toFixed(1) : 'N/A'}
               </p>
-              <p className="text-sm text-warmGray-600">Avg Rating</p>
+              <p className="text-sm text-warmGray-600">Note Moyenne</p>
             </div>
           </div>
         )}
@@ -167,13 +167,13 @@ const CampaignEvaluations = () => {
         {/* Evaluations List */}
         <div className="bg-white rounded-xl border border-warmGray-200 p-6 shadow-md">
           <h3 className="text-lg font-semibold text-warmGray-800 mb-4">
-            Individual Evaluations ({evaluations.length})
+            Évaluations Individuelles ({evaluations.length})
           </h3>
-          
+
           {evaluations.length === 0 ? (
             <div className="text-center py-8">
               <ChatBubbleLeftRightIcon className="h-12 w-12 text-warmGray-400 mx-auto mb-4" />
-              <p className="text-warmGray-500">No evaluations submitted yet</p>
+              <p className="text-warmGray-500">Aucune évaluation soumise pour le moment</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -186,7 +186,7 @@ const CampaignEvaluations = () => {
                           {evaluation.employee_name}
                         </h4>
                         <span className="text-sm text-warmGray-500">
-                          met with {evaluation.partner_name}
+                          a rencontré {evaluation.partner_name}
                         </span>
                       </div>
                       

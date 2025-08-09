@@ -23,125 +23,77 @@ export const notificationAPI = {
       if (params.page) queryParams.append('page', params.page);
       if (params.limit) queryParams.append('limit', params.limit);
 
-      // Add filter parameters
-      if (params.type && params.type !== 'all') queryParams.append('type', params.type);
-      if (params.status && params.status !== 'all') queryParams.append('status', params.status);
-      if (params.dateRange && params.dateRange !== 'all') queryParams.append('date_range', params.dateRange);
-      if (params.is_read !== undefined) queryParams.append('is_read', params.is_read);
+
 
       const url = `/notifications/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
-      // Check cache for simple requests (no complex filters)
-      const isSimpleRequest = !params.page && !params.type && !params.status && !params.dateRange && params.is_read === undefined;
-      const now = Date.now();
+      // Fetch fresh data from database
+      try {
+        const response = await apiClient.get(url);
+        const data = response.data;
 
-      if (isSimpleRequest && cache.notifications && (now - cache.notificationsTimestamp) < CACHE_DURATION) {
-        console.log('📋 Using cached notifications');
+        // Ensure consistent data structure
+        const normalizedData = {
+          results: data.results || [],
+          count: data.count || 0,
+          next: data.next || null,
+          previous: data.previous || null,
+          unread_count: data.unread_count || 0,
+          has_more: data.has_more || false,
+          page: data.page || 1
+        };
+
         return {
           success: true,
-          data: cache.notifications,
+          data: normalizedData,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error.response?.data || { message: 'Failed to fetch notifications' },
         };
       }
-
-      // Check for pending request to avoid duplicates
-      if (cache.pendingRequests.has(url)) {
-        console.log('⏳ Waiting for pending notification request');
-        return cache.pendingRequests.get(url);
-      }
-
-      // Create promise for this request
-      const requestPromise = (async () => {
-        try {
-          const response = await apiClient.get(url);
-          const data = response.data;
-
-          // Cache simple requests
-          if (isSimpleRequest) {
-            cache.notifications = data;
-            cache.notificationsTimestamp = now;
-          }
-
-          return {
-            success: true,
-            data: data,
-          };
-        } catch (error) {
-          return {
-            success: false,
-            error: error.response?.data || { message: 'Failed to fetch notifications' },
-          };
-        } finally {
-          // Remove from pending requests
-          cache.pendingRequests.delete(url);
-        }
-      })();
-
-      // Store pending request
-      cache.pendingRequests.set(url, requestPromise);
-
-      return requestPromise;
     } catch (error) {
+      console.error('❌ Service Error:', error);
       return {
         success: false,
-        error: error.response?.data || { message: 'Failed to fetch notifications' },
+        error: { message: 'Failed to fetch notifications' },
       };
     }
   },
 
   // Get unread notification count
-  getUnreadCount: async () => {
+  getUnreadCount: async (forceRefresh = false) => {
     try {
-      const now = Date.now();
-      const url = '/notifications/unread-count/';
+      // Add cache buster for force refresh
+      const queryParams = forceRefresh ? `?_t=${Date.now()}` : '';
+      const url = `/notifications/unread-count/${queryParams}`;
 
-      // Check cache
-      if (cache.unreadCount && (now - cache.unreadCountTimestamp) < CACHE_DURATION) {
-        console.log('🔔 Using cached unread count');
+      // Fetch fresh data from database
+      try {
+        const response = await apiClient.get(url);
+        const data = response.data;
+
+        // Ensure consistent data structure
+        const normalizedData = {
+          count: data.count || 0
+        };
+
         return {
           success: true,
-          data: cache.unreadCount,
+          data: normalizedData,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error.response?.data || { message: 'Failed to fetch unread count' },
         };
       }
-
-      // Check for pending request
-      if (cache.pendingRequests.has(url)) {
-        console.log('⏳ Waiting for pending unread count request');
-        return cache.pendingRequests.get(url);
-      }
-
-      // Create promise for this request
-      const requestPromise = (async () => {
-        try {
-          const response = await apiClient.get(url);
-          const data = response.data;
-
-          // Cache the result
-          cache.unreadCount = data;
-          cache.unreadCountTimestamp = now;
-
-          return {
-            success: true,
-            data: data,
-          };
-        } catch (error) {
-          return {
-            success: false,
-            error: error.response?.data || { message: 'Failed to fetch unread count' },
-          };
-        } finally {
-          // Remove from pending requests
-          cache.pendingRequests.delete(url);
-        }
-      })();
-
-      // Store pending request
-      cache.pendingRequests.set(url, requestPromise);
-
-      return requestPromise;
     } catch (error) {
+      console.error('❌ Unread count Service Error:', error);
       return {
         success: false,
-        error: error.response?.data || { message: 'Failed to fetch unread count' },
+        error: { message: 'Failed to fetch unread count' },
       };
     }
   },
@@ -150,9 +102,8 @@ export const notificationAPI = {
   markAsRead: async (notificationId) => {
     try {
       const response = await apiClient.patch(`/notifications/${notificationId}/mark-read/`);
-      // Invalidate cache after successful update
-      notificationAPI.invalidateNotificationsCache();
-      notificationAPI.invalidateUnreadCountCache();
+      // Clear all cache after successful update to ensure fresh data
+      notificationAPI.clearCache();
       return {
         success: true,
         data: response.data,
@@ -169,9 +120,8 @@ export const notificationAPI = {
   markAsUnread: async (notificationId) => {
     try {
       const response = await apiClient.patch(`/notifications/${notificationId}/mark-unread/`);
-      // Invalidate cache after successful update
-      notificationAPI.invalidateNotificationsCache();
-      notificationAPI.invalidateUnreadCountCache();
+      // Clear all cache after successful update to ensure fresh data
+      notificationAPI.clearCache();
       return {
         success: true,
         data: response.data,
@@ -188,9 +138,8 @@ export const notificationAPI = {
   markAllAsRead: async () => {
     try {
       const response = await apiClient.post('/notifications/mark-all-read/');
-      // Invalidate cache after successful update
-      notificationAPI.invalidateNotificationsCache();
-      notificationAPI.invalidateUnreadCountCache();
+      // Clear all cache after successful update to ensure fresh data
+      notificationAPI.clearCache();
       return {
         success: true,
         data: response.data,
@@ -207,9 +156,8 @@ export const notificationAPI = {
   deleteNotification: async (notificationId) => {
     try {
       await apiClient.delete(`/notifications/${notificationId}/`);
-      // Invalidate cache after successful deletion
-      notificationAPI.invalidateNotificationsCache();
-      notificationAPI.invalidateUnreadCountCache();
+      // Clear all cache after successful deletion
+      notificationAPI.clearCache();
       return {
         success: true,
         data: { message: 'Notification deleted successfully' },
@@ -219,9 +167,8 @@ export const notificationAPI = {
 
       // Handle specific error cases
       if (error.response?.status === 404) {
-        // Still invalidate cache in case of 404 (might be deleted elsewhere)
-        notificationAPI.invalidateNotificationsCache();
-        notificationAPI.invalidateUnreadCountCache();
+        // Still clear cache in case of 404 (might be deleted elsewhere)
+        notificationAPI.clearCache();
         return {
           success: false,
           error: { message: 'Notification not found or already deleted' },
@@ -241,6 +188,8 @@ export const notificationAPI = {
       const response = await apiClient.post('/notifications/bulk-delete/', {
         notification_ids: notificationIds
       });
+      // Clear all cache after successful bulk operation
+      notificationAPI.clearCache();
       return {
         success: true,
         data: response.data,
@@ -259,6 +208,8 @@ export const notificationAPI = {
       const response = await apiClient.post('/notifications/bulk-mark-read/', {
         notification_ids: notificationIds
       });
+      // Clear all cache after successful bulk operation
+      notificationAPI.clearCache();
       return {
         success: true,
         data: response.data,
@@ -299,6 +250,47 @@ export const notificationAPI = {
       return {
         success: false,
         error: error.response?.data || { message: 'Failed to update notification preferences' },
+      };
+    }
+  },
+
+  // Force refresh notifications (bypasses cache)
+  forceRefresh: async (params = {}) => {
+    try {
+      // Clear cache first to ensure fresh data
+      notificationAPI.clearCache();
+
+      // Force fresh request with cache-busting timestamp
+      const queryParams = new URLSearchParams();
+      if (params.page) queryParams.append('page', params.page);
+      if (params.limit) queryParams.append('limit', params.limit);
+      queryParams.append('_t', Date.now().toString()); // Cache buster
+
+      const url = `/notifications/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+
+      const response = await apiClient.get(url);
+      const data = response.data;
+
+      // Ensure consistent data structure
+      const normalizedData = {
+        results: data.results || [],
+        count: data.count || 0,
+        next: data.next || null,
+        previous: data.previous || null,
+        unread_count: data.unread_count || 0,
+        has_more: data.has_more || false,
+        page: data.page || 1
+      };
+
+      return {
+        success: true,
+        data: normalizedData,
+      };
+    } catch (error) {
+      console.error('❌ Force refresh error:', error.response?.data || error.message);
+      return {
+        success: false,
+        error: error.response?.data || { message: 'Failed to refresh notifications' },
       };
     }
   },

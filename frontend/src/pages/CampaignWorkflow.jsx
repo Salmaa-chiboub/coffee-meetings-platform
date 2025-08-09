@@ -28,7 +28,7 @@ const CampaignWorkflow = () => {
 
       // Add a small delay to prevent immediate redirect in case of React double-rendering
       const timer = setTimeout(() => {
-        navigate('/campaigns', { replace: true });
+        navigate('/app/campaigns', { replace: true });
       }, 100);
 
       return () => clearTimeout(timer);
@@ -53,13 +53,28 @@ const CampaignWorkflow = () => {
     const loadData = async () => {
       try {
         setLoading(true);
+        console.log('🔍 CampaignWorkflow.loadData: Starting data load for campaign:', campaignId);
+
+        // Check authentication state before making API calls
+        const accessToken = localStorage.getItem('access_token');
+        const refreshToken = localStorage.getItem('refresh_token');
+
+        console.log('🔍 CampaignWorkflow.loadData: Auth state:', {
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          campaignId
+        });
 
         // Load campaign details
+        console.log('🔍 CampaignWorkflow.loadData: Loading campaign details...');
         const campaignData = await campaignService.getCampaign(campaignId);
+        console.log('🔍 CampaignWorkflow.loadData: Campaign data loaded:', campaignData);
         setCampaign(campaignData);
 
         // Load workflow state
+        console.log('🔍 CampaignWorkflow.loadData: Loading workflow state...');
         const workflowData = await workflowService.getCampaignWorkflowStatus(campaignId);
+        console.log('🔍 CampaignWorkflow.loadData: Workflow data loaded:', workflowData);
         setWorkflowState(workflowData);
 
         // Set current step based on workflow state
@@ -74,8 +89,17 @@ const CampaignWorkflow = () => {
         // Check if campaign is completed (step 5 completed)
         const isCompleted = isStep5Completed && workflowData.step_data['5']?.campaign_completed;
         setCampaignCompleted(isCompleted);
-        
+
       } catch (err) {
+        console.error('❌ CampaignWorkflow.loadData: Error loading data:', err);
+
+        // Check if it's an authentication error
+        if (err.message?.includes('Authentication') || err.message?.includes('401') || err.status === 401) {
+          console.error('❌ CampaignWorkflow.loadData: Authentication error detected, redirecting to login');
+          navigate('/login');
+          return;
+        }
+
         setError(err.message || 'Failed to load campaign data');
       } finally {
         setLoading(false);

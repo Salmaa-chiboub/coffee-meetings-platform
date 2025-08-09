@@ -43,6 +43,13 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    console.log('🔍 API Interceptor: Handling error:', {
+      status: error.response?.status,
+      url: originalRequest?.url,
+      method: originalRequest?.method,
+      hasRetried: originalRequest._retry
+    });
+
     // Handle 401 Unauthorized errors
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -51,14 +58,21 @@ apiClient.interceptors.response.use(
         const refreshToken = getStoredRefreshToken();
         const accessToken = getStoredToken();
 
-        // If no refresh token or access token, immediately logout
-        if (!refreshToken || !accessToken) {
-          console.log('❌ No tokens found, redirecting to login');
+        console.log('🔍 API Interceptor: Token check:', {
+          hasRefreshToken: !!refreshToken,
+          hasAccessToken: !!accessToken,
+          refreshTokenLength: refreshToken?.length,
+          accessTokenLength: accessToken?.length
+        });
+
+        // If no refresh token, immediately logout
+        if (!refreshToken) {
+          console.log('❌ API Interceptor: No refresh token found, redirecting to login');
           handleAuthenticationFailure();
           return Promise.reject(error);
         }
 
-        console.log('🔄 Access token expired, attempting refresh...');
+        console.log('🔄 API Interceptor: Access token expired, attempting refresh...');
 
         // Attempt to refresh the token
         const response = await axios.post(`${API_BASE_URL}/users/token/refresh/`, {
@@ -67,24 +81,32 @@ apiClient.interceptors.response.use(
 
         const { access, refresh: newRefreshToken } = response.data;
 
+        console.log('✅ API Interceptor: Token refresh successful:', {
+          hasNewAccess: !!access,
+          hasNewRefresh: !!newRefreshToken
+        });
+
         // Store new tokens
         localStorage.setItem('access_token', access);
         if (newRefreshToken) {
           localStorage.setItem('refresh_token', newRefreshToken);
         }
 
-        console.log('✅ Token refreshed successfully');
+        console.log('🔄 API Interceptor: Retrying original request...');
 
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return apiClient(originalRequest);
 
       } catch (refreshError) {
-        console.log('❌ Token refresh failed:', refreshError.response?.data || refreshError.message);
+        console.error('❌ API Interceptor: Token refresh failed:', {
+          error: refreshError.response?.data || refreshError.message,
+          status: refreshError.response?.status
+        });
 
         // Check if refresh token is also expired or invalid
         if (refreshError.response?.status === 401) {
-          console.log('❌ Refresh token expired, logging out');
+          console.log('❌ API Interceptor: Refresh token expired, logging out');
         }
 
         handleAuthenticationFailure();
@@ -94,7 +116,16 @@ apiClient.interceptors.response.use(
 
     // Handle other authentication errors
     if (error.response?.status === 403) {
-      console.log('❌ Access forbidden, insufficient permissions');
+      console.log('❌ API Interceptor: Access forbidden, insufficient permissions');
+    }
+
+    // For campaign creation specifically, add extra logging
+    if (originalRequest?.url?.includes('/campaigns/') && originalRequest?.method === 'post') {
+      console.error('❌ API Interceptor: Campaign creation failed:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
     }
 
     return Promise.reject(error);
@@ -323,12 +354,27 @@ export const authAPI = {
   // Create campaign
   createCampaign: async (campaignData) => {
     try {
+      console.log('🔍 authAPI.createCampaign: Making POST request to /campaigns/');
+      console.log('🔍 authAPI.createCampaign: Campaign data:', campaignData);
+
       const response = await apiClient.post('/campaigns/', campaignData);
+      console.log('✅ authAPI.createCampaign: Success response:', response.data);
+
       return {
         success: true,
         data: response.data,
       };
     } catch (error) {
+      console.error('❌ authAPI.createCampaign: Request failed:', error);
+      console.error('❌ authAPI.createCampaign: Error response:', error.response?.data);
+      console.error('❌ authAPI.createCampaign: Error status:', error.response?.status);
+
+      // Enhanced error handling for authentication issues
+      if (error.response?.status === 401) {
+        console.error('❌ authAPI.createCampaign: 401 Unauthorized - triggering logout');
+        handleAuthenticationFailure();
+      }
+
       return {
         success: false,
         error: error.response?.data || { message: 'Network error occurred' },

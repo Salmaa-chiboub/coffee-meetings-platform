@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../services/api';
+import { useNotificationTrigger } from '../contexts/NotificationContext';
 import {
   CameraIcon,
   TrashIcon,
@@ -21,6 +22,7 @@ import {
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
+  const { checkForNewNotifications } = useNotificationTrigger();
   const fileInputRef = useRef(null);
 
   // State management
@@ -83,6 +85,8 @@ const Profile = () => {
         updateUser(result.data);
         setIsEditingName(false);
         setMessage({ type: 'success', text: 'Nom mis à jour avec succès !' });
+        // Trigger notification check after profile update
+        checkForNewNotifications();
       } else {
         throw new Error(result.error?.message || 'Échec de la mise à jour du nom');
       }
@@ -110,6 +114,8 @@ const Profile = () => {
         updateUser(result.data);
         setIsEditingCompany(false);
         setMessage({ type: 'success', text: 'Entreprise mise à jour avec succès !' });
+        // Trigger notification check after profile update
+        checkForNewNotifications();
       } else {
         throw new Error(result.error?.message || 'Échec de la mise à jour de l\'entreprise');
       }
@@ -149,6 +155,8 @@ const Profile = () => {
       if (result.success) {
         updateUser(result.data);
         setMessage({ type: 'success', text: 'Photo de profil mise à jour avec succès !' });
+        // Trigger notification check after profile picture update
+        checkForNewNotifications();
       } else {
         throw new Error(result.message || 'Échec du téléchargement de la photo de profil');
       }

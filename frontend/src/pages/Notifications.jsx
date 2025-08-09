@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { notificationAPI } from '../services/notificationService';
+import { useNotifications } from '../contexts/NotificationContext';
 import {
   BellIcon,
   CheckIcon,
@@ -15,35 +16,57 @@ import {
 import { CheckIcon as CheckIconSolid } from '@heroicons/react/24/solid';
 
 const Notifications = () => {
-  // Local state instead of context to avoid loops
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  // Use notification context for state management
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    pagination,
+    fetchNotifications,
+    loadMore,
+    markAsRead,
+    markAsUnread,
+    markAllAsRead,
+    deleteNotification
+  } = useNotifications();
+
+  // Local UI state
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   const [showCheckboxes, setShowCheckboxes] = useState(false);
   const [longPressTimer, setLongPressTimer] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [toast, setToast] = useState(null);
 
-  // Fetch notifications function
-  const fetchNotifications = async () => {
+
+
+  // Toast notification helper
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+
+
+  // Force refresh function
+  const handleForceRefresh = async () => {
     try {
-      setLoading(true);
-      const result = await notificationAPI.getNotifications();
-      if (result.success) {
-        const notifications = result.data.results || [];
-        setNotifications(notifications);
-        setUnreadCount(result.data.unread_count || 0);
-      }
+      setIsRefreshing(true);
+      // Force refresh from database to get latest state
+      await fetchNotifications({ forceRefresh: true });
+      showToast('Notifications actualisées', 'success');
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      showToast('Erreur lors de l\'actualisation', 'error');
     } finally {
-      setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   // Fetch notifications on component mount only
   useEffect(() => {
-    fetchNotifications();
-  }, []); // No dependencies to prevent loops
+    if (notifications.length === 0 && !loading) {
+      fetchNotifications();
+    }
+  }, []); // Only run on mount
 
   // Get notification type icon with improved mapping
   const getNotificationIcon = (type) => {
@@ -197,88 +220,80 @@ const Notifications = () => {
     setSelectedNotifications([]);
   };
 
-  // Handle mark as read
+  // Handle mark as read - use context method
   const handleMarkAsRead = async (id) => {
     try {
-      const result = await notificationAPI.markAsRead(id);
-      if (result.success) {
-        setNotifications(prev => prev.map(n => 
-          n.id === id ? { ...n, is_read: true } : n
-        ));
-        setUnreadCount(prev => Math.max(0, prev - 1));
+      const success = await markAsRead(id);
+      if (success) {
+        setSelectedNotifications(prev => prev.filter(nId => nId !== id));
       }
     } catch (error) {
-      console.error('Failed to mark as read:', error);
+      showToast('Erreur lors du marquage', 'error');
     }
   };
 
-  // Handle mark as unread
+  // Handle mark as unread - use context method
   const handleMarkAsUnread = async (id) => {
     try {
-      const result = await notificationAPI.markAsUnread(id);
-      if (result.success) {
-        setNotifications(prev => prev.map(n => 
-          n.id === id ? { ...n, is_read: false } : n
-        ));
-        setUnreadCount(prev => prev + 1);
+      const success = await markAsUnread(id);
+      if (success) {
+        setSelectedNotifications(prev => prev.filter(nId => nId !== id));
       }
     } catch (error) {
-      console.error('Failed to mark as unread:', error);
+      showToast('Erreur lors du marquage', 'error');
     }
   };
 
-  // Handle delete
+  // Handle delete - use context method
   const handleDelete = async (id) => {
     try {
-      const result = await notificationAPI.deleteNotification(id);
-      if (result.success) {
-        setNotifications(prev => prev.filter(n => n.id !== id));
+      const success = await deleteNotification(id);
+      if (success) {
         setSelectedNotifications(prev => prev.filter(nId => nId !== id));
-        // Update unread count if notification was unread
-        const notification = notifications.find(n => n.id === id);
-        if (notification && !notification.is_read) {
-          setUnreadCount(prev => Math.max(0, prev - 1));
-        }
-      } else {
-        // Handle deletion failure - remove from UI if it was a 404 (already deleted)
-        if (result.error?.message?.includes('not found')) {
-          console.warn('Notification was already deleted, removing from UI');
-          setNotifications(prev => prev.filter(n => n.id !== id));
-          setSelectedNotifications(prev => prev.filter(nId => nId !== id));
-        } else {
-          console.error('Failed to delete notification:', result.error);
-          // Could show a toast notification here
-        }
       }
     } catch (error) {
-      console.error('Failed to delete notification:', error);
+      showToast('Erreur lors de la suppression', 'error');
     }
   };
 
   // Handle bulk actions
   const handleBulkMarkAsRead = async () => {
-    for (const id of selectedNotifications) {
-      await handleMarkAsRead(id);
+    try {
+      for (const id of selectedNotifications) {
+        await markAsRead(id);
+      }
+      setSelectedNotifications([]);
+      setShowCheckboxes(false);
+      showToast('Notifications marquées comme lues', 'success');
+    } catch (error) {
+      showToast('Erreur lors du marquage', 'error');
     }
-    setSelectedNotifications([]);
   };
 
   const handleBulkDelete = async () => {
-    for (const id of selectedNotifications) {
-      await handleDelete(id);
+    try {
+      for (const id of selectedNotifications) {
+        await deleteNotification(id);
+      }
+      setSelectedNotifications([]);
+      setShowCheckboxes(false);
+      showToast('Notifications supprimées', 'success');
+    } catch (error) {
+      showToast('Erreur lors de la suppression', 'error');
     }
-    setSelectedNotifications([]);
   };
 
+  // Handle mark all as read - use context method
   const handleMarkAllAsRead = async () => {
     try {
-      const result = await notificationAPI.markAllAsRead();
-      if (result.success) {
-        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-        setUnreadCount(0);
+      const success = await markAllAsRead();
+      if (success) {
+        showToast('Toutes les notifications marquées comme lues', 'success');
+      } else {
+        showToast('Erreur lors du marquage', 'error');
       }
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
+      showToast('Erreur lors du marquage', 'error');
     }
   };
 
@@ -296,6 +311,22 @@ const Notifications = () => {
 
   return (
     <div className="min-h-screen bg-cream">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${
+          toast.type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
+          toast.type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' :
+          'bg-blue-100 text-blue-800 border border-blue-200'
+        }`}>
+          <div className="flex items-center space-x-2">
+            {toast.type === 'success' && <CheckIcon className="w-5 h-5" />}
+            {toast.type === 'error' && <ExclamationCircleIcon className="w-5 h-5" />}
+            {toast.type === 'info' && <BellIcon className="w-5 h-5" />}
+            <span className="font-medium">{toast.message}</span>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto px-3 py-4 sm:px-4 sm:py-6">
         {/* Header with reduced margins */}
         <div className="mb-4">
@@ -315,13 +346,14 @@ const Notifications = () => {
             <div className="flex items-center space-x-2">
               {/* Refresh Button */}
               <button
-                onClick={() => fetchNotifications()}
+                onClick={handleForceRefresh}
                 className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cream to-[#E8C4A0]/30 text-[#8B6F47] rounded-lg hover:from-cream/80 hover:to-[#E8C4A0]/40 transition-all duration-200 font-medium"
+                disabled={loading || isRefreshing}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-4 h-4 ${(loading || isRefreshing) ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span>Actualiser</span>
+                <span>{(loading || isRefreshing) ? 'Actualisation...' : 'Actualiser'}</span>
               </button>
 
               {unreadCount > 0 && (
@@ -337,6 +369,8 @@ const Notifications = () => {
           </div>
         </div>
 
+
+
         {/* Bulk actions bar - only show when checkboxes are visible */}
         {showCheckboxes && (
           <div className="mb-4 p-3 bg-white/70 backdrop-blur-sm border border-[#E8C4A0]/20 rounded-lg">
@@ -351,9 +385,9 @@ const Notifications = () => {
                   )}
                 </button>
                 <span className="text-sm text-[#8B6F47] font-medium">
-                  {selectedNotifications.length > 0 
-                    ? `${selectedNotifications.length} selected`
-                    : 'Select all notifications'
+                  {selectedNotifications.length > 0
+                    ? `${selectedNotifications.length} sélectionnée${selectedNotifications.length > 1 ? 's' : ''}`
+                    : 'Sélectionner toutes les notifications'
                   }
                 </span>
               </div>
@@ -364,14 +398,16 @@ const Notifications = () => {
                     <button
                       onClick={handleBulkMarkAsRead}
                       className="px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm"
+                      disabled={loading}
                     >
-                      Mark as read
+                      Marquer comme lues
                     </button>
                     <button
                       onClick={handleBulkDelete}
                       className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
+                      disabled={loading}
                     >
-                      Delete
+                      Supprimer
                     </button>
                   </>
                 )}
@@ -379,7 +415,7 @@ const Notifications = () => {
                   onClick={handleCloseSelection}
                   className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
                 >
-                  Cancel
+                  Annuler
                 </button>
               </div>
             </div>
@@ -505,18 +541,41 @@ const Notifications = () => {
               <p className="text-warmGray-500">
                 Vous êtes à jour ! Les nouvelles notifications apparaîtront ici.
               </p>
+
             </div>
           )}
         </div>
 
-        {/* Load More Button - TODO: Implement pagination */}
-        {notifications.length > 10 && (
+        {/* Load More Button */}
+        {pagination.hasMore && (
           <div className="mt-6 text-center">
             <button
-              className="px-6 py-3 bg-gradient-to-r from-[#E8C4A0] to-peach-200 text-[#8B6F47] rounded-lg hover:from-[#E8C4A0]/80 hover:to-peach-200/80 transition-all duration-200 font-medium"
+              onClick={() => {
+                console.log('📄 Loading more notifications...');
+                loadMore();
+              }}
+              disabled={loading}
+              className="px-6 py-3 bg-gradient-to-r from-[#E8C4A0] to-peach-200 text-[#8B6F47] rounded-lg hover:from-[#E8C4A0]/80 hover:to-peach-200/80 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Charger Plus de Notifications
+              {loading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#8B6F47]"></div>
+                  <span>Chargement...</span>
+                </div>
+              ) : (
+                'Charger Plus de Notifications'
+              )}
             </button>
+          </div>
+        )}
+
+        {/* Pagination Info */}
+        {notifications.length > 0 && (
+          <div className="mt-4 text-center text-sm text-warmGray-500">
+            {notifications.length} notification{notifications.length > 1 ? 's' : ''} affichée{notifications.length > 1 ? 's' : ''}
+            {pagination.total > notifications.length && (
+              <span> sur {pagination.total} au total</span>
+            )}
           </div>
         )}
       </div>

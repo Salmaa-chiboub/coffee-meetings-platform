@@ -54,10 +54,10 @@ class NotificationService:
                 related_object_id=related_object_id,
                 extra_data=extra_data or {}
             )
-            
+
             logger.info(f"Created notification {notification.id} for user {recipient.email}")
             return notification
-            
+
         except Exception as e:
             logger.error(f"Failed to create notification for user {recipient.email}: {str(e)}")
             raise

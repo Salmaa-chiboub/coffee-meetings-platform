@@ -3,11 +3,13 @@ import { useForm } from 'react-hook-form';
 import { ArrowLeftIcon, CalendarDaysIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
 import { useCreateCampaign } from '../hooks/useCampaigns';
+import { useAuth } from '../contexts/AuthContext';
 
 const CampaignCreate = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const createCampaignMutation = useCreateCampaign();
+  const { user, isAuthenticated } = useAuth();
 
   const {
     register,
@@ -23,18 +25,46 @@ const CampaignCreate = () => {
     setIsLoading(true);
     try {
       console.log('🔍 DEBUG: Creating campaign with data:', data);
+
+      // Check authentication state before submitting
+      console.log('🔍 DEBUG: Auth state check:', {
+        isAuthenticated,
+        hasUser: !!user,
+        userId: user?.id,
+        hasAccessToken: !!localStorage.getItem('access_token'),
+        hasRefreshToken: !!localStorage.getItem('refresh_token')
+      });
+
+      if (!isAuthenticated || !user) {
+        console.error('❌ DEBUG: User not authenticated, redirecting to login');
+        navigate('/login');
+        return;
+      }
+
       const newCampaign = await createCampaignMutation.mutateAsync(data);
       console.log('✅ DEBUG: Campaign created successfully:', newCampaign);
+      console.log('🔍 DEBUG: Campaign object keys:', Object.keys(newCampaign || {}));
+      console.log('🔍 DEBUG: Campaign ID:', newCampaign?.id);
+      console.log('🔍 DEBUG: Campaign data structure:', JSON.stringify(newCampaign, null, 2));
 
       // Ensure we have a valid campaign ID before navigating
       if (newCampaign && newCampaign.id) {
-        console.log('🔍 DEBUG: Navigating to workflow:', `/campaigns/${newCampaign.id}/workflow`);
+        console.log('🔍 DEBUG: Navigating to workflow:', `/app/campaigns/${newCampaign.id}/workflow`);
+
+        // Check auth state before navigation
+        const stillAuthenticated = localStorage.getItem('access_token') || localStorage.getItem('refresh_token');
+        if (!stillAuthenticated) {
+          console.error('❌ DEBUG: Lost authentication after campaign creation');
+          navigate('/login');
+          return;
+        }
+
         // Navigate to workflow page on success
-        navigate(`/campaigns/${newCampaign.id}/workflow`);
+        navigate(`/app/campaigns/${newCampaign.id}/workflow`);
       } else {
         console.error('❌ DEBUG: Campaign created but no ID returned:', newCampaign);
         // Fallback to campaigns list
-        navigate('/campaigns');
+        navigate('/app/campaigns');
       }
     } catch (error) {
       console.error('❌ DEBUG: Campaign creation failed:', error);
@@ -63,6 +93,8 @@ const CampaignCreate = () => {
   const handleBack = () => {
     navigate('/app/campaigns');
   };
+
+
 
   return (
     <div className="max-w-2xl mx-auto">
