@@ -72,6 +72,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'axes.middleware.AxesMiddleware',
     'utils.middleware.PerformanceMiddleware',
+    'coffee_meetings_platform.middleware.UserDataIsolationMiddleware',
 ]
 
 ROOT_URLCONF = 'coffee_meetings_platform.urls'

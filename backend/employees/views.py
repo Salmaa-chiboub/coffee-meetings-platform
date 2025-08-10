@@ -16,6 +16,7 @@ from .serializers import (
 )
 from .services import ExcelProcessingService
 from campaigns.models import Campaign
+from .permissions import IsEmployeeOwner
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class EmployeePagination(PageNumberPagination):
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsEmployeeOwner]
     pagination_class = EmployeePagination
     # parser_classes will be set per action
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -45,13 +46,23 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return EmployeeSerializer
 
     def get_queryset(self):
-        """Filter queryset based on query parameters"""
+        """Filter queryset to only show employees from user's campaigns"""
+        # Base queryset with optimizations
         queryset = Employee.objects.select_related('campaign').prefetch_related('employeeattribute_set')
+        
+        # Filter by user's campaigns only
+        user_campaign_ids = Campaign.objects.filter(hr_manager=self.request.user).values_list('id', flat=True)
+        queryset = queryset.filter(campaign_id__in=user_campaign_ids)
 
-        # Filter by campaign if provided
+        # Additional filter by campaign if provided
         campaign_id = self.request.query_params.get('campaign_id')
         if campaign_id:
-            queryset = queryset.filter(campaign_id=campaign_id)
+            # Verify the campaign belongs to the user
+            if int(campaign_id) in user_campaign_ids:
+                queryset = queryset.filter(campaign_id=campaign_id)
+            else:
+                # Return empty queryset if campaign doesn't belong to user
+                return Employee.objects.none()
 
         return queryset
 
@@ -128,10 +139,11 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            campaign = Campaign.objects.get(id=campaign_id)
+            # Verify the campaign belongs to the user
+            campaign = Campaign.objects.get(id=campaign_id, hr_manager=request.user)
         except Campaign.DoesNotExist:
             return Response(
-                {'error': 'Campaign not found'},
+                {'error': 'Campaign not found or access denied'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -160,10 +172,11 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            campaign = Campaign.objects.get(id=campaign_id)
+            # Verify the campaign belongs to the user
+            campaign = Campaign.objects.get(id=campaign_id, hr_manager=request.user)
         except Campaign.DoesNotExist:
             return Response(
-                {'error': 'Campaign not found'},
+                {'error': 'Campaign not found or access denied'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -189,7 +202,18 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 class EmployeeAttributeViewSet(viewsets.ModelViewSet):
     queryset = EmployeeAttribute.objects.all()
     serializer_class = EmployeeAttributeSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsEmployeeOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['employee', 'campaign', 'attribute_key']
     search_fields = ['attribute_key', 'attribute_value']
+
+    def get_queryset(self):
+        """Filter queryset to only show attributes from user's campaigns"""
+        # Base queryset
+        queryset = EmployeeAttribute.objects.select_related('employee', 'campaign')
+        
+        # Filter by user's campaigns only
+        user_campaign_ids = Campaign.objects.filter(hr_manager=self.request.user).values_list('id', flat=True)
+        queryset = queryset.filter(campaign_id__in=user_campaign_ids)
+
+        return queryset

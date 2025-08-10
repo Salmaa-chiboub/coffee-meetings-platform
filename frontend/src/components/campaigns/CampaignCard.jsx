@@ -1,35 +1,19 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarDaysIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import CampaignCardMenu from './CampaignCardMenu';
 
 const CampaignCard = React.memo(({ campaign, onClick, onDelete }) => {
   const navigate = useNavigate();
-  const [campaignStatus, setCampaignStatus] = useState({ isCompleted: false, isLoading: true });
-
-  // Check campaign workflow status
-  useEffect(() => {
-    const checkCampaignStatus = async () => {
-      try {
-        const { workflowService } = await import('../../services/workflowService');
-        const workflowData = await workflowService.getCampaignWorkflowStatus(campaign.id);
-
-        // Campaign is completed if all 5 steps are completed
-        const isCompleted = workflowData.completed_steps.includes(1) &&
-                           workflowData.completed_steps.includes(2) &&
-                           workflowData.completed_steps.includes(3) &&
-                           workflowData.completed_steps.includes(4) &&
-                           workflowData.completed_steps.includes(5);
-
-        setCampaignStatus({ isCompleted, isLoading: false });
-      } catch (error) {
-        console.error('Error checking campaign status:', error);
-        setCampaignStatus({ isCompleted: false, isLoading: false });
-      }
-    };
-
-    checkCampaignStatus();
-  }, [campaign.id]);
+  // Derive status from data provided by parent to avoid N+1 requests
+  const campaignStatus = useMemo(() => {
+    const steps = campaign?.workflow_status?.completed_steps || [];
+    const isCompletedFromWorkflow = [1, 2, 3, 4, 5].every((s) => steps.includes(s));
+    const isCompleted = typeof campaign?.isCompleted === 'boolean'
+      ? campaign.isCompleted
+      : isCompletedFromWorkflow;
+    return { isCompleted, isLoading: false };
+  }, [campaign]);
 
   // Memoize expensive date formatting
   const formattedDates = useMemo(() => {

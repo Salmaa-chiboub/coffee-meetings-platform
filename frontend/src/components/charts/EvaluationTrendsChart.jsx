@@ -1,5 +1,5 @@
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const EvaluationTrendsChart = ({ campaigns }) => {
   // Préparer les données pour le graphique de tendances
@@ -66,18 +66,38 @@ const EvaluationTrendsChart = ({ campaigns }) => {
         Campaign Trends (Last 6 Months)
       </h3>
       <div className="h-80">
+        <style>
+          {`
+            .recharts-bar-rectangle {
+              animation: barGrow 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+              transform-origin: bottom;
+            }
+            
+            @keyframes barGrow {
+              0% {
+                transform: scaleY(0);
+                opacity: 0;
+              }
+              50% {
+                transform: scaleY(0.8);
+                opacity: 0.8;
+              }
+              100% {
+                transform: scaleY(1);
+                opacity: 1;
+              }
+            }
+            
+            .recharts-bar-rectangle:nth-child(1) { animation-delay: 0.1s; }
+            .recharts-bar-rectangle:nth-child(2) { animation-delay: 0.2s; }
+            .recharts-bar-rectangle:nth-child(3) { animation-delay: 0.3s; }
+            .recharts-bar-rectangle:nth-child(4) { animation-delay: 0.4s; }
+            .recharts-bar-rectangle:nth-child(5) { animation-delay: 0.5s; }
+            .recharts-bar-rectangle:nth-child(6) { animation-delay: 0.6s; }
+          `}
+        </style>
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-            <defs>
-              <linearGradient id="colorCampaigns" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#E8C4A0" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#E8C4A0" stopOpacity={0.1}/>
-              </linearGradient>
-              <linearGradient id="colorParticipants" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#60A5FA" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#60A5FA" stopOpacity={0.1}/>
-              </linearGradient>
-            </defs>
+          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
             <XAxis 
               dataKey="month" 
@@ -86,24 +106,35 @@ const EvaluationTrendsChart = ({ campaigns }) => {
             />
             <YAxis stroke="#6b7280" fontSize={12} />
             <Tooltip content={<CustomTooltip />} />
-            <Area
-              type="monotone"
-              dataKey="campaigns"
-              stroke="#E8C4A0"
-              strokeWidth={3}
-              fillOpacity={1}
-              fill="url(#colorCampaigns)"
+            <Bar 
+              dataKey="campaigns" 
+              fill="#E8C4A0" 
               name="Campaigns Completed"
-            />
-            <Line
-              type="monotone"
-              dataKey="avgParticipants"
-              stroke="#60A5FA"
-              strokeWidth={3}
-              dot={{ fill: '#60A5FA', strokeWidth: 2, r: 4 }}
+              radius={[4, 4, 0, 0]}
+            >
+              {chartData.map((entry, index) => (
+                <Cell 
+                  key={`cell-campaigns-${index}`} 
+                  fill={entry.campaigns === 0 ? "#93c5fd" : "#E8C4A0"}
+                  stroke="none"
+                />
+              ))}
+            </Bar>
+            <Bar 
+              dataKey="avgParticipants" 
+              fill="#60A5FA" 
               name="Avg Participants"
-            />
-          </AreaChart>
+              radius={[4, 4, 0, 0]}
+            >
+              {chartData.map((entry, index) => (
+                <Cell 
+                  key={`cell-participants-${index}`} 
+                  fill={entry.avgParticipants === 0 ? "#93c5fd" : "#60A5FA"}
+                  stroke="none"
+                />
+              ))}
+            </Bar>
+          </BarChart>
         </ResponsiveContainer>
       </div>
     </div>

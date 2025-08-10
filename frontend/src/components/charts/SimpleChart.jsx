@@ -371,29 +371,9 @@ const EvaluationTrendsChart = React.memo(({ data, title, className = '' }) => {
     return { x, y, value, label: labels[index] };
   });
 
-  // Create smooth curve path
-  const createSmoothPath = (points) => {
-    if (points.length < 2) return '';
-
-    let path = `M ${points[0].x} ${points[0].y}`;
-
-    for (let i = 1; i < points.length; i++) {
-      const current = points[i];
-      const previous = points[i - 1];
-
-      // Smooth curve using quadratic bezier
-      const cpX = (previous.x + current.x) / 2;
-      const cpY = (previous.y + current.y) / 2;
-
-      if (i === 1) {
-        path += ` Q ${cpX} ${previous.y} ${current.x} ${current.y}`;
-      } else {
-        path += ` T ${current.x} ${current.y}`;
-      }
-    }
-
-    return path;
-  };
+  // Calculate bar dimensions
+  const barWidth = chartAreaWidth / values.length * 0.8; // 80% of available space
+  const barSpacing = chartAreaWidth / values.length * 0.2; // 20% for spacing
 
   return (
     <div className={`bg-white rounded-xl shadow-sm border border-gray-200 h-full w-full flex flex-col ${className}`} style={{ padding: '10px' }}>
@@ -421,6 +401,13 @@ const EvaluationTrendsChart = React.memo(({ data, title, className = '' }) => {
             {/* Animation definitions */}
             <style>
               {`
+                .chart-bar {
+                  opacity: 0;
+                  transform: scaleY(0);
+                  transform-origin: bottom;
+                  animation: growBar 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                }
+
                 .chart-line {
                   stroke-dasharray: 1000;
                   stroke-dashoffset: 1000;
@@ -440,6 +427,21 @@ const EvaluationTrendsChart = React.memo(({ data, title, className = '' }) => {
                 .grid-line {
                   opacity: 0;
                   animation: fadeInGrid 1s ease-out 0.2s forwards;
+                }
+
+                @keyframes growBar {
+                  0% {
+                    opacity: 0;
+                    transform: scaleY(0);
+                  }
+                  50% {
+                    opacity: 0.8;
+                    transform: scaleY(0.8);
+                  }
+                  100% {
+                    opacity: 1;
+                    transform: scaleY(1);
+                  }
                 }
 
                 @keyframes drawLine {
@@ -513,67 +515,46 @@ const EvaluationTrendsChart = React.memo(({ data, title, className = '' }) => {
             );
           })}
 
-          {/* Area under curve */}
-          {dataPoints.length > 1 && (
-            <path
-              d={`${createSmoothPath(dataPoints)} L ${dataPoints[dataPoints.length - 1].x} ${topPadding + chartPadding + chartAreaHeight} L ${dataPoints[0].x} ${topPadding + chartPadding + chartAreaHeight} Z`}
-              fill="url(#areaGradient)"
-              className="chart-area"
-            />
-          )}
+          {/* Bars */}
+          {dataPoints.map((point, index) => {
+            const barX = yAxisWidth + chartPadding + (index * (barWidth + barSpacing)) + (barSpacing / 2);
+            const barHeight = topPadding + chartPadding + chartAreaHeight - point.y;
+            const barY = point.y;
+            const isZeroValue = point.value === 0;
+            // Pour les valeurs nulles, on crée une ligne très fine
+            const finalBarHeight = isZeroValue ? 2 : barHeight;
+            const finalBarY = isZeroValue ? (topPadding + chartPadding + chartAreaHeight - 2) : barY;
+            
+            return (
+              <g key={index}>
+                {/* Bar */}
+                <rect
+                  x={barX}
+                  y={finalBarY}
+                  width={barWidth}
+                  height={finalBarHeight}
+                  fill={isZeroValue ? "#93c5fd" : "url(#chartGradient)"}
+                  stroke="none"
+                  rx={isZeroValue ? "0" : "2"}
+                  ry={isZeroValue ? "0" : "2"}
+                  className="chart-bar"
+                  style={{
+                    animationDelay: `${1.5 + index * 0.1}s`,
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    setHoveredPoint(point);
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setTooltipPosition({ x: rect.left + rect.width / 2, y: rect.top });
+                  }}
+                  onMouseLeave={() => setHoveredPoint(null)}
+                />
+                
 
-          {/* Main trend line */}
-          <path
-            d={createSmoothPath(dataPoints)}
-            fill="none"
-            stroke="url(#chartGradient)"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="chart-line"
-          />
-
-          {/* Data points for hover interaction */}
-          {dataPoints.map((point, index) => (
-            <g key={index}>
-              {/* Invisible larger circle for easier hover */}
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r="8"
-                fill="transparent"
-                style={{ cursor: 'pointer' }}
-                onMouseEnter={(e) => {
-                  setHoveredPoint(point);
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  setTooltipPosition({ x: rect.left + rect.width / 2, y: rect.top });
-                }}
-                onMouseLeave={() => setHoveredPoint(null)}
-              />
-
-              {/* Visible data point */}
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r={hoveredPoint === point ? "3" : "2"}
-                fill={hoveredPoint === point ? "#1d4ed8" : "#3b82f6"}
-                stroke="white"
-                strokeWidth="1"
-                className="chart-label"
-                style={{
-                  animationDelay: `${1.5 + index * 0.1}s`,
-                  transition: 'all 0.2s ease',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  setHoveredPoint(point);
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  setTooltipPosition({ x: rect.left + rect.width / 2, y: rect.top });
-                }}
-                onMouseLeave={() => setHoveredPoint(null)}
-              />
-            </g>
-          ))}
+              </g>
+            );
+          })}
 
           {/* X-axis labels */}
           {labels.map((label, index) => {

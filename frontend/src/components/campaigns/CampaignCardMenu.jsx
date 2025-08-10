@@ -1,13 +1,12 @@
-import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
 import { EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 
 const CampaignCardMenu = ({ campaign, isCompleted, onDelete }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
-  const navigate = useNavigate();
 
-  React.useEffect(() => {
+  // Close menu when clicking outside
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setIsOpen(false);
@@ -15,19 +14,20 @@ const CampaignCardMenu = ({ campaign, isCompleted, onDelete }) => {
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
-  const handleViewFeedback = (e) => {
-    e.stopPropagation();
-    navigate(`/app/campaigns/${campaign.id}/evaluations`);
-    setIsOpen(false);
+  const handleMenuClick = (e) => {
+    e.stopPropagation(); // Prevent card click
+    setIsOpen(!isOpen);
   };
 
-  const handleDelete = async (e) => {
-    e.stopPropagation();
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette campagne ?')) {
-      await onDelete(campaign.id);
+  const handleDelete = (e) => {
+    e.stopPropagation(); // Prevent card click
+    if (onDelete) {
+      onDelete(campaign);
     }
     setIsOpen(false);
   };
@@ -35,41 +35,22 @@ const CampaignCardMenu = ({ campaign, isCompleted, onDelete }) => {
   return (
     <div className="relative" ref={menuRef}>
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
-        className="p-1 rounded-full hover:bg-warmGray-100 focus:outline-none"
-        aria-label="Menu de la campagne"
+        onClick={handleMenuClick}
+        className="p-1 rounded-full hover:bg-warmGray-100 transition-colors"
       >
         <EllipsisVerticalIcon className="w-5 h-5 text-warmGray-500" />
       </button>
 
       {isOpen && (
-        <div
-          className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 py-1 border border-warmGray-200"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={handleViewFeedback}
-            className="w-full text-left px-4 py-2 text-sm text-warmGray-700 hover:bg-warmGray-50"
-          >
-            Voir les feedbacks
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={isCompleted}
-            className={`w-full text-left px-4 py-2 text-sm
-              ${isCompleted 
-                ? 'text-warmGray-400 cursor-not-allowed' 
-                : 'text-red-600 hover:bg-warmGray-50'
-              }`}
-          >
-            Supprimer la campagne
-            {isCompleted && (
-              <span className="ml-2 text-xs text-warmGray-400">(Complétée)</span>
-            )}
-          </button>
+        <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-warmGray-200 rounded-lg shadow-lg z-10">
+          <div className="py-1">
+            <button
+              onClick={handleDelete}
+              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+            >
+              Supprimer
+            </button>
+          </div>
         </div>
       )}
     </div>

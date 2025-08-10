@@ -37,6 +37,7 @@ export const campaignService = {
       }
 
       const response = await apiClient.get(`/campaigns/${id}/`);
+      // If response doesn't include workflow, consumer may call workflowService for details page only
       console.log('✅ campaignService.getCampaign: Success response:', response.data);
 
       return {

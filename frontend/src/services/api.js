@@ -323,7 +323,9 @@ export const authAPI = {
       const queryString = queryParams.toString();
       const url = `/campaigns/${queryString ? `?${queryString}` : ''}`;
 
-      const response = await apiClient.get(url);
+      // Prefer bulk endpoint with workflow to avoid N+1
+      const wfQuery = queryString ? `${queryString}&with_workflow=1` : 'with_workflow=1';
+      const response = await apiClient.get(`/campaigns/with-workflow/?${wfQuery}`);
 
       if (response.data.results) {
         return {
@@ -331,10 +333,9 @@ export const authAPI = {
           data: response.data.results,
           pagination: {
             count: response.data.count,
-            next: response.data.next,
-            previous: response.data.previous,
             page_size: params.page_size || 20,
-            current_page: params.page || 1
+            current_page: params.page || 1,
+            total_pages: response.data.total_pages,
           }
         };
       }

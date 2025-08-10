@@ -4,8 +4,7 @@ from .views import (
     EvaluationFormView,
     EvaluationSubmissionView,
     CampaignEvaluationResultsView,
-    EvaluationStatisticsView,
-    GlobalEvaluationStatisticsView
+    EvaluationStatisticsView
 )
 
 
@@ -17,9 +16,7 @@ urlpatterns = [
     # Protected RH endpoints (authentication required - 3 endpoints)
     path('campaigns/<int:campaign_id>/evaluations/', CampaignEvaluationResultsView.as_view(), name='rh-campaign-evaluations'),
     path('campaigns/<int:campaign_id>/statistics/', EvaluationStatisticsView.as_view(), name='rh-campaign-statistics'),
-    path('global-statistics/', GlobalEvaluationStatisticsView.as_view(), name='global-evaluation-statistics'),
 ]
-
 
 # PUBLIC ENDPOINTS (no authentication):
 # GET /evaluations/evaluate/{token}/ - Display evaluation form
