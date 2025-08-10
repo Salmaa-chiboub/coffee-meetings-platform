@@ -26,7 +26,7 @@ export const employeeService = {
   // Upload Excel file with employee data
   uploadExcel: async (campaignId, file, replaceExisting = false) => {
     try {
-      console.log('📤 uploadExcel called with:', { campaignId, fileName: file?.name, replaceExisting });
+      console.log('📤 uploadExcel called with:', { campaignId, fileName: file?.name, fileSize: file?.size, replaceExisting });
 
       if (!campaignId || campaignId === 'undefined') {
         throw new Error('Campaign ID is required and cannot be undefined');
@@ -43,14 +43,22 @@ export const employeeService = {
 
       console.log('📤 FormData contents:', {
         file: file.name,
+        fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
         campaign_id: campaignId,
         replace_existing: replaceExisting
       });
+
+      // Calculate timeout based on file size (minimum 30 seconds, add 10 seconds per MB)
+      const fileSizeMB = file.size / (1024 * 1024);
+      const timeoutMs = Math.max(30000, 30000 + (fileSizeMB * 10000)); // 30s base + 10s per MB
+
+      console.log(`📤 Upload timeout set to ${timeoutMs / 1000}s for ${fileSizeMB.toFixed(2)}MB file`);
 
       const response = await api.post('/employees/upload_excel/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: timeoutMs,
       });
       return response.data;
     } catch (error) {

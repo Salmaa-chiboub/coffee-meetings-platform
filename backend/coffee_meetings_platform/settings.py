@@ -255,6 +255,13 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# File Upload Settings
+# https://docs.djangoproject.com/en/5.2/ref/settings/#file-upload-max-memory-size
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB - files larger than this will be stored to disk
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB - maximum size for request data
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000  # Maximum number of fields in a request
+FILE_UPLOAD_PERMISSIONS = 0o644  # File permissions for uploaded files
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

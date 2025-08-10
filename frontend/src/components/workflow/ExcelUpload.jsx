@@ -86,10 +86,13 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
       setUploading(true);
       onError(null);
 
+      console.log(`📤 Starting upload of ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+
       const result = await employeeService.uploadExcel(campaignId, file);
-      
+
       if (result.success) {
         setUploadResult(result);
+        console.log(`✅ Upload successful: ${result.created_employees} employees created`);
 
         // Complete the step
         await onComplete(WORKFLOW_STEPS.UPLOAD_EMPLOYEES, {
@@ -100,10 +103,36 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
         });
       } else {
         setUploadResult(result);
-        onError(result.error || 'Échec du téléchargement');
+        console.error('❌ Upload failed:', result.error);
+
+        // Provide more specific error messages
+        let errorMessage = result.error || 'Échec du téléchargement';
+
+        if (result.error && result.error.includes('too large')) {
+          errorMessage = 'Le fichier est trop volumineux. Veuillez réduire la taille du fichier ou le diviser en plusieurs fichiers plus petits.';
+        } else if (result.error && result.error.includes('memory')) {
+          errorMessage = 'Erreur de mémoire lors du traitement. Veuillez essayer avec un fichier plus petit.';
+        } else if (result.error && result.error.includes('could not be read')) {
+          errorMessage = 'Le fichier Excel ne peut pas être lu. Vérifiez que le fichier n\'est pas corrompu.';
+        }
+
+        onError(errorMessage);
       }
     } catch (error) {
-      onError(error.message || 'Échec du téléchargement');
+      console.error('❌ Upload error:', error);
+
+      // Handle specific error types
+      let errorMessage = 'Échec du téléchargement';
+
+      if (error.message && error.message.includes('413')) {
+        errorMessage = 'Le fichier est trop volumineux pour être traité par le serveur.';
+      } else if (error.message && error.message.includes('timeout')) {
+        errorMessage = 'Le téléchargement a pris trop de temps. Veuillez essayer avec un fichier plus petit.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      onError(errorMessage);
     } finally {
       setUploading(false);
     }

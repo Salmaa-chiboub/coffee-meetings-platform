@@ -99,19 +99,43 @@ class ExcelProcessingService:
             }
     
     def _read_excel_file(self, file) -> pd.DataFrame:
-        """Read Excel file into DataFrame"""
+        """Read Excel file into DataFrame with memory optimization"""
         try:
-            # Try reading as xlsx first
+            # Reset file pointer to beginning
+            file.seek(0)
+
+            # Try reading as xlsx first with memory optimization
             if file.name.endswith('.xlsx'):
-                df = pd.read_excel(file, engine='openpyxl')
+                # Use openpyxl engine with memory optimization
+                df = pd.read_excel(
+                    file,
+                    engine='openpyxl',
+                    dtype=str,  # Read all columns as strings to avoid type inference overhead
+                    na_filter=False  # Don't convert empty strings to NaN
+                )
             else:
-                df = pd.read_excel(file, engine='xlrd')
-            
+                # Use xlrd engine for older Excel files
+                df = pd.read_excel(
+                    file,
+                    engine='xlrd',
+                    dtype=str,
+                    na_filter=False
+                )
+
+            # Log file processing info
+            logger.info(f"Successfully read Excel file with {len(df)} rows and {len(df.columns)} columns")
+
             # Clean column names
             df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
-            
+
+            # Remove completely empty rows
+            df = df.dropna(how='all')
+
             return df
-            
+
+        except MemoryError as e:
+            logger.error(f"Memory error reading Excel file: {str(e)}")
+            raise ValidationError("File is too large to process. Please reduce the file size or split into smaller files.")
         except Exception as e:
             logger.error(f"Error reading Excel file: {str(e)}")
             raise ValidationError(f"Could not read Excel file: {str(e)}")
@@ -145,28 +169,44 @@ class ExcelProcessingService:
         return {'valid': True}
     
     def _process_rows(self, df: pd.DataFrame) -> List[Employee]:
-        """Process DataFrame rows and create employees"""
+        """Process DataFrame rows and create employees with batch processing"""
         employees = []
-        
-        with transaction.atomic():
-            for index, row in df.iterrows():
-                try:
-                    employee = self._process_single_row(row, index)
-                    if employee:
-                        employees.append(employee)
-                        self.created_count += 1
-                    
-                    self.processed_count += 1
-                    
-                except Exception as e:
-                    error_msg = f"Row {index + 2}: {str(e)}"  # +2 for Excel row number (header + 0-based index)
-                    self.errors.append({
-                        'row': index + 2,
-                        'error': error_msg,
-                        'data': row.to_dict()
-                    })
-                    logger.warning(error_msg)
-        
+        batch_size = 50  # Process in batches to manage memory
+        total_rows = len(df)
+
+        logger.info(f"Processing {total_rows} rows in batches of {batch_size}")
+
+        # Process in batches to manage memory and database connections
+        for batch_start in range(0, total_rows, batch_size):
+            batch_end = min(batch_start + batch_size, total_rows)
+            batch_df = df.iloc[batch_start:batch_end]
+
+            logger.info(f"Processing batch {batch_start + 1}-{batch_end} of {total_rows}")
+
+            with transaction.atomic():
+                for index, row in batch_df.iterrows():
+                    try:
+                        employee = self._process_single_row(row, index)
+                        if employee:
+                            employees.append(employee)
+                            self.created_count += 1
+
+                        self.processed_count += 1
+
+                        # Log progress for large files
+                        if self.processed_count % 10 == 0:
+                            logger.info(f"Processed {self.processed_count}/{total_rows} rows")
+
+                    except Exception as e:
+                        error_msg = f"Row {index + 2}: {str(e)}"  # +2 for Excel row number (header + 0-based index)
+                        self.errors.append({
+                            'row': index + 2,
+                            'error': error_msg,
+                            'data': row.to_dict()
+                        })
+                        logger.warning(error_msg)
+
+        logger.info(f"Completed processing: {self.created_count} employees created, {len(self.errors)} errors")
         return employees
     
     def _process_single_row(self, row: pd.Series, index: int) -> Employee:

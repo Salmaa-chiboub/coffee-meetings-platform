@@ -64,9 +64,15 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         - file: Excel file (.xlsx or .xls)
         - campaign_id: ID of the campaign to associate employees with
         """
+        # Log upload attempt
+        file_info = request.FILES.get('file')
+        if file_info:
+            logger.info(f"Excel upload attempt: {file_info.name}, size: {file_info.size} bytes")
+
         serializer = ExcelUploadSerializer(data=request.data)
 
         if not serializer.is_valid():
+            logger.warning(f"Excel upload validation failed: {serializer.errors}")
             return Response(
                 {'error': 'Invalid data', 'details': serializer.errors},
                 status=status.HTTP_400_BAD_REQUEST
@@ -74,10 +80,12 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
         try:
             # Process Excel file
-            service = ExcelProcessingService(
-                serializer.validated_data['campaign_id'],
-                replace_existing=serializer.validated_data.get('replace_existing', False)
-            )
+            campaign_id = serializer.validated_data['campaign_id']
+            replace_existing = serializer.validated_data.get('replace_existing', False)
+
+            logger.info(f"Starting Excel processing for campaign {campaign_id}, replace_existing: {replace_existing}")
+
+            service = ExcelProcessingService(campaign_id, replace_existing=replace_existing)
             result = service.process_excel_file(serializer.validated_data['file'])
 
             # Serialize employees for response
@@ -93,8 +101,16 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 logger.warning(f"Excel processing failed: {result.get('error', 'Unknown error')}")
                 return Response(result, status=status.HTTP_400_BAD_REQUEST)
 
+        except MemoryError as e:
+            logger.error(f"Memory error during Excel processing: {str(e)}")
+            return Response(
+                {'error': 'File too large', 'message': 'The file is too large to process. Please reduce the file size or split into smaller files.'},
+                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
+            )
         except Exception as e:
             logger.error(f"Unexpected error during Excel processing: {str(e)}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             return Response(
                 {'error': 'Internal server error', 'message': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

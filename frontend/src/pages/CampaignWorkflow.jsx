@@ -19,6 +19,48 @@ const CampaignWorkflow = () => {
 
   console.log('🔍 CampaignWorkflow - Campaign ID from params:', campaignId);
 
+  // Safe date formatting function
+  const formatCampaignDate = (dateString) => {
+    console.log('🔍 formatCampaignDate: Input:', { dateString, type: typeof dateString });
+
+    if (!dateString) {
+      console.warn('⚠️ formatCampaignDate: No date provided');
+      return 'N/A';
+    }
+
+    try {
+      // Handle different date formats
+      let date;
+
+      if (dateString instanceof Date) {
+        date = dateString;
+      } else if (typeof dateString === 'string') {
+        // Try parsing the string
+        date = new Date(dateString);
+      } else {
+        console.warn('⚠️ formatCampaignDate: Unexpected date type:', typeof dateString);
+        return 'Invalid Date';
+      }
+
+      if (isNaN(date.getTime())) {
+        console.warn('⚠️ formatCampaignDate: Invalid date after parsing:', dateString);
+        return 'Invalid Date';
+      }
+
+      const formatted = date.toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+
+      console.log('✅ formatCampaignDate: Successfully formatted:', { input: dateString, output: formatted });
+      return formatted;
+    } catch (error) {
+      console.error('❌ formatCampaignDate: Error formatting date:', error, dateString);
+      return 'Invalid Date';
+    }
+  };
+
   // Redirect to campaigns list if no valid campaign ID
   useEffect(() => {
     if (!campaignId || campaignId === 'undefined' || campaignId === 'null') {
@@ -67,8 +109,18 @@ const CampaignWorkflow = () => {
 
         // Load campaign details
         console.log('🔍 CampaignWorkflow.loadData: Loading campaign details...');
-        const campaignData = await campaignService.getCampaign(campaignId);
-        console.log('🔍 CampaignWorkflow.loadData: Campaign data loaded:', campaignData);
+        const campaignResponse = await campaignService.getCampaign(campaignId);
+        console.log('🔍 CampaignWorkflow.loadData: Campaign response:', campaignResponse);
+
+        // Extract campaign data from the response
+        const campaignData = campaignResponse.success ? campaignResponse.data : campaignResponse;
+        console.log('🔍 CampaignWorkflow.loadData: Extracted campaign data:', campaignData);
+        console.log('🔍 CampaignWorkflow.loadData: Date values:', {
+          start_date: campaignData?.start_date,
+          end_date: campaignData?.end_date,
+          start_date_type: typeof campaignData?.start_date,
+          end_date_type: typeof campaignData?.end_date
+        });
         setCampaign(campaignData);
 
         // Load workflow state
@@ -285,9 +337,9 @@ const CampaignWorkflow = () => {
               {campaign.title}
             </h1>
             <div className="flex items-center space-x-4 text-xs text-warmGray-500 mt-0.5">
-              <span>{new Date(campaign.start_date).toLocaleDateString()}</span>
+              <span>{formatCampaignDate(campaign.start_date)}</span>
               <span>→</span>
-              <span>{new Date(campaign.end_date).toLocaleDateString()}</span>
+              <span>{formatCampaignDate(campaign.end_date)}</span>
             </div>
           </div>
         )}
