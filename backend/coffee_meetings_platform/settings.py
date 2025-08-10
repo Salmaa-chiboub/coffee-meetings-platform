@@ -122,41 +122,56 @@ if not DEBUG:
     DATABASES['default']['CONN_MAX_AGE'] = 600
     DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 
-
-# Cache Configuration for Performance
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'coffee-meetings-cache',
-        'TIMEOUT': 300,  # 5 minutes default timeout
-        'OPTIONS': {
-            'MAX_ENTRIES': 1000,
-            'CULL_FREQUENCY': 3,
-        }
-    }
-}
-
-# Use Redis for production caching if available
-if not DEBUG:
-    try:
-        import redis
-        CACHES = {
-            'default': {
-                'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-                'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
-                'TIMEOUT': 300,
-                'OPTIONS': {
-                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-                    'CONNECTION_POOL_KWARGS': {
-                        'max_connections': 50,
-                        'retry_on_timeout': True,
-                    }
-                }
+# Cache Configuration
+if DEBUG:
+    # 🔹 Mode développement : cache en mémoire, TTL très court pour voir les changements rapidement
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'coffee-meetings-cache',
+            'TIMEOUT': 5,  # 5 secondes seulement
+            'OPTIONS': {
+                'MAX_ENTRIES': 1000,
+                'CULL_FREQUENCY': 3,
             }
         }
-    except ImportError:
-        pass  # Fall back to local memory cache
+    }
+else:
+    # 🔹 Mode production : Redis performant et persistant
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
+            'TIMEOUT': 300,  # 5 minutes
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'PARSER_CLASS': 'redis.connection.HiredisParser',
+                'SOCKET_TIMEOUT': 5,
+                'SOCKET_CONNECT_TIMEOUT': 5,
+                'CONNECTION_POOL_CLASS': 'redis.BlockingConnectionPool',
+                'CONNECTION_POOL_CLASS_KWARGS': {
+                    'max_connections': 50,
+                    'timeout': 20,
+                },
+                'MAX_CONNECTIONS': 1000,
+                'RETRY_ON_TIMEOUT': True,
+            },
+            'KEY_PREFIX': 'coffee_meetings',
+        }
+    }
 
+# Middleware cache settings — activé seulement en prod
+if not DEBUG:
+    CACHE_MIDDLEWARE_ALIAS = 'default'
+    CACHE_MIDDLEWARE_SECONDS = 300
+    CACHE_MIDDLEWARE_KEY_PREFIX = 'coffee_meetings_view'
+else:
+    # En dev, on désactive complètement le middleware cache pour éviter les surprises
+    try:
+        MIDDLEWARE.remove('django.middleware.cache.UpdateCacheMiddleware')
+        MIDDLEWARE.remove('django.middleware.cache.FetchFromCacheMiddleware')
+    except ValueError:
+        pass
 
 # Performance Logging Configuration
 LOGGING = {
