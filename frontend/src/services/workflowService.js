@@ -29,6 +29,7 @@ export const workflowService = {
         throw new Error('Authentication required');
       }
 
+      // This call is kept for detail pages. List pages use bulk endpoint.
       const response = await api.get(`/campaigns/${campaignId}/workflow-status/`);
       console.log('✅ workflowService.getCampaignWorkflowStatus: Success response:', response.data);
       return response.data;
@@ -47,6 +48,15 @@ export const workflowService = {
 
       throw error.response?.data || error.message;
     }
+  },
+  // Bulk: get workflows for many campaigns in a single call (uses campaigns/with-workflow/ under the hood)
+  getCampaignsWithWorkflow: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.page_size) queryParams.append('page_size', params.page_size);
+    if (params.search) queryParams.append('search', params.search);
+    const response = await api.get(`/campaigns/with-workflow/?${queryParams.toString()}`);
+    return response.data;
   },
 
   // Update workflow step completion

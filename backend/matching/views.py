@@ -18,6 +18,7 @@ from .serializers import (
 from .services import MatchingAlgorithmService, EmailNotificationService
 from employees.models import Employee, EmployeeAttribute
 from campaigns.models import Campaign
+from .permissions import IsMatchingOwner
 
 
 class AvailableAttributesView(APIView):
@@ -25,12 +26,13 @@ class AvailableAttributesView(APIView):
     Step 1: Get available employee attributes for criteria definition
     GET /matching/campaigns/{campaign_id}/available-attributes/
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsMatchingOwner]
 
     def get(self, request, campaign_id):
         """Get available employee attributes for a specific campaign"""
         try:
-            campaign = get_object_or_404(Campaign, id=campaign_id)
+            # Verify the campaign belongs to the user
+            campaign = get_object_or_404(Campaign, id=campaign_id, hr_manager=request.user)
 
             # Get distinct attributes for this campaign
             attributes = EmployeeAttribute.objects.filter(
@@ -58,12 +60,13 @@ class SaveMatchingCriteriaView(APIView):
     Step 2: Save matching criteria for a campaign
     POST /matching/campaigns/{campaign_id}/criteria/
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsMatchingOwner]
 
     def post(self, request, campaign_id):
         """Save matching criteria for a campaign"""
         try:
-            campaign = get_object_or_404(Campaign, id=campaign_id)
+            # Verify the campaign belongs to the user
+            campaign = get_object_or_404(Campaign, id=campaign_id, hr_manager=request.user)
 
             # Validate request data
             request_serializer = CriteriaSaveRequestSerializer(data=request.data)
@@ -146,13 +149,13 @@ class GeneratePairsView(APIView):
     Step 3: Generate employee pairs based on saved criteria
     GET /matching/campaigns/{campaign_id}/generate-pairs/
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsMatchingOwner]
 
     def get(self, request, campaign_id):
         """Generate employee pairs based on saved criteria"""
         try:
-            # Get the campaign
-            campaign = get_object_or_404(Campaign, id=campaign_id)
+            # Verify the campaign belongs to the user
+            campaign = get_object_or_404(Campaign, id=campaign_id, hr_manager=request.user)
 
             # Get optional limit parameter
             limit_param = request.query_params.get('limit')
@@ -190,12 +193,13 @@ class ConfirmPairsView(APIView):
     Step 4: Confirm selected pairs and optionally send email notifications
     POST /matching/campaigns/{campaign_id}/confirm-pairs/
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsMatchingOwner]
 
     def post(self, request, campaign_id):
         """Confirm and save selected pairs with optional email notifications"""
         try:
-            campaign = get_object_or_404(Campaign, id=campaign_id)
+            # Verify the campaign belongs to the user
+            campaign = get_object_or_404(Campaign, id=campaign_id, hr_manager=request.user)
 
             print(f"DEBUG: Received data for campaign {campaign_id}: {request.data}")
 
@@ -303,7 +307,8 @@ class MatchingHistoryView(APIView):
     def get(self, request, campaign_id):
         """Get complete matching history with all information for HR display"""
         try:
-            campaign = get_object_or_404(Campaign, id=campaign_id)
+            # Verify the campaign belongs to the user
+            campaign = get_object_or_404(Campaign, id=campaign_id, hr_manager=request.user)
 
             # Get all pairs for this campaign
             pairs = EmployeePair.objects.filter(campaign=campaign).select_related(
@@ -350,7 +355,8 @@ class CriteriaHistoryView(APIView):
     def get(self, request, campaign_id):
         """Get criteria history with complete information"""
         try:
-            campaign = get_object_or_404(Campaign, id=campaign_id)
+            # Verify the campaign belongs to the user
+            campaign = get_object_or_404(Campaign, id=campaign_id, hr_manager=request.user)
 
             # Get all criteria for this campaign
             criteria = CampaignMatchingCriteria.objects.filter(campaign=campaign)

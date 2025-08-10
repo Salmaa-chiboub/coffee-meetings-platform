@@ -13,6 +13,7 @@ from .serializers import (
     BulkActionSerializer, NotificationStatsSerializer,
     CreateNotificationSerializer
 )
+from .permissions import IsNotificationOwner
 
 
 class NotificationPagination(PageNumberPagination):
@@ -28,7 +29,7 @@ class NotificationListView(generics.ListAPIView):
     """
     serializer_class = NotificationListSerializer
     pagination_class = NotificationPagination
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsNotificationOwner]
 
     def get_queryset(self):
         user = self.request.user
@@ -59,7 +60,7 @@ class NotificationDetailView(generics.RetrieveUpdateDestroyAPIView):
     Retrieve, update, or delete a specific notification
     """
     serializer_class = NotificationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsNotificationOwner]
     
     def get_queryset(self):
         return Notification.objects.filter(recipient=self.request.user)

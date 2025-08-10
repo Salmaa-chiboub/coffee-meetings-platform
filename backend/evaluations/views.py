@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from .models import Evaluation
 from campaigns.models import Campaign
 from campaigns.permissions import IsCampaignOwner
+from .permissions import IsEvaluationOwner
 
 class EvaluationStatisticsView(APIView):
     """View for getting evaluation statistics for a campaign"""
@@ -142,12 +143,13 @@ class CampaignEvaluationResultsView(APIView):
     Protected endpoint for HR managers to view campaign evaluation results
     GET /evaluations/campaigns/{campaign_id}/results/
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsEvaluationOwner]
 
     def get(self, request, campaign_id):
         """Get evaluation results for a specific campaign"""
         try:
-            campaign = get_object_or_404(Campaign, id=campaign_id)
+            # Verify the campaign belongs to the user
+            campaign = get_object_or_404(Campaign, id=campaign_id, hr_manager=request.user)
 
             # Get all evaluations for this campaign
             evaluations = Evaluation.objects.filter(
@@ -212,12 +214,13 @@ class EvaluationStatisticsView(APIView):
     Protected endpoint to get evaluation statistics per campaign
     GET /evaluations/campaigns/{campaign_id}/statistics/
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsEvaluationOwner]
 
     def get(self, request, campaign_id):
         """Get evaluation statistics for a specific campaign"""
         try:
-            campaign = get_object_or_404(Campaign, id=campaign_id)
+            # Verify the campaign belongs to the user
+            campaign = get_object_or_404(Campaign, id=campaign_id, hr_manager=request.user)
 
             # Get evaluation counts
             total_evaluations = Evaluation.objects.filter(
@@ -268,117 +271,118 @@ class EvaluationStatisticsView(APIView):
             }, status=status.HTTP_404_NOT_FOUND)
 
 
-class GlobalEvaluationStatisticsView(APIView):
-    """
-    Protected endpoint for HR managers to view their evaluation statistics
-    GET /evaluations/global-statistics/
-    """
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        """Get evaluation statistics for campaigns of the connected HR manager"""
-        try:
-            # Get the connected HR manager (user is the HR manager directly)
-            hr_manager = request.user
-
-            # Get campaigns of this HR manager that have pairs generated (step 4 completed)
-            completed_campaigns = Campaign.objects.filter(
-                hr_manager=hr_manager,
-                workflow_state__completed_steps__contains=[4]
-            )
-
-            # If no campaigns with workflow, fall back to HR manager's campaigns with pairs
-            if not completed_campaigns.exists():
-                from matching.models import EmployeePair
-                campaign_ids_with_pairs = EmployeePair.objects.filter(
-                    campaign__hr_manager=hr_manager
-                ).values_list('campaign_id', flat=True).distinct()
-                completed_campaigns = Campaign.objects.filter(id__in=campaign_ids_with_pairs)
-
-            if not completed_campaigns.exists():
-                return Response({
-                    'success': True,
-                    'statistics': {
-                        'total_campaigns': 0,
-                        'total_pairs': 0,
-                        'total_evaluations_generated': 0,
-                        'evaluations_submitted': 0,
-                        'evaluations_pending': 0,
-                        'response_rate': 0,
-                        'average_rating': None,
-                        'total_ratings': 0,
-                        'global_performance': 'No Data'
-                    }
-                })
-
-            # Calculate global statistics
-            from matching.models import EmployeePair
-
-            # Total pairs across all completed campaigns
-            total_pairs = EmployeePair.objects.filter(
-                campaign__in=completed_campaigns
-            ).count()
-
-            # Total evaluations generated (2 per pair)
-            total_evaluations_generated = Evaluation.objects.filter(
-                employee_pair__campaign__in=completed_campaigns
-            ).count()
-
-            # Submitted evaluations
-            evaluations_submitted = Evaluation.objects.filter(
-                employee_pair__campaign__in=completed_campaigns,
-                used=True
-            ).count()
-
-            # Pending evaluations
-            evaluations_pending = total_evaluations_generated - evaluations_submitted
-
-            # Response rate
-            response_rate = (evaluations_submitted / total_evaluations_generated * 100) if total_evaluations_generated > 0 else 0
-
-            # Rating statistics
-            rating_stats = Evaluation.objects.filter(
-                employee_pair__campaign__in=completed_campaigns,
-                used=True,
-                rating__isnull=False
-            ).aggregate(
-                average_rating=Avg('rating'),
-                total_ratings=Count('rating')
-            )
-
-            # Calculate global performance
-            avg_rating = rating_stats['average_rating'] or 0
-            performance_level = 'Poor'
-
-            if response_rate >= 80 and avg_rating >= 4:
-                performance_level = 'Excellent'
-            elif response_rate >= 60 and avg_rating >= 3.5:
-                performance_level = 'Good'
-            elif response_rate >= 40 and avg_rating >= 3:
-                performance_level = 'Average'
-            elif response_rate >= 20 and avg_rating >= 2:
-                performance_level = 'Below Average'
-
-            return Response({
-                'success': True,
-                'statistics': {
-                    'total_campaigns': completed_campaigns.count(),
-                    'total_pairs': total_pairs,
-                    'total_evaluations_generated': total_evaluations_generated,
-                    'evaluations_submitted': evaluations_submitted,
-                    'evaluations_pending': evaluations_pending,
-                    'response_rate': round(response_rate, 1),
-                    'average_rating': round(avg_rating, 2) if avg_rating else None,
-                    'total_ratings': rating_stats['total_ratings'],
-                    'global_performance': performance_level
-                }
-            })
-
-        except Exception as e:
-            return Response({
-                'error': 'Failed to fetch global statistics',
-                'details': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+# ENDPOINT NON UTILISÉ PAR LE FRONTEND - DÉSACTIVÉ
+# class GlobalEvaluationStatisticsView(APIView):
+#     """
+#     Protected endpoint for HR managers to view their evaluation statistics
+#     GET /evaluations/global-statistics/
+#     """
+#     permission_classes = [IsAuthenticated]
+# 
+#     def get(self, request):
+#         """Get evaluation statistics for campaigns of the connected HR manager"""
+#         try:
+#             # Get the connected HR manager (user is the HR manager directly)
+#             hr_manager = request.user
+# 
+#             # Get campaigns of this HR manager that have pairs generated (step 4 completed)
+#             completed_campaigns = Campaign.objects.filter(
+#                 hr_manager=hr_manager,
+#                 workflow_state__completed_steps__contains=[4]
+#             )
+# 
+#             # If no campaigns with workflow, fall back to HR manager's campaigns with pairs
+#             if not completed_campaigns.exists():
+#                 from matching.models import EmployeePair
+#                 campaign_ids_with_pairs = EmployeePair.objects.filter(
+#                     campaign__hr_manager=hr_manager
+#                 ).values_list('campaign_id', flat=True).distinct()
+#                 completed_campaigns = Campaign.objects.filter(id__in=campaign_ids_with_pairs)
+# 
+#             if not completed_campaigns.exists():
+#                 return Response({
+#                     'success': True,
+#                     'statistics': {
+#                         'total_campaigns': 0,
+#                         'total_pairs': 0,
+#                         'total_evaluations_generated': 0,
+#                         'evaluations_submitted': 0,
+#                         'evaluations_pending': 0,
+#                         'response_rate': 0,
+#                         'average_rating': None,
+#                         'total_ratings': 0,
+#                         'global_performance': 'No Data'
+#                     }
+#                 })
+# 
+#             # Calculate global statistics
+#             from matching.models import EmployeePair
+# 
+#             # Total pairs across all completed campaigns
+#             total_pairs = EmployeePair.objects.filter(
+#                 campaign__in=completed_campaigns
+#             ).count()
+# 
+#             # Total evaluations generated (2 per pair)
+#             total_evaluations_generated = Evaluation.objects.filter(
+#                 employee_pair__campaign__in=completed_campaigns
+#             ).count()
+# 
+#             # Submitted evaluations
+#             evaluations_submitted = Evaluation.objects.filter(
+#                 employee_pair__campaign__in=completed_campaigns,
+#                 used=True
+#             ).count()
+# 
+#             # Pending evaluations
+#             evaluations_pending = total_evaluations_generated - evaluations_submitted
+# 
+#             # Response rate
+#             response_rate = (evaluations_submitted / total_evaluations_generated * 100) if total_evaluations_generated > 0 else 0
+# 
+#             # Rating statistics
+#             rating_stats = Evaluation.objects.filter(
+#                 employee_pair__campaign__in=completed_campaigns,
+#                 used=True,
+#                 rating__isnull=False
+#             ).aggregate(
+#                 average_rating=Avg('rating'),
+#                 total_ratings=Count('rating')
+#             )
+# 
+#             # Calculate global performance
+#             avg_rating = rating_stats['average_rating'] or 0
+#             performance_level = 'Poor'
+# 
+#             if response_rate >= 80 and avg_rating >= 4:
+#                 performance_level = 'Excellent'
+#             elif response_rate >= 60 and avg_rating >= 3.5:
+#                 performance_level = 'Good'
+#             elif response_rate >= 40 and avg_rating >= 3:
+#                 performance_level = 'Average'
+#             elif response_rate >= 20 and avg_rating >= 2:
+#                 performance_level = 'Below Average'
+# 
+#             return Response({
+#                 'success': True,
+#                 'statistics': {
+#                     'total_campaigns': completed_campaigns.count(),
+#                     'total_pairs': total_pairs,
+#                     'total_evaluations_generated': total_evaluations_generated,
+#                     'evaluations_submitted': evaluations_submitted,
+#                     'evaluations_pending': evaluations_pending,
+#                     'response_rate': round(response_rate, 1),
+#                     'average_rating': round(avg_rating, 2) if avg_rating else None,
+#                     'total_ratings': rating_stats['total_ratings'],
+#                     'global_performance': performance_level
+#                 }
+#             })
+# 
+#         except Exception as e:
+#             return Response({
+#                 'error': 'Failed to fetch global statistics',
+#                 'details': str(e)
+#             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ============================================================================

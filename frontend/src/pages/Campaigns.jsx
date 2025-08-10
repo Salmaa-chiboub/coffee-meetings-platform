@@ -49,52 +49,22 @@ const CampaignsList = React.memo(() => {
   const campaigns = campaignsResponse?.data || [];
   const pagination = campaignsResponse?.pagination;
 
-  // Load workflow status for all campaigns when campaigns change
+  // Use server-provided workflow_status to avoid N+1 calls
   useEffect(() => {
-    const loadWorkflowStatus = async () => {
-      if (campaigns.length === 0) return;
-
-      setStatusLoading(true);
-      try {
-        const { workflowService } = await import('../services/workflowService');
-
-        const campaignsWithWorkflow = await Promise.all(
-          campaigns.map(async (campaign) => {
-            try {
-              const workflowData = await workflowService.getCampaignWorkflowStatus(campaign.id);
-              const isCompleted = workflowData.completed_steps &&
-                                 workflowData.completed_steps.includes(1) &&
-                                 workflowData.completed_steps.includes(2) &&
-                                 workflowData.completed_steps.includes(3) &&
-                                 workflowData.completed_steps.includes(4) &&
-                                 workflowData.completed_steps.includes(5);
-
-              return {
-                ...campaign,
-                workflow_status: workflowData,
-                isCompleted
-              };
-            } catch (error) {
-              console.error(`Error loading workflow for campaign ${campaign.id}:`, error);
-              return {
-                ...campaign,
-                workflow_status: null,
-                isCompleted: false
-              };
-            }
-          })
-        );
-
-        setCampaignsWithStatus(campaignsWithWorkflow);
-      } catch (error) {
-        console.error('Error loading workflow statuses:', error);
-        setCampaignsWithStatus(campaigns.map(c => ({ ...c, isCompleted: false })));
-      } finally {
-        setStatusLoading(false);
-      }
-    };
-
-    loadWorkflowStatus();
+    if (!Array.isArray(campaigns)) return;
+    if (campaigns.length === 0) {
+      setCampaignsWithStatus([]);
+      return;
+    }
+    setStatusLoading(true);
+    const campaignsWithWorkflow = campaigns.map(c => {
+      const ws = c.workflow_status;
+      const steps = ws?.completed_steps || [];
+      const isCompleted = [1,2,3,4,5].every(s => steps.includes(s));
+      return { ...c, workflow_status: ws, isCompleted };
+    });
+    setCampaignsWithStatus(campaignsWithWorkflow);
+    setStatusLoading(false);
   }, [campaigns]);
 
   // Ajout de la fonction de suppression

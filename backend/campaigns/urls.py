@@ -7,6 +7,8 @@ from .views import (
     CampaignWorkflowStepUpdateView,
     CampaignWorkflowValidationView,
     CampaignWorkflowResetView,
+    CampaignsWithWorkflowView,
+    WorkflowEventsView,
 )
 
 router = DefaultRouter()
@@ -21,6 +23,9 @@ workflow_urlpatterns = [
 ]
 
 urlpatterns = [
+    # Place custom endpoints BEFORE router to avoid being captured as {pk}
+    path('with-workflow/', CampaignsWithWorkflowView.as_view(), name='campaigns-with-workflow'),
+    path('workflow-events/', WorkflowEventsView.as_view(), name='campaigns-workflow-events'),
     *workflow_urlpatterns,  # Unpack workflow patterns
     *router.urls  # Unpack router patterns
 ]
