@@ -292,15 +292,15 @@ class MatchingAlgorithmService:
 
 class EmailNotificationService:
     """Enhanced email notification service for employee pair matching"""
-    
+
     def __init__(self):
         self.from_email = settings.DEFAULT_FROM_EMAIL
-    
+
     def send_pair_notifications(self, pairs: List[EmployeePair]) -> Dict[str, Any]:
         """Send emails in batches to reduce overhead and improve throughput."""
         logger.info(f"🚀 Starting email notifications for {len(pairs)} pairs")
         logger.info(f"📧 From email: {self.from_email}")
-        
+
         results = {
             'total_pairs': len(pairs),
             'emails_sent': 0,
@@ -313,14 +313,13 @@ class EmailNotificationService:
             logger.warning("⚠️ No pairs to send emails to")
             return results
 
-        # Batch size for sending emails
-        batch_size = 50
+        batch_size = getattr(settings, 'EMAIL_BATCH_SIZE', 50)
         logger.info(f"📦 Processing emails in batches of {batch_size}")
-        
+
         for batch_start in range(0, len(pairs), batch_size):
             batch = pairs[batch_start: batch_start + batch_size]
             logger.info(f"📤 Processing batch {batch_start//batch_size + 1}: pairs {batch_start+1}-{min(batch_start+batch_size, len(pairs))}")
-            
+
             for pair in batch:
                 logger.info(f"📧 Processing pair {pair.id}: {pair.employee1.name} & {pair.employee2.name}")
                 try:
@@ -345,20 +344,10 @@ class EmailNotificationService:
         return results
 
     def _send_pair_notification(self, pair: EmployeePair) -> bool:
-        """
-        Send email notification to a single employee pair with evaluation links
-
-        Args:
-            pair: EmployeePair object
-
-        Returns:
-            bool: True if email was sent successfully, False otherwise
-        """
+        """Send email notification to a single employee pair with evaluation links"""
         try:
-            # Create evaluation tokens for both employees
             evaluation_tokens = self._create_evaluation_tokens(pair)
 
-            # Prepare email context
             context = {
                 'employee1': pair.employee1,
                 'employee2': pair.employee2,
@@ -367,7 +356,6 @@ class EmailNotificationService:
                 'evaluation_tokens': evaluation_tokens
             }
 
-            # Send email to employee 1
             success1 = self._send_individual_email(
                 recipient=pair.employee1,
                 partner=pair.employee2,
@@ -375,20 +363,12 @@ class EmailNotificationService:
                 evaluation_token=evaluation_tokens.get(pair.employee1.id)
             )
 
-            # Send email to employee 2
             success2 = self._send_individual_email(
                 recipient=pair.employee2,
                 partner=pair.employee1,
                 context=context,
                 evaluation_token=evaluation_tokens.get(pair.employee2.id)
             )
-
-            # Mark emails as sent if both were successful
-            if success1 and success2:
-                pair.mark_email_sent()
-                logger.info(f"✅ Marked pair {pair.id} as email sent")
-            else:
-                logger.warning(f"⚠️ Pair {pair.id} emails not fully sent - not marking as sent")
 
             return success1 and success2
 
@@ -397,41 +377,25 @@ class EmailNotificationService:
             return False
 
     def _create_evaluation_tokens(self, pair: EmployeePair) -> dict:
-        """
-        Create evaluation records with tokens for both employees in the pair
-
-        Args:
-            pair: EmployeePair object
-
-        Returns:
-            dict: Mapping of employee_id to evaluation token
-        """
+        """Create evaluation records with tokens for both employees in the pair"""
         try:
             from evaluations.models import Evaluation
             import uuid
 
             tokens = {}
-
-            # Create evaluation for employee1
-            eval1, created1 = Evaluation.objects.get_or_create(
+            eval1, _ = Evaluation.objects.get_or_create(
                 employee=pair.employee1,
                 employee_pair=pair,
-                defaults={'token': uuid.uuid4(), 'used': False}
+                defaults={'token': str(uuid.uuid4()), 'used': False}
             )
             tokens[pair.employee1.id] = eval1.token
 
-            # Create evaluation for employee2
-            eval2, created2 = Evaluation.objects.get_or_create(
+            eval2, _ = Evaluation.objects.get_or_create(
                 employee=pair.employee2,
                 employee_pair=pair,
-                defaults={'token': uuid.uuid4(), 'used': False}
+                defaults={'token': str(uuid.uuid4()), 'used': False}
             )
             tokens[pair.employee2.id] = eval2.token
-
-            if created1:
-                logger.info(f"Created evaluation token for {pair.employee1.name}")
-            if created2:
-                logger.info(f"Created evaluation token for {pair.employee2.name}")
 
             return tokens
 
@@ -440,20 +404,8 @@ class EmailNotificationService:
             return {}
 
     def _send_individual_email(self, recipient, partner, context: Dict[str, Any], evaluation_token=None) -> bool:
-        """
-        Send email to an individual employee with evaluation link
-
-        Args:
-            recipient: Employee receiving the email
-            partner: Employee they are matched with
-            context: Email template context
-            evaluation_token: UUID token for evaluation
-
-        Returns:
-            bool: True if email was sent successfully, False otherwise
-        """
+        """Send email to an individual employee with evaluation link"""
         try:
-            # Update context for this specific recipient
             email_context = {
                 **context,
                 'recipient': recipient,
@@ -461,20 +413,11 @@ class EmailNotificationService:
                 'evaluation_token': evaluation_token
             }
 
-            # Email subject
             subject = f"☕ Coffee Meeting Match - You're paired with {partner.name}!"
-
-            # Create email content
             html_message = self._create_html_email(email_context)
             plain_message = self._create_plain_email(email_context)
 
-            # Log email details for debugging
             logger.info(f"Attempting to send email to {recipient.email} from {self.from_email}")
-            logger.info(f"Email subject: {subject}")
-            logger.info(f"Recipient: {recipient.name} ({recipient.email})")
-            logger.info(f"Partner: {partner.name} ({partner.email})")
-
-            # Send email
             send_mail(
                 subject=subject,
                 message=plain_message,
@@ -489,241 +432,99 @@ class EmailNotificationService:
 
         except Exception as e:
             logger.error(f"❌ Failed to send email to {recipient.email}: {str(e)}")
-            logger.error(f"Error type: {type(e).__name__}")
             import traceback
             logger.error(f"Full traceback: {traceback.format_exc()}")
             return False
 
-    def _create_html_email(self, context: Dict[str, Any]) -> str:
-        """Create modern, professional HTML email content"""
+    def _format_email_common_data(self, context: Dict[str, Any]) -> Tuple[str, str, str]:
+        """Return (start_date, end_date, evaluation_url) for emails"""
         campaign = context['campaign']
-        evaluation_token = context.get('evaluation_token')
-
-        # Create evaluation URL if token exists
-        evaluation_url = ""
-        if evaluation_token:
-            base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-            evaluation_url = f"{base_url}/evaluation/{evaluation_token}"
-
-        # Format campaign dates
         start_date = campaign.start_date.strftime('%B %d') if campaign.start_date else 'TBD'
         end_date = campaign.end_date.strftime('%B %d, %Y') if campaign.end_date else 'TBD'
+        evaluation_url = ""
+        if context.get('evaluation_token'):
+            base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            evaluation_url = f"{base_url}/evaluation/{context['evaluation_token']}"
+        return start_date, end_date, evaluation_url
+
+    def _create_html_email(self, context: Dict[str, Any]) -> str:
+        """Créer un contenu HTML professionnel pour l'email"""
+        start_date, end_date, evaluation_url = self._format_email_common_data(context)
+
+        bouton_html = f"""
+            <p style="text-align: center;">
+                <a href="{evaluation_url}" class="button">Accéder au formulaire d'évaluation</a>
+            </p>
+        """ if evaluation_url else ""
 
         return f"""
         <!DOCTYPE html>
-        <html lang="en">
+        <html lang="fr">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Coffee Meeting Match</title>
+            <title>Coffee Meeting - Nouvelle rencontre</title>
             <style>
                 body {{
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    font-family: Arial, sans-serif;
                     line-height: 1.6;
-                    color: #2d3748;
+                    color: #333333;
                     margin: 0;
-                    padding: 0;
-                    background-color: #f7fafc;
+                    padding: 20px;
+                    background-color: #ffffff;
                 }}
                 .email-container {{
                     max-width: 600px;
                     margin: 0 auto;
                     background-color: #ffffff;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-                    overflow: hidden;
-                }}
-                .header {{
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 32px 24px;
-                    text-align: center;
-                }}
-                .header h1 {{
-                    margin: 0;
-                    font-size: 28px;
-                    font-weight: 600;
-                    letter-spacing: -0.025em;
-                }}
-                .header .subtitle {{
-                    margin: 8px 0 0 0;
-                    font-size: 16px;
-                    opacity: 0.9;
-                    font-weight: 400;
+                    padding: 30px;
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
                 }}
                 .content {{
-                    padding: 32px 24px;
+                    margin: 20px 0;
                 }}
-                .greeting {{
-                    font-size: 18px;
-                    margin-bottom: 24px;
-                    color: #1a202c;
-                }}
-                .partner-card {{
-                    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-                    border: 1px solid #e2e8f0;
-                    border-radius: 12px;
-                    padding: 24px;
-                    margin: 24px 0;
-                    text-align: center;
-                }}
-                .partner-card h3 {{
-                    margin: 0 0 16px 0;
-                    color: #2d3748;
-                    font-size: 16px;
-                    font-weight: 500;
-                    text-transform: uppercase;
-                    letter-spacing: 0.05em;
-                }}
-                .partner-name {{
-                    font-size: 24px;
-                    font-weight: 600;
-                    color: #1a202c;
-                    margin: 8px 0;
-                }}
-                .partner-email {{
-                    color: #3182ce;
-                    text-decoration: none;
-                    font-weight: 500;
-                }}
-                .partner-email:hover {{
-                    text-decoration: underline;
-                }}
-                .action-section {{
-                    background-color: #fff5f5;
-                    border-left: 4px solid #f56565;
-                    border-radius: 8px;
-                    padding: 20px;
-                    margin: 24px 0;
-                }}
-                .action-section h3 {{
-                    margin: 0 0 16px 0;
-                    color: #c53030;
-                    font-size: 16px;
-                    font-weight: 600;
-                }}
-                .action-steps {{
-                    margin: 0;
-                    padding-left: 20px;
-                }}
-                .action-steps li {{
-                    margin-bottom: 8px;
-                    color: #742a2a;
-                }}
-                .evaluation-section {{
-                    background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
-                    border: 1px solid #9ae6b4;
-                    border-radius: 12px;
-                    padding: 24px;
-                    margin: 24px 0;
-                    text-align: center;
-                }}
-                .evaluation-section h3 {{
-                    margin: 0 0 16px 0;
-                    color: #22543d;
-                    font-size: 16px;
-                    font-weight: 600;
-                }}
-                .evaluation-button {{
+                .button {{
                     display: inline-block;
-                    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+                    padding: 12px 25px;
+                    background-color: #007bff;
                     color: white;
-                    padding: 14px 28px;
                     text-decoration: none;
-                    border-radius: 8px;
-                    font-weight: 600;
+                    border-radius: 4px;
                     font-size: 16px;
-                    transition: all 0.2s ease;
-                    box-shadow: 0 2px 4px rgba(72, 187, 120, 0.2);
-                }}
-                .evaluation-button:hover {{
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 8px rgba(72, 187, 120, 0.3);
                 }}
                 .footer {{
-                    background-color: #f7fafc;
-                    padding: 24px;
-                    text-align: center;
-                    border-top: 1px solid #e2e8f0;
-                }}
-                .footer p {{
-                    margin: 8px 0;
-                    color: #718096;
+                    margin-top: 30px;
                     font-size: 14px;
-                }}
-                .campaign-info {{
-                    background-color: #edf2f7;
-                    border-radius: 8px;
-                    padding: 16px;
-                    margin: 16px 0;
-                    text-align: center;
-                }}
-                .campaign-info p {{
-                    margin: 4px 0;
-                    color: #4a5568;
-                    font-size: 14px;
-                }}
-                @media only screen and (max-width: 600px) {{
-                    .email-container {{
-                        margin: 0;
-                        border-radius: 0;
-                    }}
-                    .content, .header, .footer {{
-                        padding: 20px 16px;
-                    }}
-                    .header h1 {{
-                        font-size: 24px;
-                    }}
+                    color: #666;
+                    border-top: 1px solid #ddd;
+                    padding-top: 15px;
                 }}
             </style>
         </head>
         <body>
             <div class="email-container">
-                <div class="header">
-                    <h1>☕ Coffee Meeting Match</h1>
-                    <p class="subtitle">You've been paired for a coffee meeting!</p>
-                </div>
-
                 <div class="content">
-                    <p class="greeting">Hello <strong>{context['recipient'].name}</strong>,</p>
-                    
-                    <p>Great news! You've been matched for a coffee meeting in our networking campaign.</p>
-                    
-                    <div class="campaign-info">
-                        <p><strong>Campaign:</strong> {campaign.title}</p>
-                        <p><strong>Period:</strong> {start_date} - {end_date}</p>
-                    </div>
-                    
-                    <div class="partner-card">
-                        <h3>Your Coffee Partner</h3>
-                        <div class="partner-name">{context['partner'].name}</div>
-                        <a href="mailto:{context['partner'].email}" class="partner-email">{context['partner'].email}</a>
-                    </div>
-                    
-                    <div class="action-section">
-                        <h3>🎯 Next Steps</h3>
-                        <ol class="action-steps">
-                            <li><strong>Reach out</strong> to your partner within 48 hours</li>
-                            <li><strong>Schedule</strong> a meeting at a convenient time</li>
-                            <li><strong>Meet up</strong> for coffee and conversation</li>
-                    </ol>
+                    <p>Bonjour {context['recipient'].name},</p>
+
+                    <p>L’équipe <strong>Coffee Meetings</strong> a le plaisir de vous informer qu’une nouvelle rencontre a été organisée dans le cadre de notre programme.</p>
+
+                    <p>Vous aurez l’occasion de rencontrer <strong>{context['partner'].name}</strong> ({context['partner'].email}).</p>
+
+                    <p>Cette rencontre est à organiser entre le <strong>{start_date}</strong> et le <strong>{end_date}</strong>. Nous vous invitons à convenir ensemble d’une date et d’un lieu afin de partager un moment convivial autour d’un café.</p>
+
+                    <p>À l’issue de votre rencontre, nous vous prions de bien vouloir partager votre expérience via le formulaire d’évaluation accessible ci-dessous :</p>
+
+                    {bouton_html}
+
+                    <p>Nous vous souhaitons une agréable expérience et espérons que cette rencontre sera enrichissante.</p>
                 </div>
 
-                {f'''
-                    <div class="evaluation-section">
-                        <h3>📝 Share Your Feedback</h3>
-                        <p>After your meeting, please take a moment to share your experience:</p>
-                        <a href="{evaluation_url}" class="evaluation-button">Evaluate Meeting</a>
-                        <p style="font-size: 12px; margin-top: 12px; color: #4a5568;">
-                        This link will remain active until you submit your feedback.
-                    </p>
-                </div>
-                ''' if evaluation_token else ''}
-                </div>
-                
                 <div class="footer">
-                    <p>Questions? Contact your HR team</p>
-                    <p><strong>Coffee Meetings Team</strong></p>
+                    <p>Cordialement,<br>
+                    L’équipe Coffee Meetings</p>
+                    <p>Contacter nous sur :
+                    <a href="mailto:cffmeet.info@gmail.com">cffmeet.info@gmail.com</a></p>
                 </div>
             </div>
         </body>
@@ -732,76 +533,51 @@ class EmailNotificationService:
 
     def _create_plain_email(self, context: Dict[str, Any]) -> str:
         """Create clean, professional plain text email content"""
-        campaign = context['campaign']
-        evaluation_token = context.get('evaluation_token')
-
-        # Create evaluation URL if token exists
+        start_date, end_date, evaluation_url = self._format_email_common_data(context)
         evaluation_section = ""
-        if evaluation_token:
-            base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-            evaluation_url = f"{base_url}/evaluation/{evaluation_token}"
+        if evaluation_url:
             evaluation_section = f"""
 
-📝 AFTER YOUR MEETING:
-Please share your feedback about this coffee meeting:
+📝 APRÈS VOTRE RENCONTRE :
+Merci de partager votre retour sur cette rencontre café :
 {evaluation_url}
-
-This link will remain active until you submit your feedback.
 """
-
-        # Format campaign dates
-        start_date = campaign.start_date.strftime('%B %d') if campaign.start_date else 'TBD'
-        end_date = campaign.end_date.strftime('%B %d, %Y') if campaign.end_date else 'TBD'
-
         return f"""
-☕ Coffee Meeting Match
+☕ Coffee Meeting - Nouvelle rencontre
 
-Hello {context['recipient'].name},
+Bonjour {context['recipient'].name},
 
-Great news! You've been matched for a coffee meeting in our networking campaign.
+Nous espérons que ce message vous trouve bien. Vous allez rencontrer {context['partner'].name} ({context['partner'].email}).
+Période : {start_date} - {end_date}
 
-CAMPAIGN DETAILS:
-Campaign: {campaign.title}
-Period: {start_date} - {end_date}
+🎯 PROCHAINES ÉTAPES :
+1. Contactez votre partenaire dans les 48 heures
+2. Planifiez une rencontre
+3. Rencontrez-vous autour d'un café{evaluation_section}
 
-YOUR COFFEE PARTNER:
-{context['partner'].name}
-Email: {context['partner'].email}
+Pour toute question, contactez votre équipe RH.
 
-🎯 NEXT STEPS:
-1. Reach out to your partner within 48 hours
-2. Schedule a meeting at a convenient time
-3. Meet up for coffee and conversation{evaluation_section}
-
-Questions? Contact your HR team.
-
-Best regards,
-Coffee Meetings Team
+Cordialement,
+L'équipe Coffee Meetings
         """
 
     def get_email_status_summary(self, campaign_id: int) -> Dict[str, Any]:
-        """
-        Get email status summary for a campaign
-
-        Args:
-            campaign_id: Campaign ID
-
-        Returns:
-            Dict with email status statistics
-        """
+        """Get email status summary for a campaign"""
+        from django.db.models import Count, Q
         pairs = EmployeePair.objects.filter(campaign_id=campaign_id)
-
-        total_pairs = pairs.count()
-        sent_count = pairs.filter(email_status='sent').count()
-        pending_count = pairs.filter(email_status='pending').count()
-        failed_count = pairs.filter(email_status='failed').count()
-        bounced_count = pairs.filter(email_status='bounced').count()
-
+        stats = pairs.aggregate(
+            sent=Count('id', filter=Q(email_status='sent')),
+            pending=Count('id', filter=Q(email_status='pending')),
+            failed=Count('id', filter=Q(email_status='failed')),
+            bounced=Count('id', filter=Q(email_status='bounced'))
+        )
+        total = pairs.count()
         return {
-            'total_pairs': total_pairs,
-            'emails_sent': sent_count,
-            'emails_pending': pending_count,
-            'emails_failed': failed_count,
-            'emails_bounced': bounced_count,
-            'success_rate': (sent_count / total_pairs * 100) if total_pairs > 0 else 0
+            'total_pairs': total,
+            'emails_sent': stats['sent'],
+            'emails_pending': stats['pending'],
+            'emails_failed': stats['failed'],
+            'emails_bounced': stats['bounced'],
+            'success_rate': (stats['sent'] / total * 100) if total > 0 else 0
         }
+
