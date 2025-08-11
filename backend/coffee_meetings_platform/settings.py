@@ -125,16 +125,10 @@ if not DEBUG:
 
 # Cache Configuration
 if DEBUG:
-    # 🔹 Mode développement : cache en mémoire, TTL très court pour voir les changements rapidement
+    # 🔹 Mode développement : désactiver complètement le cache
     CACHES = {
         'default': {
-            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'LOCATION': 'coffee-meetings-cache',
-            'TIMEOUT': 5,  # 5 secondes seulement
-            'OPTIONS': {
-                'MAX_ENTRIES': 1000,
-                'CULL_FREQUENCY': 3,
-            }
+            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
         }
     }
 else:
