@@ -102,94 +102,92 @@ class MatchingAlgorithmService:
         return pairs_set
     
     def _generate_with_criteria(self, employees: List[Employee], criteria, existing_pairs: set) -> List[Dict]:
-        """Generate final pairs based on matching criteria - optimized algorithm"""
-        from random import shuffle
+        """Generate final pairs based on matching criteria using maximum matching."""
         import time
-
         start_time = time.time()
 
-        # Get employee attributes once (optimized with prefetch)
+        # Prepare data
         employee_attributes = self._get_employee_attributes(employees)
-
-        # Pre-compile criteria for faster matching
         compiled_criteria = list(criteria.values('attribute_key', 'rule'))
 
-        # Shuffle employees for randomness
-        employees_list = employees.copy()
-        shuffle(employees_list)
-
-        final_pairs = []
-        used_employees = set()
-
-        # Create a lookup for faster employee access
-        employee_lookup = {emp.id: emp for emp in employees_list}
-
-        # Try to pair each unused employee with optimized matching
-        for i, emp1 in enumerate(employees_list):
-            if emp1.id in used_employees:
-                continue
-
-            # Find a compatible partner for emp1
-            for j in range(i + 1, len(employees_list)):
-                emp2 = employees_list[j]
-
-                if emp2.id in used_employees:
-                    continue
-
-                # Skip if pair already exists (fast lookup)
-                pair_key = (min(emp1.id, emp2.id), max(emp1.id, emp2.id))
+        # Build compatibility edges (exclude existing pairs)
+        compat_edges: List[Tuple[int, int]] = []
+        emp_list = list(employees)
+        for i in range(len(emp_list)):
+            for j in range(i + 1, len(emp_list)):
+                e1, e2 = emp_list[i], emp_list[j]
+                pair_key = (min(e1.id, e2.id), max(e1.id, e2.id))
                 if pair_key in existing_pairs:
                     continue
+                if self._pair_matches_criteria_optimized(e1, e2, employee_attributes, compiled_criteria):
+                    compat_edges.append((e1.id, e2.id))
 
-                # Check if pair matches all criteria (optimized)
-                if self._pair_matches_criteria_optimized(emp1, emp2, employee_attributes, compiled_criteria):
-                    final_pairs.append(self._create_pair_dict(emp1, emp2))
-                    used_employees.add(emp1.id)
-                    used_employees.add(emp2.id)
-                    break
+        final_pairs = self._maximum_matching_from_edges(emp_list, compat_edges)
 
-        # Log performance metrics
         elapsed_time = time.time() - start_time
-        logger.info(f"Matching algorithm completed in {elapsed_time:.3f}s for {len(employees)} employees, generated {len(final_pairs)} pairs")
+        logger.info(
+            f"Matching (max-cardinality) completed in {elapsed_time:.3f}s for {len(employees)} employees, "
+            f"generated {len(final_pairs)} pairs"
+        )
 
         return final_pairs
     
     def _generate_random_pairs(self, employees: List[Employee], existing_pairs: set) -> List[Dict]:
-        """Generate random pairs when no criteria are defined - optimized algorithm"""
-        from random import shuffle
+        """Generate pairs without criteria using maximum matching (exclude existing pairs)."""
         import time
-
         start_time = time.time()
 
-        employees_list = employees.copy()
-        shuffle(employees_list)
-
-        valid_pairs = []
-        used_employees = set()
-
-        # Optimized pairing with performance tracking
-        for i in range(len(employees_list)):
-            if employees_list[i].id in used_employees:
-                continue
-
-            for j in range(i + 1, len(employees_list)):
-                if employees_list[j].id in used_employees:
-                    continue
-
-                emp1, emp2 = employees_list[i], employees_list[j]
-                pair_key = (min(emp1.id, emp2.id), max(emp1.id, emp2.id))
-
+        # All possible edges excluding existing
+        compat_edges: List[Tuple[int, int]] = []
+        emp_list = list(employees)
+        for i in range(len(emp_list)):
+            for j in range(i + 1, len(emp_list)):
+                e1, e2 = emp_list[i], emp_list[j]
+                pair_key = (min(e1.id, e2.id), max(e1.id, e2.id))
                 if pair_key not in existing_pairs:
-                    valid_pairs.append(self._create_pair_dict(emp1, emp2))
-                    used_employees.add(emp1.id)
-                    used_employees.add(emp2.id)
-                    break
+                    compat_edges.append((e1.id, e2.id))
 
-        # Log performance metrics
+        final_pairs = self._maximum_matching_from_edges(emp_list, compat_edges)
+
         elapsed_time = time.time() - start_time
-        logger.info(f"Random pairing completed in {elapsed_time:.3f}s for {len(employees)} employees, generated {len(valid_pairs)} pairs")
+        logger.info(
+            f"Random pairing (max-cardinality) completed in {elapsed_time:.3f}s for {len(employees)} employees, "
+            f"generated {len(final_pairs)} pairs"
+        )
 
-        return valid_pairs
+        return final_pairs
+
+    def _maximum_matching_from_edges(self, employees: List[Employee], edges: List[Tuple[int, int]]) -> List[Dict]:
+        """Find maximum-cardinality matching from a list of compatible edges.
+
+        Uses networkx's max_weight_matching with maxcardinality=True to compute
+        an optimal disjoint set of pairs. Falls back to greedy if networkx is unavailable.
+        """
+        id_to_emp = {e.id: e for e in employees}
+        final_pairs: List[Dict] = []
+
+        try:
+            import networkx as nx
+            G = nx.Graph()
+            G.add_nodes_from(id_to_emp.keys())
+            G.add_edges_from(edges)
+            matching = nx.algorithms.matching.max_weight_matching(G, maxcardinality=True)
+            for u, v in matching:
+                emp1 = id_to_emp[u]
+                emp2 = id_to_emp[v]
+                final_pairs.append(self._create_pair_dict(emp1, emp2))
+            return final_pairs
+        except Exception as e:
+            # Fallback: greedy (maintain previous behavior)
+            logger.warning(f"networkx unavailable or failed ({e}); falling back to greedy matching")
+            used = set()
+            for u, v in edges:
+                if u in used or v in used:
+                    continue
+                used.add(u)
+                used.add(v)
+                final_pairs.append(self._create_pair_dict(id_to_emp[u], id_to_emp[v]))
+            return final_pairs
     
     def _get_employee_attributes(self, employees: List[Employee]) -> Dict[int, Dict[str, str]]:
         """Get attributes for all employees with optimized query and caching"""

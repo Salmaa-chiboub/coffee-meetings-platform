@@ -11,9 +11,10 @@ console.log('After removing /api:', process.env.REACT_APP_API_URL?.replace('/api
 console.log('Final API_BASE_URL:', API_BASE_URL);
 
 // Create axios instance with default configuration
+// Set timeout to 0 (no timeout) to allow long-running operations like Excel upload and bulk email sending
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 0,
   headers: {
     'Content-Type': 'application/json',
   },

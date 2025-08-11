@@ -33,7 +33,6 @@ function App() {
   return (
     <QueryProvider>
       <AuthProvider>
-        <NotificationProvider>
           <Router>
             <Routes>
               {/* Public routes */}
@@ -49,7 +48,9 @@ function App() {
                 path="/app"
                 element={
                   <ProtectedRoute>
-                    <Layout />
+                    <NotificationProvider>
+                      <Layout />
+                    </NotificationProvider>
                   </ProtectedRoute>
                 }
               >
@@ -163,7 +164,6 @@ function App() {
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </Router>
-        </NotificationProvider>
       </AuthProvider>
     </QueryProvider>
   );

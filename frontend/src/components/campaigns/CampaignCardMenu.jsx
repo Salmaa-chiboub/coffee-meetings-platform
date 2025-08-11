@@ -27,7 +27,7 @@ const CampaignCardMenu = ({ campaign, isCompleted, onDelete }) => {
   const handleDelete = (e) => {
     e.stopPropagation(); // Prevent card click
     if (onDelete) {
-      onDelete(campaign);
+      onDelete(campaign?.id);
     }
     setIsOpen(false);
   };

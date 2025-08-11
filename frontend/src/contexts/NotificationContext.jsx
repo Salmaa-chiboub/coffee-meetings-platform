@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useCallback, useState, useRef, useEffect } from 'react';
 import { notificationAPI } from '../services/notificationService';
+import { useAuth } from './AuthContext';
 
 // Initial state
 const initialState = {
@@ -139,16 +140,21 @@ const NotificationContext = createContext();
 // Provider component
 export const NotificationProvider = ({ children }) => {
   const [state, dispatch] = useReducer(notificationReducer, initialState);
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   // Use ref to access current state without causing re-renders
   const stateRef = useRef(state);
   const [isPollingActive, setIsPollingActive] = useState(true);
   const pollingIntervalRef = useRef(null);
+  const canUseNotifications = isAuthenticated && !authLoading;
 
   stateRef.current = state;
 
   // Fetch notifications
   const fetchNotifications = useCallback(async (options = {}) => {
+    if (!canUseNotifications) {
+      return;
+    }
     try {
       dispatch({ type: NOTIFICATION_ACTIONS.SET_LOADING, payload: true });
 
@@ -184,10 +190,13 @@ export const NotificationProvider = ({ children }) => {
     } finally {
       dispatch({ type: NOTIFICATION_ACTIONS.SET_LOADING, payload: false });
     }
-  }, []); // No dependencies - function is stable
+  }, [canUseNotifications]); // Depends on auth
 
   // Fetch unread count
   const fetchUnreadCount = useCallback(async (forceRefresh = false) => {
+    if (!canUseNotifications) {
+      return;
+    }
     try {
       const result = await notificationAPI.getUnreadCount(forceRefresh);
       if (result.success) {
@@ -196,10 +205,13 @@ export const NotificationProvider = ({ children }) => {
     } catch (error) {
       console.error('Failed to fetch unread count:', error);
     }
-  }, []);
+  }, [canUseNotifications]);
 
   // Mark notification as read
   const markAsRead = useCallback(async (notificationId) => {
+    if (!canUseNotifications) {
+      return false;
+    }
     try {
       const result = await notificationAPI.markAsRead(notificationId);
       if (result.success) {
@@ -211,10 +223,13 @@ export const NotificationProvider = ({ children }) => {
     } catch (error) {
       return false;
     }
-  }, []);
+  }, [canUseNotifications, fetchUnreadCount]);
 
   // Mark notification as unread
   const markAsUnread = useCallback(async (notificationId) => {
+    if (!canUseNotifications) {
+      return false;
+    }
     try {
       const result = await notificationAPI.markAsUnread(notificationId);
       if (result.success) {
@@ -226,10 +241,13 @@ export const NotificationProvider = ({ children }) => {
     } catch (error) {
       return false;
     }
-  }, []);
+  }, [canUseNotifications, fetchUnreadCount]);
 
   // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
+    if (!canUseNotifications) {
+      return false;
+    }
     try {
       const result = await notificationAPI.markAllAsRead();
       if (result.success) {
@@ -244,10 +262,13 @@ export const NotificationProvider = ({ children }) => {
     } catch (error) {
       return false;
     }
-  }, [fetchNotifications]);
+  }, [fetchNotifications, canUseNotifications]);
 
   // Delete notification
   const deleteNotification = useCallback(async (notificationId) => {
+    if (!canUseNotifications) {
+      return false;
+    }
     try {
       const result = await notificationAPI.deleteNotification(notificationId);
       if (result.success) {
@@ -258,7 +279,7 @@ export const NotificationProvider = ({ children }) => {
     } catch (error) {
       return false;
     }
-  }, []);
+  }, [canUseNotifications, fetchUnreadCount]);
 
 
 
@@ -294,6 +315,9 @@ export const NotificationProvider = ({ children }) => {
 
   // Automatic polling for new notifications
   const startPolling = useCallback(() => {
+    if (!canUseNotifications) {
+      return;
+    }
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
     }
@@ -317,7 +341,7 @@ export const NotificationProvider = ({ children }) => {
         }
       }
     }, 15000); // 15 seconds for more responsive updates
-  }, [isPollingActive, fetchUnreadCount, fetchNotifications]);
+  }, [isPollingActive, fetchUnreadCount, fetchNotifications, canUseNotifications]);
 
   const stopPolling = useCallback(() => {
     if (pollingIntervalRef.current) {
@@ -328,6 +352,9 @@ export const NotificationProvider = ({ children }) => {
 
   // Trigger immediate check for new notifications (useful after user actions)
   const triggerImmediateCheck = useCallback(async () => {
+    if (!canUseNotifications) {
+      return;
+    }
     try {
       await fetchUnreadCount(true);
       // Also refresh notifications for dropdown
@@ -335,11 +362,11 @@ export const NotificationProvider = ({ children }) => {
     } catch (error) {
       console.error('Immediate check error:', error);
     }
-  }, [fetchUnreadCount, fetchNotifications]);
+  }, [fetchUnreadCount, fetchNotifications, canUseNotifications]);
 
   // Start/stop polling based on active state
   useEffect(() => {
-    if (isPollingActive) {
+    if (canUseNotifications && isPollingActive) {
       startPolling();
     } else {
       stopPolling();
@@ -349,7 +376,7 @@ export const NotificationProvider = ({ children }) => {
     return () => {
       stopPolling();
     };
-  }, [isPollingActive, startPolling, stopPolling]);
+  }, [canUseNotifications, isPollingActive, startPolling, stopPolling]);
 
   // Pause polling when page is not visible to save resources
   useEffect(() => {
@@ -357,9 +384,11 @@ export const NotificationProvider = ({ children }) => {
       if (document.hidden) {
         setIsPollingActive(false);
       } else {
-        setIsPollingActive(true);
-        // Immediately check for new notifications when page becomes visible
-        fetchUnreadCount(true);
+        if (canUseNotifications) {
+          setIsPollingActive(true);
+          // Immediately check for new notifications when page becomes visible
+          fetchUnreadCount(true);
+        }
       }
     };
 
@@ -368,7 +397,16 @@ export const NotificationProvider = ({ children }) => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [fetchUnreadCount]);
+  }, [fetchUnreadCount, canUseNotifications]);
+
+  // Reset notifications when user logs out or auth is not ready
+  useEffect(() => {
+    if (!canUseNotifications) {
+      // Stop polling and clear state to avoid showing stale data on public pages
+      stopPolling();
+      dispatch({ type: NOTIFICATION_ACTIONS.RESET_NOTIFICATIONS });
+    }
+  }, [canUseNotifications, stopPolling]);
 
   const value = {
     // State

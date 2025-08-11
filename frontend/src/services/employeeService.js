@@ -48,17 +48,12 @@ export const employeeService = {
         replace_existing: replaceExisting
       });
 
-      // Calculate timeout based on file size (minimum 30 seconds, add 10 seconds per MB)
-      const fileSizeMB = file.size / (1024 * 1024);
-      const timeoutMs = Math.max(30000, 30000 + (fileSizeMB * 10000)); // 30s base + 10s per MB
-
-      console.log(`📤 Upload timeout set to ${timeoutMs / 1000}s for ${fileSizeMB.toFixed(2)}MB file`);
-
+      // No timeout for large Excel processing (operation can be long)
       const response = await api.post('/employees/upload_excel/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: timeoutMs,
+        timeout: 0,
       });
       return response.data;
     } catch (error) {

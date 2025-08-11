@@ -86,7 +86,7 @@ export const matchingService = {
       const response = await api.post(`/matching/campaigns/${campaignId}/confirm-pairs/`, {
         pairs: pairsData,
         send_emails: true
-      });
+      }, { timeout: 0 }); // No timeout for potentially long email sending
 
       return {
         success: true,
