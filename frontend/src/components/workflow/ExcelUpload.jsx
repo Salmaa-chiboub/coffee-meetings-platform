@@ -36,9 +36,9 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
       return;
     }
 
-    // Validate file size (max 10MB)
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      onError('La taille du fichier doit être inférieure à 10 Mo');
+    // Validate file size (max 25MB)
+    if (selectedFile.size > 25 * 1024 * 1024) {
+      onError('La taille du fichier doit être inférieure à 25 Mo');
       return;
     }
 
@@ -333,7 +333,7 @@ const ExcelUpload = ({ campaignId, onComplete, onError }) => {
                           Déposez votre fichier Excel ici, ou cliquez pour parcourir
                         </p>
                         <p className="text-warmGray-500 text-xs">
-                          Prend en charge les fichiers .xlsx et .xls jusqu'à 10 Mo
+                          Prend en charge les fichiers .xlsx et .xls jusqu'à 25 Mo
                         </p>
                       </div>
                     </div>

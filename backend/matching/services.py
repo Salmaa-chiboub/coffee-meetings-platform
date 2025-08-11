@@ -102,94 +102,92 @@ class MatchingAlgorithmService:
         return pairs_set
     
     def _generate_with_criteria(self, employees: List[Employee], criteria, existing_pairs: set) -> List[Dict]:
-        """Generate final pairs based on matching criteria - optimized algorithm"""
-        from random import shuffle
+        """Generate final pairs based on matching criteria using maximum matching."""
         import time
-
         start_time = time.time()
 
-        # Get employee attributes once (optimized with prefetch)
+        # Prepare data
         employee_attributes = self._get_employee_attributes(employees)
-
-        # Pre-compile criteria for faster matching
         compiled_criteria = list(criteria.values('attribute_key', 'rule'))
 
-        # Shuffle employees for randomness
-        employees_list = employees.copy()
-        shuffle(employees_list)
-
-        final_pairs = []
-        used_employees = set()
-
-        # Create a lookup for faster employee access
-        employee_lookup = {emp.id: emp for emp in employees_list}
-
-        # Try to pair each unused employee with optimized matching
-        for i, emp1 in enumerate(employees_list):
-            if emp1.id in used_employees:
-                continue
-
-            # Find a compatible partner for emp1
-            for j in range(i + 1, len(employees_list)):
-                emp2 = employees_list[j]
-
-                if emp2.id in used_employees:
-                    continue
-
-                # Skip if pair already exists (fast lookup)
-                pair_key = (min(emp1.id, emp2.id), max(emp1.id, emp2.id))
+        # Build compatibility edges (exclude existing pairs)
+        compat_edges: List[Tuple[int, int]] = []
+        emp_list = list(employees)
+        for i in range(len(emp_list)):
+            for j in range(i + 1, len(emp_list)):
+                e1, e2 = emp_list[i], emp_list[j]
+                pair_key = (min(e1.id, e2.id), max(e1.id, e2.id))
                 if pair_key in existing_pairs:
                     continue
+                if self._pair_matches_criteria_optimized(e1, e2, employee_attributes, compiled_criteria):
+                    compat_edges.append((e1.id, e2.id))
 
-                # Check if pair matches all criteria (optimized)
-                if self._pair_matches_criteria_optimized(emp1, emp2, employee_attributes, compiled_criteria):
-                    final_pairs.append(self._create_pair_dict(emp1, emp2))
-                    used_employees.add(emp1.id)
-                    used_employees.add(emp2.id)
-                    break
+        final_pairs = self._maximum_matching_from_edges(emp_list, compat_edges)
 
-        # Log performance metrics
         elapsed_time = time.time() - start_time
-        logger.info(f"Matching algorithm completed in {elapsed_time:.3f}s for {len(employees)} employees, generated {len(final_pairs)} pairs")
+        logger.info(
+            f"Matching (max-cardinality) completed in {elapsed_time:.3f}s for {len(employees)} employees, "
+            f"generated {len(final_pairs)} pairs"
+        )
 
         return final_pairs
     
     def _generate_random_pairs(self, employees: List[Employee], existing_pairs: set) -> List[Dict]:
-        """Generate random pairs when no criteria are defined - optimized algorithm"""
-        from random import shuffle
+        """Generate pairs without criteria using maximum matching (exclude existing pairs)."""
         import time
-
         start_time = time.time()
 
-        employees_list = employees.copy()
-        shuffle(employees_list)
-
-        valid_pairs = []
-        used_employees = set()
-
-        # Optimized pairing with performance tracking
-        for i in range(len(employees_list)):
-            if employees_list[i].id in used_employees:
-                continue
-
-            for j in range(i + 1, len(employees_list)):
-                if employees_list[j].id in used_employees:
-                    continue
-
-                emp1, emp2 = employees_list[i], employees_list[j]
-                pair_key = (min(emp1.id, emp2.id), max(emp1.id, emp2.id))
-
+        # All possible edges excluding existing
+        compat_edges: List[Tuple[int, int]] = []
+        emp_list = list(employees)
+        for i in range(len(emp_list)):
+            for j in range(i + 1, len(emp_list)):
+                e1, e2 = emp_list[i], emp_list[j]
+                pair_key = (min(e1.id, e2.id), max(e1.id, e2.id))
                 if pair_key not in existing_pairs:
-                    valid_pairs.append(self._create_pair_dict(emp1, emp2))
-                    used_employees.add(emp1.id)
-                    used_employees.add(emp2.id)
-                    break
+                    compat_edges.append((e1.id, e2.id))
 
-        # Log performance metrics
+        final_pairs = self._maximum_matching_from_edges(emp_list, compat_edges)
+
         elapsed_time = time.time() - start_time
-        logger.info(f"Random pairing completed in {elapsed_time:.3f}s for {len(employees)} employees, generated {len(valid_pairs)} pairs")
+        logger.info(
+            f"Random pairing (max-cardinality) completed in {elapsed_time:.3f}s for {len(employees)} employees, "
+            f"generated {len(final_pairs)} pairs"
+        )
 
-        return valid_pairs
+        return final_pairs
+
+    def _maximum_matching_from_edges(self, employees: List[Employee], edges: List[Tuple[int, int]]) -> List[Dict]:
+        """Find maximum-cardinality matching from a list of compatible edges.
+
+        Uses networkx's max_weight_matching with maxcardinality=True to compute
+        an optimal disjoint set of pairs. Falls back to greedy if networkx is unavailable.
+        """
+        id_to_emp = {e.id: e for e in employees}
+        final_pairs: List[Dict] = []
+
+        try:
+            import networkx as nx
+            G = nx.Graph()
+            G.add_nodes_from(id_to_emp.keys())
+            G.add_edges_from(edges)
+            matching = nx.algorithms.matching.max_weight_matching(G, maxcardinality=True)
+            for u, v in matching:
+                emp1 = id_to_emp[u]
+                emp2 = id_to_emp[v]
+                final_pairs.append(self._create_pair_dict(emp1, emp2))
+            return final_pairs
+        except Exception as e:
+            # Fallback: greedy (maintain previous behavior)
+            logger.warning(f"networkx unavailable or failed ({e}); falling back to greedy matching")
+            used = set()
+            for u, v in edges:
+                if u in used or v in used:
+                    continue
+                used.add(u)
+                used.add(v)
+                final_pairs.append(self._create_pair_dict(id_to_emp[u], id_to_emp[v]))
+            return final_pairs
     
     def _get_employee_attributes(self, employees: List[Employee]) -> Dict[int, Dict[str, str]]:
         """Get attributes for all employees with optimized query and caching"""
@@ -294,20 +292,15 @@ class MatchingAlgorithmService:
 
 class EmailNotificationService:
     """Enhanced email notification service for employee pair matching"""
-    
+
     def __init__(self):
         self.from_email = settings.DEFAULT_FROM_EMAIL
-    
+
     def send_pair_notifications(self, pairs: List[EmployeePair]) -> Dict[str, Any]:
-        """
-        Send email notifications to a list of employee pairs
-        
-        Args:
-            pairs: List of EmployeePair objects
-            
-        Returns:
-            Dict with success/failure statistics
-        """
+        """Send emails in batches to reduce overhead and improve throughput."""
+        logger.info(f"🚀 Starting email notifications for {len(pairs)} pairs")
+        logger.info(f"📧 From email: {self.from_email}")
+
         results = {
             'total_pairs': len(pairs),
             'emails_sent': 0,
@@ -315,47 +308,46 @@ class EmailNotificationService:
             'failed_pairs': [],
             'success_pairs': []
         }
-        
-        for pair in pairs:
-            try:
-                success = self._send_pair_notification(pair)
-                if success:
-                    pair.mark_email_sent()
-                    results['emails_sent'] += 1
-                    results['success_pairs'].append(pair.id)
-                else:
-                    pair.mark_email_failed('Failed to send email')
+
+        if not pairs:
+            logger.warning("⚠️ No pairs to send emails to")
+            return results
+
+        batch_size = getattr(settings, 'EMAIL_BATCH_SIZE', 50)
+        logger.info(f"📦 Processing emails in batches of {batch_size}")
+
+        for batch_start in range(0, len(pairs), batch_size):
+            batch = pairs[batch_start: batch_start + batch_size]
+            logger.info(f"📤 Processing batch {batch_start//batch_size + 1}: pairs {batch_start+1}-{min(batch_start+batch_size, len(pairs))}")
+
+            for pair in batch:
+                logger.info(f"📧 Processing pair {pair.id}: {pair.employee1.name} & {pair.employee2.name}")
+                try:
+                    success = self._send_pair_notification(pair)
+                    if success:
+                        pair.mark_email_sent()
+                        results['emails_sent'] += 1
+                        results['success_pairs'].append(pair.id)
+                        logger.info(f"✅ Pair {pair.id} emails sent successfully")
+                    else:
+                        pair.mark_email_failed('Failed to send email')
+                        results['emails_failed'] += 1
+                        results['failed_pairs'].append({'pair_id': pair.id, 'error': 'Failed to send email'})
+                        logger.error(f"❌ Pair {pair.id} email sending failed")
+                except Exception as e:
+                    logger.error(f"❌ Exception sending email for pair {pair.id}: {str(e)}")
+                    pair.mark_email_failed(str(e))
                     results['emails_failed'] += 1
-                    results['failed_pairs'].append({
-                        'pair_id': pair.id,
-                        'error': 'Failed to send email'
-                    })
-            except Exception as e:
-                logger.error(f"Failed to send email for pair {pair.id}: {str(e)}")
-                pair.mark_email_failed(str(e))
-                results['emails_failed'] += 1
-                results['failed_pairs'].append({
-                    'pair_id': pair.id,
-                    'error': str(e)
-                })
-        
+                    results['failed_pairs'].append({'pair_id': pair.id, 'error': str(e)})
+
+        logger.info(f"📊 Email notification summary: {results['emails_sent']} sent, {results['emails_failed']} failed")
         return results
 
     def _send_pair_notification(self, pair: EmployeePair) -> bool:
-        """
-        Send email notification to a single employee pair with evaluation links
-
-        Args:
-            pair: EmployeePair object
-
-        Returns:
-            bool: True if email was sent successfully, False otherwise
-        """
+        """Send email notification to a single employee pair with evaluation links"""
         try:
-            # Create evaluation tokens for both employees
             evaluation_tokens = self._create_evaluation_tokens(pair)
 
-            # Prepare email context
             context = {
                 'employee1': pair.employee1,
                 'employee2': pair.employee2,
@@ -364,7 +356,6 @@ class EmailNotificationService:
                 'evaluation_tokens': evaluation_tokens
             }
 
-            # Send email to employee 1
             success1 = self._send_individual_email(
                 recipient=pair.employee1,
                 partner=pair.employee2,
@@ -372,7 +363,6 @@ class EmailNotificationService:
                 evaluation_token=evaluation_tokens.get(pair.employee1.id)
             )
 
-            # Send email to employee 2
             success2 = self._send_individual_email(
                 recipient=pair.employee2,
                 partner=pair.employee1,
@@ -387,41 +377,25 @@ class EmailNotificationService:
             return False
 
     def _create_evaluation_tokens(self, pair: EmployeePair) -> dict:
-        """
-        Create evaluation records with tokens for both employees in the pair
-
-        Args:
-            pair: EmployeePair object
-
-        Returns:
-            dict: Mapping of employee_id to evaluation token
-        """
+        """Create evaluation records with tokens for both employees in the pair"""
         try:
             from evaluations.models import Evaluation
             import uuid
 
             tokens = {}
-
-            # Create evaluation for employee1
-            eval1, created1 = Evaluation.objects.get_or_create(
+            eval1, _ = Evaluation.objects.get_or_create(
                 employee=pair.employee1,
                 employee_pair=pair,
-                defaults={'token': uuid.uuid4(), 'used': False}
+                defaults={'token': str(uuid.uuid4()), 'used': False}
             )
             tokens[pair.employee1.id] = eval1.token
 
-            # Create evaluation for employee2
-            eval2, created2 = Evaluation.objects.get_or_create(
+            eval2, _ = Evaluation.objects.get_or_create(
                 employee=pair.employee2,
                 employee_pair=pair,
-                defaults={'token': uuid.uuid4(), 'used': False}
+                defaults={'token': str(uuid.uuid4()), 'used': False}
             )
             tokens[pair.employee2.id] = eval2.token
-
-            if created1:
-                logger.info(f"Created evaluation token for {pair.employee1.name}")
-            if created2:
-                logger.info(f"Created evaluation token for {pair.employee2.name}")
 
             return tokens
 
@@ -430,20 +404,8 @@ class EmailNotificationService:
             return {}
 
     def _send_individual_email(self, recipient, partner, context: Dict[str, Any], evaluation_token=None) -> bool:
-        """
-        Send email to an individual employee with evaluation link
-
-        Args:
-            recipient: Employee receiving the email
-            partner: Employee they are matched with
-            context: Email template context
-            evaluation_token: UUID token for evaluation
-
-        Returns:
-            bool: True if email was sent successfully, False otherwise
-        """
+        """Send email to an individual employee with evaluation link"""
         try:
-            # Update context for this specific recipient
             email_context = {
                 **context,
                 'recipient': recipient,
@@ -451,14 +413,11 @@ class EmailNotificationService:
                 'evaluation_token': evaluation_token
             }
 
-            # Email subject
-            subject = f"Coffee Meeting Match - You've been paired with {partner.name}!"
-
-            # Create email content
+            subject = f"☕ Coffee Meeting Match - You're paired with {partner.name}!"
             html_message = self._create_html_email(email_context)
             plain_message = self._create_plain_email(email_context)
 
-            # Send email
+            logger.info(f"Attempting to send email to {recipient.email} from {self.from_email}")
             send_mail(
                 subject=subject,
                 message=plain_message,
@@ -468,146 +427,157 @@ class EmailNotificationService:
                 fail_silently=False,
             )
 
-            logger.info(f"Email sent successfully to {recipient.email}")
+            logger.info(f"✅ Email sent successfully to {recipient.email}")
             return True
 
         except Exception as e:
-            logger.error(f"Failed to send email to {recipient.email}: {str(e)}")
+            logger.error(f"❌ Failed to send email to {recipient.email}: {str(e)}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             return False
 
-    def _create_html_email(self, context: Dict[str, Any]) -> str:
-        """Create HTML email content with evaluation link"""
+    def _format_email_common_data(self, context: Dict[str, Any]) -> Tuple[str, str, str]:
+        """Return (start_date, end_date, evaluation_url) for emails"""
         campaign = context['campaign']
-        evaluation_token = context.get('evaluation_token')
-
-        # Create evaluation URL if token exists
+        start_date = campaign.start_date.strftime('%B %d') if campaign.start_date else 'TBD'
+        end_date = campaign.end_date.strftime('%B %d, %Y') if campaign.end_date else 'TBD'
         evaluation_url = ""
-        if evaluation_token:
+        if context.get('evaluation_token'):
             base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-            evaluation_url = f"{base_url}/evaluation/{evaluation_token}"
+            evaluation_url = f"{base_url}/evaluation/{context['evaluation_token']}"
+        return start_date, end_date, evaluation_url
+
+    def _create_html_email(self, context: Dict[str, Any]) -> str:
+        """Créer un contenu HTML professionnel pour l'email"""
+        start_date, end_date, evaluation_url = self._format_email_common_data(context)
+
+        bouton_html = f"""
+            <p style="text-align: center;">
+                <a href="{evaluation_url}" class="button">Accéder au formulaire d'évaluation</a>
+            </p>
+        """ if evaluation_url else ""
 
         return f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
-                    ☕ Coffee Meeting Match
-                </h2>
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Coffee Meeting - Nouvelle rencontre</title>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333333;
+                    margin: 0;
+                    padding: 20px;
+                    background-color: #ffffff;
+                }}
+                .email-container {{
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background-color: #ffffff;
+                    padding: 30px;
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                }}
+                .content {{
+                    margin: 20px 0;
+                }}
+                .button {{
+                    display: inline-block;
+                    padding: 12px 25px;
+                    background-color: #007bff;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 4px;
+                    font-size: 16px;
+                }}
+                .footer {{
+                    margin-top: 30px;
+                    font-size: 14px;
+                    color: #666;
+                    border-top: 1px solid #ddd;
+                    padding-top: 15px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="email-container">
+                <div class="content">
+                    <p>Bonjour {context['recipient'].name},</p>
 
-                <p>Hello <strong>{context['recipient'].name}</strong>,</p>
+                    <p>L’équipe <strong>Coffee Meetings</strong> a le plaisir de vous informer qu’une nouvelle rencontre a été organisée dans le cadre de notre programme.</p>
 
-                <p>You've been matched for a coffee meeting in the <strong>{campaign.title}</strong> campaign
-                ({campaign.start_date.strftime('%B %d')} - {campaign.end_date.strftime('%B %d, %Y')}).</p>
+                    <p>Vous aurez l’occasion de rencontrer <strong>{context['partner'].name}</strong> ({context['partner'].email}).</p>
 
-                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
-                    <h3 style="color: #2c3e50; margin: 0 0 10px 0;">Your Coffee Partner</h3>
-                    <p style="font-size: 18px; margin: 5px 0;"><strong>{context['partner'].name}</strong></p>
-                    <p style="margin: 5px 0;">📧 <a href="mailto:{context['partner'].email}">{context['partner'].email}</a></p>
+                    <p>Cette rencontre est à organiser entre le <strong>{start_date}</strong> et le <strong>{end_date}</strong>. Nous vous invitons à convenir ensemble d’une date et d’un lieu afin de partager un moment convivial autour d’un café.</p>
+
+                    <p>À l’issue de votre rencontre, nous vous prions de bien vouloir partager votre expérience via le formulaire d’évaluation accessible ci-dessous :</p>
+
+                    {bouton_html}
+
+                    <p>Nous vous souhaitons une agréable expérience et espérons que cette rencontre sera enrichissante.</p>
                 </div>
 
-                <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;">
-                    <h3 style="color: #856404; margin: 0 0 10px 0;">🎯 Action Required</h3>
-                    <ol style="margin: 0; padding-left: 20px;">
-                        <li><strong>Contact your partner</strong> via email within 48 hours</li>
-                        <li><strong>Schedule your meeting</strong> for a mutually convenient time</li>
-                        <li><strong>Meet and connect</strong> - office café, coffee shop, or virtual</li>
-                    </ol>
+                <div class="footer">
+                    <p>Cordialement,<br>
+                    L’équipe Coffee Meetings</p>
+                    <p>Contacter nous sur :
+                    <a href="mailto:cffmeet.info@gmail.com">cffmeet.info@gmail.com</a></p>
                 </div>
-
-                {f'''
-                <div style="background-color: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
-                    <h3 style="color: #155724; margin: 0 0 10px 0;">📝 After Your Meeting</h3>
-                    <p style="margin: 5px 0;">Please share your feedback about this coffee meeting:</p>
-                    <p style="margin: 10px 0;">
-                        <a href="{evaluation_url}"
-                           style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                            📝 Evaluate Your Meeting
-                        </a>
-                    </p>
-                    <p style="font-size: 12px; color: #666; margin: 5px 0;">
-                        This link will remain active until you submit your feedback.
-                    </p>
-                </div>
-                ''' if evaluation_token else ''}
-
-                <p style="margin: 20px 0 10px 0; font-size: 14px; color: #666;">
-                    Questions? Contact your HR team.
-                </p>
-
-                <p style="margin-top: 20px; font-size: 14px;">
-                    Best regards,<br>
-                    <strong>Coffee Meetings Team</strong>
-                </p>
             </div>
         </body>
         </html>
         """
 
     def _create_plain_email(self, context: Dict[str, Any]) -> str:
-        """Create plain text email content with evaluation link"""
-        campaign = context['campaign']
-        evaluation_token = context.get('evaluation_token')
-
-        # Create evaluation URL if token exists
+        """Create clean, professional plain text email content"""
+        start_date, end_date, evaluation_url = self._format_email_common_data(context)
         evaluation_section = ""
-        if evaluation_token:
-            base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-            evaluation_url = f"{base_url}/evaluation/{evaluation_token}"
+        if evaluation_url:
             evaluation_section = f"""
 
-📝 AFTER YOUR MEETING:
-Please share your feedback about this coffee meeting:
+📝 APRÈS VOTRE RENCONTRE :
+Merci de partager votre retour sur cette rencontre café :
 {evaluation_url}
-
-This link will remain active until you submit your feedback.
 """
-
         return f"""
-☕ Coffee Meeting Match
+☕ Coffee Meeting - Nouvelle rencontre
 
-Hello {context['recipient'].name},
+Bonjour {context['recipient'].name},
 
-You've been matched for a coffee meeting in the {campaign.title} campaign
-({campaign.start_date.strftime('%B %d')} - {campaign.end_date.strftime('%B %d, %Y')}).
+Nous espérons que ce message vous trouve bien. Vous allez rencontrer {context['partner'].name} ({context['partner'].email}).
+Période : {start_date} - {end_date}
 
-YOUR COFFEE PARTNER:
-{context['partner'].name}
-Email: {context['partner'].email}
+🎯 PROCHAINES ÉTAPES :
+1. Contactez votre partenaire dans les 48 heures
+2. Planifiez une rencontre
+3. Rencontrez-vous autour d'un café{evaluation_section}
 
-🎯 ACTION REQUIRED:
-1. Contact your partner via email within 48 hours
-2. Schedule your meeting for a mutually convenient time
-3. Meet and connect - office café, coffee shop, or virtual{evaluation_section}
+Pour toute question, contactez votre équipe RH.
 
-Questions? Contact your HR team.
-
-Best regards,
-Coffee Meetings Team
+Cordialement,
+L'équipe Coffee Meetings
         """
 
     def get_email_status_summary(self, campaign_id: int) -> Dict[str, Any]:
-        """
-        Get email status summary for a campaign
-
-        Args:
-            campaign_id: Campaign ID
-
-        Returns:
-            Dict with email status statistics
-        """
+        """Get email status summary for a campaign"""
+        from django.db.models import Count, Q
         pairs = EmployeePair.objects.filter(campaign_id=campaign_id)
-
-        total_pairs = pairs.count()
-        sent_count = pairs.filter(email_status='sent').count()
-        pending_count = pairs.filter(email_status='pending').count()
-        failed_count = pairs.filter(email_status='failed').count()
-        bounced_count = pairs.filter(email_status='bounced').count()
-
+        stats = pairs.aggregate(
+            sent=Count('id', filter=Q(email_status='sent')),
+            pending=Count('id', filter=Q(email_status='pending')),
+            failed=Count('id', filter=Q(email_status='failed')),
+            bounced=Count('id', filter=Q(email_status='bounced'))
+        )
+        total = pairs.count()
         return {
-            'total_pairs': total_pairs,
-            'emails_sent': sent_count,
-            'emails_pending': pending_count,
-            'emails_failed': failed_count,
-            'emails_bounced': bounced_count,
-            'success_rate': (sent_count / total_pairs * 100) if total_pairs > 0 else 0
+            'total_pairs': total,
+            'emails_sent': stats['sent'],
+            'emails_pending': stats['pending'],
+            'emails_failed': stats['failed'],
+            'emails_bounced': stats['bounced'],
+            'success_rate': (stats['sent'] / total * 100) if total > 0 else 0
         }
+

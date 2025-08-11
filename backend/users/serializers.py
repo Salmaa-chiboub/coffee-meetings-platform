@@ -215,43 +215,158 @@ class PasswordResetRequestSerializer(serializers.Serializer):
             reset_url = f"http://localhost:3000/reset-password?token={reset_token.token}"
 
             # Email subject and content
-            subject = "Réinitialisation de votre mot de passe - Coffee Meetings Platform"
+            subject = "🔐 Password Reset - Coffee Meetings Platform"
 
             # HTML email content
             html_message = f"""
-            <html>
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Password Reset</title>
+                <style>
+                    body {{
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                        line-height: 1.6;
+                        color: #2d3748;
+                        margin: 0;
+                        padding: 0;
+                        background-color: #f7fafc;
+                    }}
+                    .email-container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        background-color: #ffffff;
+                        border-radius: 12px;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+                        overflow: hidden;
+                    }}
+                    .header {{
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 32px 24px;
+                        text-align: center;
+                    }}
+                    .header h1 {{
+                        margin: 0;
+                        font-size: 28px;
+                        font-weight: 600;
+                        letter-spacing: -0.025em;
+                    }}
+                    .content {{
+                        padding: 32px 24px;
+                    }}
+                    .greeting {{
+                        font-size: 18px;
+                        margin-bottom: 24px;
+                        color: #1a202c;
+                    }}
+                    .reset-section {{
+                        background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+                        border: 1px solid #9ae6b4;
+                        border-radius: 12px;
+                        padding: 24px;
+                        margin: 24px 0;
+                        text-align: center;
+                    }}
+                    .reset-button {{
+                        display: inline-block;
+                        background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+                        color: white;
+                        padding: 14px 28px;
+                        text-decoration: none;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        font-size: 16px;
+                        transition: all 0.2s ease;
+                        box-shadow: 0 2px 4px rgba(72, 187, 120, 0.2);
+                    }}
+                    .reset-button:hover {{
+                        transform: translateY(-1px);
+                        box-shadow: 0 4px 8px rgba(72, 187, 120, 0.3);
+                    }}
+                    .footer {{
+                        background-color: #f7fafc;
+                        padding: 24px;
+                        text-align: center;
+                        border-top: 1px solid #e2e8f0;
+                    }}
+                    .footer p {{
+                        margin: 8px 0;
+                        color: #718096;
+                        font-size: 14px;
+                    }}
+                    .warning {{
+                        background-color: #fff5f5;
+                        border-left: 4px solid #f56565;
+                        border-radius: 8px;
+                        padding: 16px;
+                        margin: 16px 0;
+                    }}
+                    .warning p {{
+                        margin: 8px 0;
+                        color: #742a2a;
+                        font-size: 14px;
+                    }}
+                </style>
+            </head>
             <body>
-                <h2>Réinitialisation de votre mot de passe</h2>
-                <p>Bonjour {user.name},</p>
-                <p>Vous avez demandé la réinitialisation de votre mot de passe pour votre compte Coffee Meetings Platform.</p>
-                <p>Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe :</p>
-                <p><a href="{reset_url}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Réinitialiser mon mot de passe</a></p>
-                <p>Ce lien expirera dans 1 heure.</p>
-                <p>Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email.</p>
-                <br>
-                <p>Cordialement,<br>L'équipe Coffee Meetings Platform</p>
+                <div class="email-container">
+                    <div class="header">
+                        <h1>🔐 Password Reset</h1>
+                    </div>
+                    
+                    <div class="content">
+                        <p class="greeting">Hello <strong>{user.name}</strong>,</p>
+                        
+                        <p>You've requested a password reset for your Coffee Meetings Platform account.</p>
+                        
+                        <div class="reset-section">
+                            <h3>Reset Your Password</h3>
+                            <p>Click the button below to create a new password:</p>
+                            <a href="{reset_url}" class="reset-button">Reset Password</a>
+                            <p style="font-size: 12px; margin-top: 12px; color: #4a5568;">
+                                This link will expire in 1 hour for security reasons.
+                            </p>
+                        </div>
+                        
+                        <div class="warning">
+                            <p><strong>⚠️ Security Notice:</strong></p>
+                            <p>If you didn't request this password reset, please ignore this email. Your account remains secure.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>Questions? Contact our support team</p>
+                        <p><strong>Coffee Meetings Platform</strong></p>
+                    </div>
+                </div>
             </body>
             </html>
             """
 
             # Plain text version
             plain_message = f"""
-            Réinitialisation de votre mot de passe
+🔐 Password Reset
 
-            Bonjour {user.name},
+Hello {user.name},
 
-            Vous avez demandé la réinitialisation de votre mot de passe pour votre compte Coffee Meetings Platform.
+You've requested a password reset for your Coffee Meetings Platform account.
 
-            Copiez et collez ce lien dans votre navigateur pour réinitialiser votre mot de passe :
-            {reset_url}
+Click the link below to create a new password:
+{reset_url}
 
-            Ce lien expirera dans 1 heure.
+This link will expire in 1 hour for security reasons.
 
-            Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email.
+⚠️ SECURITY NOTICE:
+If you didn't request this password reset, please ignore this email. Your account remains secure.
 
-            Cordialement,
-            L'équipe Coffee Meetings Platform
-            """
+Questions? Contact our support team.
+
+Best regards,
+Coffee Meetings Platform Team
+"""
 
             # Send email
             send_mail(

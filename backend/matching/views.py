@@ -225,40 +225,53 @@ class ConfirmPairsView(APIView):
             saved_pairs = []
             errors = []
 
-            with transaction.atomic():
-                for pair_data in pairs_data:
-                    emp1_id = pair_data['employee_1_id']
-                    emp2_id = pair_data['employee_2_id']
+            # Bulk upsert pairs in batches for performance
+            BATCH_SIZE = 500
+            for batch_start in range(0, len(pairs_data), BATCH_SIZE):
+                batch = pairs_data[batch_start: batch_start + BATCH_SIZE]
+                # Collect employee ids in this batch
+                emp_ids = set()
+                for pd in batch:
+                    emp_ids.add(pd['employee_1_id'])
+                    emp_ids.add(pd['employee_2_id'])
 
-                    try:
-                        emp1 = Employee.objects.get(id=emp1_id)
-                        emp2 = Employee.objects.get(id=emp2_id)
+                employees_map = {e.id: e for e in Employee.objects.filter(id__in=list(emp_ids))}
 
-                        # Check if pair already exists
-                        if EmployeePair.pair_exists(campaign, emp1, emp2):
-                            errors.append(f"Pair {emp1.name} & {emp2.name} already exists")
-                            continue
-
-                        # Create the pair
-                        pair = EmployeePair.objects.create(
-                            campaign=campaign,
-                            employee1=emp1,
-                            employee2=emp2,
-                            created_by=created_by,
-                            matching_criteria_snapshot=criteria_snapshot
-                        )
-
-                        saved_pairs.append({
-                            'pair_id': pair.id,
-                            'employee_1_id': emp1.id,
-                            'employee_1_name': emp1.name,
-                            'employee_2_id': emp2.id,
-                            'employee_2_name': emp2.name
-                        })
-
-                    except Employee.DoesNotExist:
-                        errors.append(f"Employee with ID {emp1_id} or {emp2_id} not found")
+                to_create = []
+                for pd in batch:
+                    emp1 = employees_map.get(pd['employee_1_id'])
+                    emp2 = employees_map.get(pd['employee_2_id'])
+                    if not emp1 or not emp2:
+                        errors.append(f"Employee with ID {pd['employee_1_id']} or {pd['employee_2_id']} not found")
                         continue
+
+                    # Skip existing pairs
+                    if EmployeePair.pair_exists(campaign, emp1, emp2):
+                        errors.append(f"Pair {emp1.name} & {emp2.name} already exists")
+                        continue
+
+                    to_create.append(EmployeePair(
+                        campaign=campaign,
+                        employee1=emp1,
+                        employee2=emp2,
+                        created_by=created_by,
+                        matching_criteria_snapshot=criteria_snapshot
+                    ))
+
+                if to_create:
+                    # Use regular create instead of bulk_create to ensure IDs are assigned
+                    for pair_obj in to_create:
+                        try:
+                            pair_obj.save()
+                            saved_pairs.append({
+                                'pair_id': pair_obj.id,
+                                'employee_1_id': pair_obj.employee1_id,
+                                'employee_1_name': employees_map[pair_obj.employee1_id].name,
+                                'employee_2_id': pair_obj.employee2_id,
+                                'employee_2_name': employees_map[pair_obj.employee2_id].name
+                            })
+                        except Exception as e:
+                            errors.append(f"Failed to create pair: {str(e)}")
 
                 # Lock criteria after successful pair creation
                 if saved_pairs:
@@ -268,13 +281,51 @@ class ConfirmPairsView(APIView):
             email_results = None
             if send_emails and saved_pairs:
                 try:
+                    print(f"DEBUG: About to send emails for {len(saved_pairs)} saved pairs")
+                    print(f"DEBUG: Saved pairs data: {saved_pairs}")
+                    print(f"DEBUG: Pair IDs to notify: {[pair['pair_id'] for pair in saved_pairs]}")
+                    
                     email_service = EmailNotificationService()
                     pairs_to_notify = EmployeePair.objects.filter(
                         id__in=[pair['pair_id'] for pair in saved_pairs]
                     )
-                    email_results = email_service.send_pair_notifications(pairs_to_notify)
+                    
+                    print(f"DEBUG: Found {pairs_to_notify.count()} pairs in database")
+                    print(f"DEBUG: Pairs to notify: {list(pairs_to_notify.values('id', 'employee1__name', 'employee2__name'))}")
+                    
+                    if pairs_to_notify.exists():
+                        print(f"DEBUG: Starting email service for {pairs_to_notify.count()} pairs")
+                        email_results = email_service.send_pair_notifications(pairs_to_notify)
+                        print(f"DEBUG: Email service completed with results: {email_results}")
+                    else:
+                        print(f"DEBUG: No pairs found in database for IDs: {[pair['pair_id'] for pair in saved_pairs]}")
+                        # Check if pairs were actually created
+                        all_pairs = EmployeePair.objects.filter(campaign=campaign)
+                        print(f"DEBUG: Total pairs in campaign: {all_pairs.count()}")
+                        print(f"DEBUG: All pairs: {list(all_pairs.values('id', 'employee1__name', 'employee2__name'))}")
+                        
+                        # Try to find pairs by employee IDs as fallback
+                        fallback_pairs = []
+                        for saved_pair in saved_pairs:
+                            fallback_pair = EmployeePair.objects.filter(
+                                campaign=campaign,
+                                employee1_id=saved_pair['employee_1_id'],
+                                employee2_id=saved_pair['employee_2_id']
+                            ).first()
+                            if fallback_pair:
+                                fallback_pairs.append(fallback_pair)
+                        
+                        if fallback_pairs:
+                            print(f"DEBUG: Found {len(fallback_pairs)} pairs using fallback method")
+                            email_results = email_service.send_pair_notifications(fallback_pairs)
+                            print(f"DEBUG: Fallback email service completed with results: {email_results}")
+                        else:
+                            print(f"DEBUG: No fallback pairs found either")
                 except Exception as e:
                     errors.append(f"Email sending failed: {str(e)}")
+                    print(f"DEBUG: Exception in email sending: {str(e)}")
+                    import traceback
+                    print(f"DEBUG: Full traceback: {traceback.format_exc()}")
 
             response_data = {
                 'success': True,
@@ -293,8 +344,6 @@ class ConfirmPairsView(APIView):
                 {'error': f'Failed to confirm pairs: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            
-            create_evaluations_and_send_emails(pair)
 
 
 class MatchingHistoryView(APIView):

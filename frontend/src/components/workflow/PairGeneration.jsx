@@ -8,14 +8,14 @@ import {
 import { matchingService } from '../../services/matchingService';
 import { WORKFLOW_STEPS } from '../../services/workflowService';
 
-const PairGeneration = ({ campaignId, onComplete, onError }) => {
+const PairGeneration = ({ campaignId, onComplete, onError, workflowState }) => {
   const [pairs, setPairs] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [pairStats, setPairStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if pairs already exist
+  // Check if pairs already exist - now also refreshes when workflow state changes
   useEffect(() => {
     const checkExistingPairs = async () => {
       try {
@@ -40,7 +40,7 @@ const PairGeneration = ({ campaignId, onComplete, onError }) => {
     };
 
     checkExistingPairs();
-  }, [campaignId]);
+  }, [campaignId, workflowState]); // ✅ Now refreshes when workflow state changes
 
   // Generate pairs
   const handleGeneratePairs = async () => {

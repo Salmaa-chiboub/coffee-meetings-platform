@@ -169,45 +169,104 @@ class ExcelProcessingService:
         return {'valid': True}
     
     def _process_rows(self, df: pd.DataFrame) -> List[Employee]:
-        """Process DataFrame rows and create employees with batch processing"""
-        employees = []
-        batch_size = 50  # Process in batches to manage memory
+        """Process DataFrame rows and create employees using bulk operations"""
+        from django.db import connections
+
+        created_employees: List[Employee] = []
         total_rows = len(df)
+        batch_size = 500  # Larger bulk size for performance
 
-        logger.info(f"Processing {total_rows} rows in batches of {batch_size}")
+        logger.info(f"Processing {total_rows} rows with bulk_create (batch_size={batch_size})")
 
-        # Process in batches to manage memory and database connections
-        for batch_start in range(0, total_rows, batch_size):
-            batch_end = min(batch_start + batch_size, total_rows)
-            batch_df = df.iloc[batch_start:batch_end]
+        # Prepare/clean columns
+        df = df.copy()
+        df['name'] = df['name'].apply(self._clean_string_value)
+        df['email'] = df['email'].apply(self._clean_string_value)
 
-            logger.info(f"Processing batch {batch_start + 1}-{batch_end} of {total_rows}")
+        # Parse arrival_date if present
+        if 'arrival_date' in df.columns:
+            df['arrival_date'] = df['arrival_date'].apply(self._parse_date)
+        else:
+            df['arrival_date'] = pd.NaT
 
-            with transaction.atomic():
-                for index, row in batch_df.iterrows():
-                    try:
-                        employee = self._process_single_row(row, index)
-                        if employee:
-                            employees.append(employee)
-                            self.created_count += 1
+        # Drop rows missing required fields
+        def has_required(row):
+            return bool(row['name']) and bool(row['email']) and ('@' in row['email'])
 
-                        self.processed_count += 1
+        valid_mask = df.apply(has_required, axis=1)
+        invalid_rows = df[~valid_mask]
+        for idx, row in invalid_rows.iterrows():
+            self.errors.append({
+                'row': idx + 2,
+                'error': f"Missing/invalid required fields: name='{row.get('name')}', email='{row.get('email')}'",
+                'data': row.to_dict()
+            })
+        df = df[valid_mask]
 
-                        # Log progress for large files
-                        if self.processed_count % 10 == 0:
-                            logger.info(f"Processed {self.processed_count}/{total_rows} rows")
+        # Handle duplicates against DB in one query
+        incoming_emails = df['email'].tolist()
+        existing_emails = set(
+            Employee.objects.filter(campaign=self.campaign, email__in=incoming_emails)
+            .values_list('email', flat=True)
+        )
 
-                    except Exception as e:
-                        error_msg = f"Row {index + 2}: {str(e)}"  # +2 for Excel row number (header + 0-based index)
-                        self.errors.append({
-                            'row': index + 2,
-                            'error': error_msg,
-                            'data': row.to_dict()
-                        })
-                        logger.warning(error_msg)
+        rows_to_create = df[~df['email'].isin(existing_emails)]
 
-        logger.info(f"Completed processing: {self.created_count} employees created, {len(self.errors)} errors")
-        return employees
+        # Add errors for duplicates if not replacing
+        if existing_emails and not self.replace_existing:
+            for idx, row in df[df['email'].isin(existing_emails)].iterrows():
+                self.errors.append({
+                    'row': idx + 2,
+                    'error': f"Employee with email {row.get('email')} already exists in this campaign",
+                    'data': row.to_dict()
+                })
+
+        # Build Employee objects
+        employee_objects: List[Employee] = []
+        for idx, row in rows_to_create.iterrows():
+            arrival_date = row.get('arrival_date') or date.today()
+            employee_objects.append(Employee(
+                name=row['name'],
+                email=row['email'],
+                arrival_date=arrival_date,
+                campaign=self.campaign
+            ))
+            self.processed_count += 1
+
+        # Bulk create employees
+        if employee_objects:
+            created_employees = Employee.objects.bulk_create(employee_objects, batch_size=batch_size)
+            self.created_count += len(created_employees)
+
+        # Build attributes for all new employees
+        attributes_to_create: List[EmployeeAttribute] = []
+        skip_fields = {'name', 'email', 'arrival_date'}
+        attribute_columns = [c for c in df.columns if c not in skip_fields]
+
+        # Map emails to created employees for quick lookup
+        email_to_employee = {e.email: e for e in created_employees}
+        for idx, row in rows_to_create.iterrows():
+            employee = email_to_employee.get(row['email'])
+            if not employee:
+                continue
+            for column in attribute_columns:
+                value = row.get(column)
+                if pd.notna(value) and str(value).strip() != '':
+                    attributes_to_create.append(EmployeeAttribute(
+                        employee=employee,
+                        campaign=self.campaign,
+                        attribute_key=column,
+                        attribute_value=str(value)
+                    ))
+
+        if attributes_to_create:
+            EmployeeAttribute.objects.bulk_create(attributes_to_create, batch_size=batch_size)
+
+        logger.info(
+            f"Completed processing: {self.created_count} employees created, "
+            f"{len(self.errors)} errors, {len(attributes_to_create)} attributes created"
+        )
+        return created_employees
     
     def _process_single_row(self, row: pd.Series, index: int) -> Employee:
         """Process a single row and create employee"""

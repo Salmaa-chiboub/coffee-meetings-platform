@@ -51,7 +51,7 @@ class EmployeePairSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'campaign', 'campaign_title', 'employee1', 'employee2',
             'email_status', 'email_status_display', 'email_sent_at', 'email_error_message',
-            'created_at', 'created_by', 'matching_criteria_snapshot'
+            'email_sent', 'created_at', 'created_by', 'matching_criteria_snapshot'
         ]
         read_only_fields = [
             'id', 'created_at', 'email_sent_at', 'email_status_display', 'campaign_title'
