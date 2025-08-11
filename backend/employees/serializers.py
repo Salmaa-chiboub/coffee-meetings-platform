@@ -56,9 +56,9 @@ class ExcelUploadSerializer(serializers.Serializer):
         if not value.name.endswith(('.xlsx', '.xls')):
             raise serializers.ValidationError("File must be an Excel file (.xlsx or .xls)")
 
-        # Check file size (10MB limit)
-        if value.size > 10 * 1024 * 1024:
-            raise serializers.ValidationError("File size must be less than 10MB")
+        # Check file size (25MB limit)
+        if value.size > 25 * 1024 * 1024:
+            raise serializers.ValidationError("File size must be less than 25MB")
 
         return value
 

@@ -26,6 +26,7 @@ const CampaignCardMenu = ({ campaign, isCompleted, onDelete }) => {
 
   const handleDelete = (e) => {
     e.stopPropagation(); // Prevent card click
+    if (isCompleted) return; // Disabled for completed campaigns
     if (onDelete) {
       onDelete(campaign?.id);
     }
@@ -46,7 +47,13 @@ const CampaignCardMenu = ({ campaign, isCompleted, onDelete }) => {
           <div className="py-1">
             <button
               onClick={handleDelete}
-              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              disabled={isCompleted}
+              title={isCompleted ? 'Suppression désactivée pour une campagne terminée' : 'Supprimer'}
+              className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                isCompleted
+                  ? 'text-warmGray-400 cursor-not-allowed'
+                  : 'text-red-600 hover:bg-red-50'
+              }`}
             >
               Supprimer
             </button>

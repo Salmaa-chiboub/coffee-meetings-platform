@@ -297,15 +297,10 @@ class EmailNotificationService:
         self.from_email = settings.DEFAULT_FROM_EMAIL
     
     def send_pair_notifications(self, pairs: List[EmployeePair]) -> Dict[str, Any]:
-        """
-        Send email notifications to a list of employee pairs
+        """Send emails in batches to reduce overhead and improve throughput."""
+        logger.info(f"🚀 Starting email notifications for {len(pairs)} pairs")
+        logger.info(f"📧 From email: {self.from_email}")
         
-        Args:
-            pairs: List of EmployeePair objects
-            
-        Returns:
-            Dict with success/failure statistics
-        """
         results = {
             'total_pairs': len(pairs),
             'emails_sent': 0,
@@ -313,30 +308,40 @@ class EmailNotificationService:
             'failed_pairs': [],
             'success_pairs': []
         }
+
+        if not pairs:
+            logger.warning("⚠️ No pairs to send emails to")
+            return results
+
+        # Batch size for sending emails
+        batch_size = 50
+        logger.info(f"📦 Processing emails in batches of {batch_size}")
         
-        for pair in pairs:
-            try:
-                success = self._send_pair_notification(pair)
-                if success:
-                    pair.mark_email_sent()
-                    results['emails_sent'] += 1
-                    results['success_pairs'].append(pair.id)
-                else:
-                    pair.mark_email_failed('Failed to send email')
+        for batch_start in range(0, len(pairs), batch_size):
+            batch = pairs[batch_start: batch_start + batch_size]
+            logger.info(f"📤 Processing batch {batch_start//batch_size + 1}: pairs {batch_start+1}-{min(batch_start+batch_size, len(pairs))}")
+            
+            for pair in batch:
+                logger.info(f"📧 Processing pair {pair.id}: {pair.employee1.name} & {pair.employee2.name}")
+                try:
+                    success = self._send_pair_notification(pair)
+                    if success:
+                        pair.mark_email_sent()
+                        results['emails_sent'] += 1
+                        results['success_pairs'].append(pair.id)
+                        logger.info(f"✅ Pair {pair.id} emails sent successfully")
+                    else:
+                        pair.mark_email_failed('Failed to send email')
+                        results['emails_failed'] += 1
+                        results['failed_pairs'].append({'pair_id': pair.id, 'error': 'Failed to send email'})
+                        logger.error(f"❌ Pair {pair.id} email sending failed")
+                except Exception as e:
+                    logger.error(f"❌ Exception sending email for pair {pair.id}: {str(e)}")
+                    pair.mark_email_failed(str(e))
                     results['emails_failed'] += 1
-                    results['failed_pairs'].append({
-                        'pair_id': pair.id,
-                        'error': 'Failed to send email'
-                    })
-            except Exception as e:
-                logger.error(f"Failed to send email for pair {pair.id}: {str(e)}")
-                pair.mark_email_failed(str(e))
-                results['emails_failed'] += 1
-                results['failed_pairs'].append({
-                    'pair_id': pair.id,
-                    'error': str(e)
-                })
-        
+                    results['failed_pairs'].append({'pair_id': pair.id, 'error': str(e)})
+
+        logger.info(f"📊 Email notification summary: {results['emails_sent']} sent, {results['emails_failed']} failed")
         return results
 
     def _send_pair_notification(self, pair: EmployeePair) -> bool:
@@ -377,6 +382,13 @@ class EmailNotificationService:
                 context=context,
                 evaluation_token=evaluation_tokens.get(pair.employee2.id)
             )
+
+            # Mark emails as sent if both were successful
+            if success1 and success2:
+                pair.mark_email_sent()
+                logger.info(f"✅ Marked pair {pair.id} as email sent")
+            else:
+                logger.warning(f"⚠️ Pair {pair.id} emails not fully sent - not marking as sent")
 
             return success1 and success2
 
@@ -450,11 +462,17 @@ class EmailNotificationService:
             }
 
             # Email subject
-            subject = f"Coffee Meeting Match - You've been paired with {partner.name}!"
+            subject = f"☕ Coffee Meeting Match - You're paired with {partner.name}!"
 
             # Create email content
             html_message = self._create_html_email(email_context)
             plain_message = self._create_plain_email(email_context)
+
+            # Log email details for debugging
+            logger.info(f"Attempting to send email to {recipient.email} from {self.from_email}")
+            logger.info(f"Email subject: {subject}")
+            logger.info(f"Recipient: {recipient.name} ({recipient.email})")
+            logger.info(f"Partner: {partner.name} ({partner.email})")
 
             # Send email
             send_mail(
@@ -466,15 +484,18 @@ class EmailNotificationService:
                 fail_silently=False,
             )
 
-            logger.info(f"Email sent successfully to {recipient.email}")
+            logger.info(f"✅ Email sent successfully to {recipient.email}")
             return True
 
         except Exception as e:
-            logger.error(f"Failed to send email to {recipient.email}: {str(e)}")
+            logger.error(f"❌ Failed to send email to {recipient.email}: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             return False
 
     def _create_html_email(self, context: Dict[str, Any]) -> str:
-        """Create HTML email content with evaluation link"""
+        """Create modern, professional HTML email content"""
         campaign = context['campaign']
         evaluation_token = context.get('evaluation_token')
 
@@ -484,65 +505,233 @@ class EmailNotificationService:
             base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
             evaluation_url = f"{base_url}/evaluation/{evaluation_token}"
 
+        # Format campaign dates
+        start_date = campaign.start_date.strftime('%B %d') if campaign.start_date else 'TBD'
+        end_date = campaign.end_date.strftime('%B %d, %Y') if campaign.end_date else 'TBD'
+
         return f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
-                    ☕ Coffee Meeting Match
-                </h2>
-
-                <p>Hello <strong>{context['recipient'].name}</strong>,</p>
-
-                <p>You've been matched for a coffee meeting in the <strong>{campaign.title}</strong> campaign
-                ({campaign.start_date.strftime('%B %d')} - {campaign.end_date.strftime('%B %d, %Y')}).</p>
-
-                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
-                    <h3 style="color: #2c3e50; margin: 0 0 10px 0;">Your Coffee Partner</h3>
-                    <p style="font-size: 18px; margin: 5px 0;"><strong>{context['partner'].name}</strong></p>
-                    <p style="margin: 5px 0;">📧 <a href="mailto:{context['partner'].email}">{context['partner'].email}</a></p>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Coffee Meeting Match</title>
+            <style>
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #2d3748;
+                    margin: 0;
+                    padding: 0;
+                    background-color: #f7fafc;
+                }}
+                .email-container {{
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background-color: #ffffff;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+                    overflow: hidden;
+                }}
+                .header {{
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 32px 24px;
+                    text-align: center;
+                }}
+                .header h1 {{
+                    margin: 0;
+                    font-size: 28px;
+                    font-weight: 600;
+                    letter-spacing: -0.025em;
+                }}
+                .header .subtitle {{
+                    margin: 8px 0 0 0;
+                    font-size: 16px;
+                    opacity: 0.9;
+                    font-weight: 400;
+                }}
+                .content {{
+                    padding: 32px 24px;
+                }}
+                .greeting {{
+                    font-size: 18px;
+                    margin-bottom: 24px;
+                    color: #1a202c;
+                }}
+                .partner-card {{
+                    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    padding: 24px;
+                    margin: 24px 0;
+                    text-align: center;
+                }}
+                .partner-card h3 {{
+                    margin: 0 0 16px 0;
+                    color: #2d3748;
+                    font-size: 16px;
+                    font-weight: 500;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }}
+                .partner-name {{
+                    font-size: 24px;
+                    font-weight: 600;
+                    color: #1a202c;
+                    margin: 8px 0;
+                }}
+                .partner-email {{
+                    color: #3182ce;
+                    text-decoration: none;
+                    font-weight: 500;
+                }}
+                .partner-email:hover {{
+                    text-decoration: underline;
+                }}
+                .action-section {{
+                    background-color: #fff5f5;
+                    border-left: 4px solid #f56565;
+                    border-radius: 8px;
+                    padding: 20px;
+                    margin: 24px 0;
+                }}
+                .action-section h3 {{
+                    margin: 0 0 16px 0;
+                    color: #c53030;
+                    font-size: 16px;
+                    font-weight: 600;
+                }}
+                .action-steps {{
+                    margin: 0;
+                    padding-left: 20px;
+                }}
+                .action-steps li {{
+                    margin-bottom: 8px;
+                    color: #742a2a;
+                }}
+                .evaluation-section {{
+                    background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+                    border: 1px solid #9ae6b4;
+                    border-radius: 12px;
+                    padding: 24px;
+                    margin: 24px 0;
+                    text-align: center;
+                }}
+                .evaluation-section h3 {{
+                    margin: 0 0 16px 0;
+                    color: #22543d;
+                    font-size: 16px;
+                    font-weight: 600;
+                }}
+                .evaluation-button {{
+                    display: inline-block;
+                    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+                    color: white;
+                    padding: 14px 28px;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    font-size: 16px;
+                    transition: all 0.2s ease;
+                    box-shadow: 0 2px 4px rgba(72, 187, 120, 0.2);
+                }}
+                .evaluation-button:hover {{
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 8px rgba(72, 187, 120, 0.3);
+                }}
+                .footer {{
+                    background-color: #f7fafc;
+                    padding: 24px;
+                    text-align: center;
+                    border-top: 1px solid #e2e8f0;
+                }}
+                .footer p {{
+                    margin: 8px 0;
+                    color: #718096;
+                    font-size: 14px;
+                }}
+                .campaign-info {{
+                    background-color: #edf2f7;
+                    border-radius: 8px;
+                    padding: 16px;
+                    margin: 16px 0;
+                    text-align: center;
+                }}
+                .campaign-info p {{
+                    margin: 4px 0;
+                    color: #4a5568;
+                    font-size: 14px;
+                }}
+                @media only screen and (max-width: 600px) {{
+                    .email-container {{
+                        margin: 0;
+                        border-radius: 0;
+                    }}
+                    .content, .header, .footer {{
+                        padding: 20px 16px;
+                    }}
+                    .header h1 {{
+                        font-size: 24px;
+                    }}
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="email-container">
+                <div class="header">
+                    <h1>☕ Coffee Meeting Match</h1>
+                    <p class="subtitle">You've been paired for a coffee meeting!</p>
                 </div>
 
-                <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;">
-                    <h3 style="color: #856404; margin: 0 0 10px 0;">🎯 Action Required</h3>
-                    <ol style="margin: 0; padding-left: 20px;">
-                        <li><strong>Contact your partner</strong> via email within 48 hours</li>
-                        <li><strong>Schedule your meeting</strong> for a mutually convenient time</li>
-                        <li><strong>Meet and connect</strong> - office café, coffee shop, or virtual</li>
+                <div class="content">
+                    <p class="greeting">Hello <strong>{context['recipient'].name}</strong>,</p>
+                    
+                    <p>Great news! You've been matched for a coffee meeting in our networking campaign.</p>
+                    
+                    <div class="campaign-info">
+                        <p><strong>Campaign:</strong> {campaign.title}</p>
+                        <p><strong>Period:</strong> {start_date} - {end_date}</p>
+                    </div>
+                    
+                    <div class="partner-card">
+                        <h3>Your Coffee Partner</h3>
+                        <div class="partner-name">{context['partner'].name}</div>
+                        <a href="mailto:{context['partner'].email}" class="partner-email">{context['partner'].email}</a>
+                    </div>
+                    
+                    <div class="action-section">
+                        <h3>🎯 Next Steps</h3>
+                        <ol class="action-steps">
+                            <li><strong>Reach out</strong> to your partner within 48 hours</li>
+                            <li><strong>Schedule</strong> a meeting at a convenient time</li>
+                            <li><strong>Meet up</strong> for coffee and conversation</li>
                     </ol>
                 </div>
 
                 {f'''
-                <div style="background-color: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
-                    <h3 style="color: #155724; margin: 0 0 10px 0;">📝 After Your Meeting</h3>
-                    <p style="margin: 5px 0;">Please share your feedback about this coffee meeting:</p>
-                    <p style="margin: 10px 0;">
-                        <a href="{evaluation_url}"
-                           style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                            📝 Evaluate Your Meeting
-                        </a>
-                    </p>
-                    <p style="font-size: 12px; color: #666; margin: 5px 0;">
+                    <div class="evaluation-section">
+                        <h3>📝 Share Your Feedback</h3>
+                        <p>After your meeting, please take a moment to share your experience:</p>
+                        <a href="{evaluation_url}" class="evaluation-button">Evaluate Meeting</a>
+                        <p style="font-size: 12px; margin-top: 12px; color: #4a5568;">
                         This link will remain active until you submit your feedback.
                     </p>
                 </div>
                 ''' if evaluation_token else ''}
-
-                <p style="margin: 20px 0 10px 0; font-size: 14px; color: #666;">
-                    Questions? Contact your HR team.
-                </p>
-
-                <p style="margin-top: 20px; font-size: 14px;">
-                    Best regards,<br>
-                    <strong>Coffee Meetings Team</strong>
-                </p>
+                </div>
+                
+                <div class="footer">
+                    <p>Questions? Contact your HR team</p>
+                    <p><strong>Coffee Meetings Team</strong></p>
+                </div>
             </div>
         </body>
         </html>
         """
 
     def _create_plain_email(self, context: Dict[str, Any]) -> str:
-        """Create plain text email content with evaluation link"""
+        """Create clean, professional plain text email content"""
         campaign = context['campaign']
         evaluation_token = context.get('evaluation_token')
 
@@ -560,22 +749,29 @@ Please share your feedback about this coffee meeting:
 This link will remain active until you submit your feedback.
 """
 
+        # Format campaign dates
+        start_date = campaign.start_date.strftime('%B %d') if campaign.start_date else 'TBD'
+        end_date = campaign.end_date.strftime('%B %d, %Y') if campaign.end_date else 'TBD'
+
         return f"""
 ☕ Coffee Meeting Match
 
 Hello {context['recipient'].name},
 
-You've been matched for a coffee meeting in the {campaign.title} campaign
-({campaign.start_date.strftime('%B %d')} - {campaign.end_date.strftime('%B %d, %Y')}).
+Great news! You've been matched for a coffee meeting in our networking campaign.
+
+CAMPAIGN DETAILS:
+Campaign: {campaign.title}
+Period: {start_date} - {end_date}
 
 YOUR COFFEE PARTNER:
 {context['partner'].name}
 Email: {context['partner'].email}
 
-🎯 ACTION REQUIRED:
-1. Contact your partner via email within 48 hours
-2. Schedule your meeting for a mutually convenient time
-3. Meet and connect - office café, coffee shop, or virtual{evaluation_section}
+🎯 NEXT STEPS:
+1. Reach out to your partner within 48 hours
+2. Schedule a meeting at a convenient time
+3. Meet up for coffee and conversation{evaluation_section}
 
 Questions? Contact your HR team.
 
