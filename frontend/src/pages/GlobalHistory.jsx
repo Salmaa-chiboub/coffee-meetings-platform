@@ -47,7 +47,7 @@ const GlobalHistory = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [exportLoading, setExportLoading] = useState(false);
-  const [selectedTimeRange, setSelectedTimeRange] = useState('all');
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -528,17 +528,7 @@ const GlobalHistory = () => {
                 Vue d'ensemble complète de toutes vos campagnes et leurs performances détaillées
               </p>
             </div>
-            <div className="mt-6 md:mt-0 flex flex-col sm:flex-row gap-3">
-              <select
-                value={selectedTimeRange}
-                onChange={(e) => setSelectedTimeRange(e.target.value)}
-                className="px-4 py-2 bg-white border-2 border-warmGray-300 rounded-lg text-warmGray-700 focus:border-peach-500 focus:outline-none font-medium"
-              >
-                <option value="all">Toutes les périodes</option>
-                <option value="last_month">Dernier mois</option>
-                <option value="last_quarter">Dernier trimestre</option>
-                <option value="last_year">Dernière année</option>
-              </select>
+            <div className="mt-6 md:mt-0">
               <button
                 onClick={handleExportPDF}
                 disabled={exportLoading}
