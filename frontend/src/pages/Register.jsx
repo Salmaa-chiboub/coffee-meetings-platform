@@ -53,7 +53,7 @@ const Register = () => {
           {/* Header */}
           <div className="text-center pt-12 pb-4">
             <h1 className="text-4xl font-bold text-warmGray-800">
-              Create Account
+              Créer un Compte
             </h1>
           </div>
 
@@ -74,11 +74,11 @@ const Register = () => {
                     },
                   })}
                   type="text"
-                  placeholder="Enter your full name"
+                  placeholder="Entrez votre nom complet"
                   className="w-full pl-12 pr-4 py-4 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-warmGray-600 transition-all duration-200"
                 />
                 <label className="absolute -top-3 left-6 bg-cream px-2 text-sm font-medium text-warmGray-600">
-                  Full Name
+                  Nom Complet
                 </label>
               </div>
               {errors.fullName && (
@@ -128,11 +128,11 @@ const Register = () => {
                     },
                   })}
                   type="text"
-                  placeholder="Enter your company name"
+                  placeholder="Entrez le nom de votre entreprise"
                   className="w-full pl-12 pr-4 py-4 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-warmGray-600 transition-all duration-200"
                 />
                 <label className="absolute -top-3 left-6 bg-cream px-2 text-sm font-medium text-warmGray-600">
-                  Company Name
+                  Nom de l'Entreprise
                 </label>
               </div>
               {errors.companyName && (
@@ -159,11 +159,11 @@ const Register = () => {
                     },
                   })}
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
+                  placeholder="Entrez votre mot de passe"
                   className="w-full pl-12 pr-12 py-4 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-warmGray-600 transition-all duration-200"
                 />
                 <label className="absolute -top-3 left-6 bg-cream px-2 text-sm font-medium text-warmGray-600">
-                  Password
+                  Mot de Passe
                 </label>
                 <button
                   type="button"
@@ -195,11 +195,11 @@ const Register = () => {
                       value === password || 'Les mots de passe ne correspondent pas',
                   })}
                   type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Confirm your password"
+                  placeholder="Confirmez votre mot de passe"
                   className="w-full pl-12 pr-12 py-4 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-warmGray-600 transition-all duration-200"
                 />
                 <label className="absolute -top-3 left-6 bg-cream px-2 text-sm font-medium text-warmGray-600">
-                  Confirm Password
+                  Confirmer le Mot de Passe
                 </label>
                 <button
                   type="button"
@@ -235,10 +235,10 @@ const Register = () => {
                 {isLoading ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#8B6F47] mr-2"></div>
-                    Creating account...
+                    Création du compte...
                   </div>
                 ) : (
-                  'Create Account'
+                  'Créer un Compte'
                 )}
               </button>
             </div>
@@ -246,13 +246,13 @@ const Register = () => {
             {/* Login Link */}
             <div className="text-center pt-8 pb-12">
               <span className="text-warmGray-500 text-sm">
-                Already have an account?{' '}
+                Vous avez déjà un compte ?{' '}
                 <button
                   type="button"
                   onClick={() => navigate('/login')}
                   className="text-peach-600 hover:text-peach-700 font-medium transition-colors duration-200"
                 >
-                  Sign in
+                  Se connecter
                 </button>
               </span>
             </div>

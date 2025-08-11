@@ -54,7 +54,7 @@ const GlobalEvaluationPerformance = ({ campaigns = [] }) => {
       setLoading(false);
     } catch (error) {
       console.error('Error calculating statistics:', error);
-      setError('Failed to calculate statistics');
+      setError('Échec du calcul des statistiques');
       setLoading(false);
     }
   };
@@ -99,7 +99,7 @@ const GlobalEvaluationPerformance = ({ campaigns = [] }) => {
         setStatistics(mappedStatistics);
         setError(null);
       } else {
-        setError('Failed to fetch statistics');
+        setError('Échec de la récupération des statistiques');
       }
     } catch (err) {
       console.error('Error fetching dashboard statistics:', err);
@@ -116,9 +116,9 @@ const GlobalEvaluationPerformance = ({ campaigns = [] }) => {
           response_rate: 0,
           average_rating: null,
           total_ratings: 0,
-          global_performance: 'No Data'
+          global_performance: 'Aucune Donnée'
         });
-        setError('Unable to load statistics');
+        setError('Impossible de charger les statistiques');
       }
     } finally {
       setLoading(false);
@@ -233,10 +233,10 @@ const GlobalEvaluationPerformance = ({ campaigns = [] }) => {
     <div className="bg-white rounded-lg border border-warmGray-200 p-6 mb-8">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-warmGray-800">
-          My Evaluation Performance
+          Ma Performance d'Évaluation
         </h3>
         <div className="text-sm text-warmGray-500">
-          Based on {statistics.total_campaigns} of your campaigns
+          Basé sur {statistics.total_campaigns} de vos campagnes
         </div>
       </div>
 
@@ -245,15 +245,15 @@ const GlobalEvaluationPerformance = ({ campaigns = [] }) => {
         <div className="text-center">
           <div className="flex items-center justify-center mb-2">
             {statistics.average_rating ? renderStars(statistics.average_rating) : (
-              <span className="text-gray-400">No ratings</span>
+              <span className="text-gray-400">Aucune note</span>
             )}
           </div>
           <div className="text-2xl font-bold text-warmGray-800">
             {statistics.average_rating ? statistics.average_rating.toFixed(1) : 'N/A'}
           </div>
-          <div className="text-sm text-warmGray-600">Average Rating</div>
+          <div className="text-sm text-warmGray-600">Note Moyenne</div>
           <div className="text-xs text-warmGray-500">
-            {statistics.total_ratings} ratings received
+            {statistics.total_ratings} notes reçues
           </div>
         </div>
 
@@ -293,9 +293,9 @@ const GlobalEvaluationPerformance = ({ campaigns = [] }) => {
           <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${performanceColors.bg} ${performanceColors.text} mb-2`}>
             {statistics.global_performance}
           </div>
-          <div className="text-sm text-warmGray-600">My Performance</div>
+          <div className="text-sm text-warmGray-600">Ma Performance</div>
           <div className="text-xs text-warmGray-500">
-            overall assessment
+            évaluation globale
           </div>
         </div>
       </div>
@@ -307,19 +307,19 @@ const GlobalEvaluationPerformance = ({ campaigns = [] }) => {
             <div className="text-lg font-semibold text-warmGray-800">
               {statistics.evaluations_submitted}
             </div>
-            <div className="text-xs text-warmGray-500">Submitted</div>
+            <div className="text-xs text-warmGray-500">Soumises</div>
           </div>
           <div>
             <div className="text-lg font-semibold text-warmGray-800">
               {statistics.evaluations_pending}
             </div>
-            <div className="text-xs text-warmGray-500">Pending</div>
+            <div className="text-xs text-warmGray-500">En Attente</div>
           </div>
           <div>
             <div className="text-lg font-semibold text-warmGray-800">
               {statistics.total_campaigns}
             </div>
-            <div className="text-xs text-warmGray-500">Campaigns</div>
+            <div className="text-xs text-warmGray-500">Campagnes</div>
           </div>
           <div>
             <div className="text-lg font-semibold text-warmGray-800">

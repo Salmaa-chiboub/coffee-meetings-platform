@@ -134,7 +134,7 @@ class HRManagerProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = HRManager
         fields = ['id', 'name', 'email', 'company_name', 'profile_picture', 'profile_picture_url']
-        read_only_fields = ['id', 'profile_picture_url']  # Email non modifiable
+        read_only_fields = ['id', 'email', 'profile_picture_url']  # Email non modifiable
 
     def get_profile_picture_url(self, obj):
         """Get the full URL for the profile picture"""

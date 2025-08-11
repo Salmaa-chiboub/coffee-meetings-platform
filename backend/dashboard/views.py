@@ -530,7 +530,7 @@ def campaign_history(request):
                 'description': campaign.description or '',
                 'status': dict(CampaignWorkflowState.WORKFLOW_STEPS).get(
                     campaign.workflow_state.current_step if campaign.workflow_state else 1,
-                    'Create Campaign'
+                    'Créer Campagne'
                 ),
                 'start_date': campaign.start_date.strftime('%Y-%m-%d') if campaign.start_date else None,
                 'end_date': campaign.end_date.strftime('%Y-%m-%d') if campaign.end_date else None,
@@ -669,7 +669,7 @@ def export_history_pdf(request):
                 campaign.title,
                 dict(CampaignWorkflowState.WORKFLOW_STEPS).get(
                     campaign.workflow_state.current_step if campaign.workflow_state else 1,
-                    'Create Campaign'
+                    'Créer Campagne'
                 ),
                 campaign.start_date.strftime('%Y-%m-%d') if campaign.start_date else '-',
                 campaign.end_date.strftime('%Y-%m-%d') if campaign.end_date else '-',

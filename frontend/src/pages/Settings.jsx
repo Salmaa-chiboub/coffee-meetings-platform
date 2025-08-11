@@ -99,7 +99,9 @@ const Settings = () => {
     setMessage({ type: '', text: '' });
 
     try {
-      const result = await authAPI.updateProfile(profileForm);
+      // Exclude email from the update since it's read-only
+      const { email, ...updateData } = profileForm;
+      const result = await authAPI.updateProfile(updateData);
 
       if (result.success) {
         // Update user context with new data
@@ -134,7 +136,7 @@ const Settings = () => {
     if (passwordForm.new_password !== passwordForm.confirm_password) {
       setMessage({
         type: 'error',
-        text: 'New passwords do not match.'
+        text: 'Les nouveaux mots de passe ne correspondent pas.'
       });
       setIsLoading(false);
       return;
@@ -144,7 +146,7 @@ const Settings = () => {
     if (passwordForm.new_password.length < 8) {
       setMessage({
         type: 'error',
-        text: 'Password must be at least 8 characters long.'
+        text: 'Le mot de passe doit contenir au moins 8 caractères.'
       });
       setIsLoading(false);
       return;
@@ -191,15 +193,15 @@ const Settings = () => {
       if (result.success) {
         setMessage({
           type: 'success',
-          text: 'Password reset email sent! Check your inbox.'
+          text: 'Email de réinitialisation envoyé ! Vérifiez votre boîte de réception.'
         });
       } else {
-        throw new Error(result.error?.message || 'Failed to send reset email');
+        throw new Error(result.error?.message || 'Échec de l\'envoi de l\'email de réinitialisation');
       }
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error.message || 'Failed to send reset email. Please try again.'
+        text: error.message || 'Échec de l\'envoi de l\'email de réinitialisation. Veuillez réessayer.'
       });
     } finally {
       setIsLoading(false);

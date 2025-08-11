@@ -41,7 +41,7 @@ const Login = () => {
           {/* Header */}
           <div className="text-center pt-12 pb-4">
             <h1 className="text-4xl font-bold text-warmGray-800">
-              Welcome Back!!
+              Bon Retour !
             </h1>
           </div>
 
@@ -85,15 +85,15 @@ const Login = () => {
                     required: 'Password is required',
                     minLength: {
                       value: 6,
-                      message: 'Password must be at least 6 characters',
+                      message: 'Le mot de passe doit contenir au moins 6 caractères',
                     },
                   })}
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
+                  placeholder="Entrez votre mot de passe"
                   className="w-full pl-12 pr-12 py-4 bg-transparent border-2 border-warmGray-400 rounded-full text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:border-warmGray-600 transition-all duration-200"
                 />
                 <label className="absolute -top-3 left-6 bg-cream px-2 text-sm font-medium text-warmGray-600">
-                  Password
+                  Mot de Passe
                 </label>
                 <button
                   type="button"

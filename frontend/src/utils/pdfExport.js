@@ -6,15 +6,15 @@ export const exportToPDF = (data, filename = 'campaign-history.pdf') => {
   
   // Add title
   doc.setFontSize(20);
-  doc.text('Campaign History Report', 20, 20);
+  doc.text('Rapport d\'Historique de Campagne', 20, 20);
   
   // Add subtitle with date
   doc.setFontSize(12);
-  doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
+  doc.text(`Généré le: ${new Date().toLocaleDateString()}`, 20, 30);
   
   // Prepare table data
   if (data && data.length > 0) {
-    const tableColumns = ['Campaign Name', 'Status', 'Start Date', 'End Date', 'Participants'];
+    const tableColumns = ['Nom de Campagne', 'Statut', 'Date de Début', 'Date de Fin', 'Participants'];
     const tableRows = data.map(campaign => [
       campaign.name || 'N/A',
       campaign.status || 'N/A',
@@ -49,19 +49,19 @@ export const exportCampaignDetailsToPDF = (campaign, filename) => {
   
   // Add title
   doc.setFontSize(20);
-  doc.text(`Campaign: ${campaign.name || 'Unnamed Campaign'}`, 20, 20);
+  doc.text(`Campagne: ${campaign.name || 'Campagne Sans Nom'}`, 20, 20);
   
   // Add campaign details
   doc.setFontSize(12);
   let yPosition = 40;
   
   const details = [
-    ['Status:', campaign.status || 'N/A'],
-    ['Description:', campaign.description || 'No description'],
-    ['Start Date:', campaign.start_date ? new Date(campaign.start_date).toLocaleDateString() : 'N/A'],
-    ['End Date:', campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : 'N/A'],
+    ['Statut:', campaign.status || 'N/A'],
+    ['Description:', campaign.description || 'Aucune description'],
+    ['Date de Début:', campaign.start_date ? new Date(campaign.start_date).toLocaleDateString() : 'N/A'],
+    ['Date de Fin:', campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : 'N/A'],
     ['Participants:', campaign.participant_count || '0'],
-    ['HR Manager:', campaign.hr_manager_name || 'N/A']
+    ['Responsable RH:', campaign.hr_manager_name || 'N/A']
   ];
   
   details.forEach(([label, value]) => {

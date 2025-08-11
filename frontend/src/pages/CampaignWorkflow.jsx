@@ -309,7 +309,7 @@ const CampaignWorkflow = () => {
             onClick={handleBackToCampaigns}
             className="mt-4 bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-2 px-4 rounded-full transition-all duration-200"
           >
-            Back to Campaigns
+            Retour aux Campagnes
           </button>
         </div>
       </div>
@@ -326,7 +326,7 @@ const CampaignWorkflow = () => {
             className="flex items-center space-x-2 text-warmGray-600 hover:text-warmGray-800 transition-colors duration-200"
           >
             <ArrowLeftIcon className="h-5 w-5" />
-            <span>Back to Campaigns</span>
+            <span>Retour aux Campagnes</span>
           </button>
         </div>
 

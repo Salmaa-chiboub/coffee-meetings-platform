@@ -111,7 +111,7 @@ const Sidebar = ({ onHoverChange }) => {
     },
     {
       id: 'profile',
-      label: 'Profile',
+      label: 'Profil',
       icon: UserIcon,
       path: '/app/profile',
       active: location.pathname.startsWith('/app/profile')
@@ -272,14 +272,14 @@ const Sidebar = ({ onHoverChange }) => {
             <ArrowRightOnRectangleIcon className={`w-5 h-5 flex-shrink-0 ${shouldShowExpanded ? 'mr-3' : ''}`} />
             {shouldShowExpanded && (
               <span className="font-medium text-sm">
-                {isLoggingOut ? 'Logging out...' : 'Logout'}
+                {isLoggingOut ? 'Déconnexion...' : 'Déconnexion'}
               </span>
             )}
 
             {/* Tooltip for collapsed state */}
             {!shouldShowExpanded && (
               <div className="absolute left-full ml-2 px-2 py-1 bg-warmGray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                Logout
+                Déconnexion
               </div>
             )}
           </button>

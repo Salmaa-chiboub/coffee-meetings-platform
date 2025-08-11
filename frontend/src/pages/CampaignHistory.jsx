@@ -265,7 +265,7 @@ const CampaignHistory = () => {
               onClick={handleBackToCampaigns}
               className="mt-4 bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-2 px-4 rounded-lg transition-all duration-200 text-sm sm:text-base"
             >
-              Back to Campaigns
+              Retour aux Campagnes
             </button>
           </div>
         </div>
@@ -284,20 +284,20 @@ const CampaignHistory = () => {
             className="flex items-center space-x-2 text-warmGray-600 hover:text-warmGray-800 transition-colors duration-200 self-start"
           >
             <ArrowLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="text-sm sm:text-base">Back to Campaigns</span>
+            <span className="text-sm sm:text-base">Retour aux Campagnes</span>
           </button>
           
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <div className="flex items-center space-x-2">
               <DocumentTextIcon className="h-5 w-5 sm:h-6 sm:w-6 text-[#E8C4A0]" />
-              <span className="text-warmGray-800 font-medium text-sm sm:text-base">Campaign History</span>
+              <span className="text-warmGray-800 font-medium text-sm sm:text-base">Historique de Campagne</span>
             </div>
             <button
               onClick={() => navigate(`/app/campaigns/${campaignId}/evaluations`)}
               className="bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-2 px-3 sm:px-4 rounded-lg transition-all duration-200 flex items-center space-x-2 text-sm sm:text-base"
             >
               <ChartBarIcon className="h-4 w-4" />
-              <span>View Feedback</span>
+              <span>Voir les Évaluations</span>
             </button>
           </div>
         </div>
@@ -310,7 +310,7 @@ const CampaignHistory = () => {
             </h2>
             <span className="inline-flex items-center px-2 sm:px-3 py-1 bg-green-100 text-green-800 text-xs sm:text-sm font-medium rounded-full self-start sm:self-auto">
               <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-              Completed
+              Terminée
             </span>
           </div>
           
@@ -325,7 +325,7 @@ const CampaignHistory = () => {
               <p className="text-sm sm:text-lg font-bold text-warmGray-800 truncate">
                 {campaignDates.start} - {campaignDates.end}
               </p>
-              <p className="text-xs sm:text-sm text-warmGray-600">Campaign Period</p>
+              <p className="text-xs sm:text-sm text-warmGray-600">Période de Campagne</p>
             </div>
             
             <div className="bg-warmGray-50 rounded-lg border border-warmGray-200 p-3 sm:p-4 text-center">
@@ -341,7 +341,7 @@ const CampaignHistory = () => {
               <p className="text-xl sm:text-2xl font-bold text-warmGray-800">
                 {pairsData?.pairs_count || pairsData?.pairs?.length || 0}
               </p>
-              <p className="text-xs sm:text-sm text-warmGray-600">Pairs Created</p>
+              <p className="text-xs sm:text-sm text-warmGray-600">Paires Créées</p>
             </div>
           </div>
         </div>

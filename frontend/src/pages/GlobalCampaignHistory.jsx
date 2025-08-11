@@ -110,7 +110,7 @@ const GlobalCampaignHistory = () => {
     const end = new Date(endDate);
     const diffTime = Math.abs(end - start);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return `${diffDays} days`;
+    return `${diffDays} jours`;
   };
 
   // Export to PDF
@@ -171,10 +171,10 @@ const GlobalCampaignHistory = () => {
         <div className="flex items-start justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-warmGray-800 mb-2">
-              Campaign History
+              Historique des Campagnes
             </h1>
             <p className="text-warmGray-600">
-              View and manage completed coffee meeting campaigns. Statistics below reflect only completed campaigns.
+              Consultez et gérez les campagnes de rencontres café terminées. Les statistiques ci-dessous reflètent uniquement les campagnes terminées.
             </p>
           </div>
 
@@ -185,7 +185,7 @@ const GlobalCampaignHistory = () => {
             className="bg-[#E8C4A0] hover:bg-[#DDB892] disabled:bg-warmGray-300 text-[#8B6F47] disabled:text-warmGray-500 font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center space-x-2"
           >
             <DocumentArrowDownIcon className="h-4 w-4" />
-            <span>Export PDF</span>
+            <span>Exporter PDF</span>
           </button>
         </div>
       </div>
@@ -203,7 +203,7 @@ const GlobalCampaignHistory = () => {
                   <ChartBarIcon className="h-5 w-5 text-[#8B6F47]" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-warmGray-600">Completed Campaigns</p>
+                  <p className="text-sm font-medium text-warmGray-600">Campagnes Terminées</p>
                   <p className="text-xl font-bold text-warmGray-800">{campaigns.length}</p>
                 </div>
               </div>
@@ -215,7 +215,7 @@ const GlobalCampaignHistory = () => {
                   <UserGroupIcon className="h-5 w-5 text-blue-600" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-warmGray-600">Participants (Completed)</p>
+                  <p className="text-sm font-medium text-warmGray-600">Participants (Terminées)</p>
                   <p className="text-xl font-bold text-warmGray-800">
                     {campaigns.reduce((sum, campaign) => sum + (campaign.participants_count || 0), 0)}
                   </p>
@@ -229,7 +229,7 @@ const GlobalCampaignHistory = () => {
                   <UsersIcon className="h-5 w-5 text-green-600" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-warmGray-600">Pairs (Completed)</p>
+                  <p className="text-sm font-medium text-warmGray-600">Paires (Terminées)</p>
                   <p className="text-xl font-bold text-warmGray-800">
                     {campaigns.reduce((sum, campaign) => sum + (campaign.total_pairs || 0), 0)}
                   </p>
@@ -259,9 +259,9 @@ const GlobalCampaignHistory = () => {
             <div className="w-16 h-16 bg-warmGray-200 rounded-full flex items-center justify-center mx-auto mb-4">
               <ChartBarIcon className="h-8 w-8 text-warmGray-400" />
             </div>
-            <h3 className="text-lg font-medium text-warmGray-800 mb-2">No campaigns found</h3>
+            <h3 className="text-lg font-medium text-warmGray-800 mb-2">Aucune campagne trouvée</h3>
             <p className="text-warmGray-600">
-              No completed campaigns available yet.
+              Aucune campagne terminée disponible pour le moment.
             </p>
           </div>
         )}
@@ -279,19 +279,19 @@ const GlobalCampaignHistory = () => {
                       Campaign
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
-                      Duration
+                      Durée
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
                       Participants
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
-                      Pairs
+                      Paires
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
-                      Criteria
+                      Critères
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-warmGray-500 uppercase tracking-wider">
-                      Completed
+                      Terminée
                     </th>
                     <th className="px-3 py-3 text-center text-xs font-medium text-warmGray-500 uppercase tracking-wider w-20">
                       Actions
@@ -444,10 +444,10 @@ const GlobalCampaignHistory = () => {
                 <div className="flex items-center justify-between text-xs text-warmGray-500 pt-3 border-t border-warmGray-100">
                   <span>
                     <ClockIcon className="h-3 w-3 inline mr-1" />
-                    Completed: {formatDate(campaign.completion_date)}
+                    Terminée: {formatDate(campaign.completion_date)}
                   </span>
                   <span>
-                    Created: {formatDate(campaign.created_at)}
+                    Créée: {formatDate(campaign.created_at)}
                   </span>
                 </div>
               </div>
@@ -461,7 +461,7 @@ const GlobalCampaignHistory = () => {
           <div className="flex justify-center py-8">
             <div className="flex items-center space-x-2 text-warmGray-600">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-warmGray-600"></div>
-              <span>Loading more campaigns...</span>
+              <span>Chargement de plus de campagnes...</span>
             </div>
           </div>
         )}
@@ -470,10 +470,10 @@ const GlobalCampaignHistory = () => {
         {!hasMore && campaigns.length > 0 && (
           <div className="text-center py-8">
             <div className="text-warmGray-500 text-sm">
-              You've reached the end of your campaign history
+              Vous avez atteint la fin de votre historique de campagnes
             </div>
             <div className="text-warmGray-400 text-xs mt-1">
-              {campaigns.length} campaigns total
+              {campaigns.length} campagnes au total
             </div>
           </div>
         )}

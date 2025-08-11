@@ -62,7 +62,7 @@ const CampaignCard = React.memo(({ campaign, onClick, onDelete }) => {
                 ? 'bg-green-100 text-green-700'
                 : 'bg-orange-100 text-orange-700'
             }`}>
-              {campaignStatus.isCompleted ? 'Completed' : 'Active'}
+              {campaignStatus.isCompleted ? 'Terminée' : 'Active'}
             </span>
           )}
           <CampaignCardMenu

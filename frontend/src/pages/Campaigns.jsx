@@ -323,10 +323,10 @@ const CampaignsList = React.memo(() => {
               <div>
                 <MagnifyingGlassIcon className="h-16 w-16 text-warmGray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-warmGray-800 mb-2">
-                  No campaigns found
+                  Aucune campagne trouvée
                 </h3>
                 <p className="text-warmGray-600">
-                  Try adjusting your search terms
+                  Essayez d'ajuster vos termes de recherche
                 </p>
               </div>
             )}

@@ -61,11 +61,11 @@ class CampaignWorkflowState(models.Model):
     Tracks the workflow state for each campaign
     """
     WORKFLOW_STEPS = [
-        (1, 'Create Campaign'),
-        (2, 'Upload Employees'),
-        (3, 'Define Criteria'),
-        (4, 'Generate Pairs'),
-        (5, 'Confirm and Send'),
+        (1, 'Créer Campagne'),
+        (2, 'Télécharger Employés'),
+        (3, 'Définir Critères'),
+        (4, 'Générer Paires'),
+        (5, 'Confirmer et Envoyer'),
     ]
 
     campaign = models.OneToOneField(Campaign, on_delete=models.CASCADE, related_name='workflow_state')
@@ -135,11 +135,11 @@ class CampaignWorkflowState(models.Model):
     def can_access_step(self, step_number):
         """Check if a step can be accessed based on dependencies"""
         step_dependencies = {
-            1: [],  # Create Campaign - no dependencies
-            2: [1],  # Upload Employees - requires campaign creation
-            3: [1, 2],  # Define Criteria - requires campaign and employees
-            4: [1, 2],  # Generate Pairs - requires campaign and employees (criteria optional)
-            5: [1, 2, 4],  # Confirm Send - requires campaign, employees, and generated pairs
+            1: [],  # Créer Campagne - no dependencies
+            2: [1],  # Télécharger Employés - requires campaign creation
+            3: [1, 2],  # Définir Critères - requires campaign and employees
+            4: [1, 2],  # Générer Paires - requires campaign and employees (criteria optional)
+            5: [1, 2, 4],  # Confirmer et Envoyer - requires campaign, employees, and generated pairs
         }
 
         required_steps = step_dependencies.get(step_number, [])
@@ -163,27 +163,27 @@ class CampaignWorkflowState(models.Model):
 
             if missing_steps:
                 step_names = {
-                    1: 'Create Campaign',
-                    2: 'Upload Employees',
-                    3: 'Define Criteria',
-                    4: 'Generate Pairs',
-                    5: 'Confirm and Send'
+                    1: 'Créer Campagne',
+                    2: 'Télécharger Employés',
+                    3: 'Définir Critères',
+                    4: 'Générer Paires',
+                    5: 'Confirmer et Envoyer'
                 }
                 missing_names = [step_names.get(step, f'Step {step}') for step in missing_steps]
                 errors.append(f"Please complete the following steps first: {', '.join(missing_names)}")
 
         # Step-specific validation
-        if step_number == 2:  # Upload Employees
+        if step_number == 2:  # Télécharger Employés
             step_data = self.step_data.get('2', {})
             if not step_data.get('employees_count') or step_data.get('employees_count', 0) < 2:
-                errors.append("At least 2 employees are required for pairing")
+                errors.append("Au moins 2 employés sont requis pour l'appariement")
 
-        elif step_number == 4:  # Generate Pairs
+        elif step_number == 4:  # Générer Paires
             step_data = self.step_data.get('4', {})
             if not step_data.get('pairs_count') or step_data.get('pairs_count', 0) == 0:
-                errors.append("No pairs have been generated")
+                errors.append("Aucune paire n'a été générée")
 
-        elif step_number == 5:  # Confirm Send
+        elif step_number == 5:  # Confirmer et Envoyer
             step_data = self.step_data.get('5', {})
             if not step_data.get('confirmed_pairs') or step_data.get('confirmed_pairs', 0) == 0:
                 errors.append("No pairs have been confirmed")

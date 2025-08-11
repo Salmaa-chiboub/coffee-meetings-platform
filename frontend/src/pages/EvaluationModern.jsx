@@ -186,13 +186,13 @@ const EvaluationModern = () => {
           <div className="text-center max-w-md">
             <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-warmGray-800 mb-2">
-              {error.type === 'already_submitted' ? 'Already Submitted' :
-               error.type === 'not_found' ? 'Invalid Link' : 'Error'}
+              {error.type === 'already_submitted' ? 'Déjà Soumis' :
+               error.type === 'not_found' ? 'Lien Invalide' : 'Erreur'}
             </h2>
             <p className="text-warmGray-600 mb-4">{error.message}</p>
             {error.submitted_at && (
               <p className="text-sm text-warmGray-500">
-                Submitted on {formatDate(error.submitted_at)}
+                Soumis le {formatDate(error.submitted_at)}
               </p>
             )}
           </div>
@@ -210,13 +210,13 @@ const EvaluationModern = () => {
           <div className="text-center max-w-md">
             <CheckCircleIcon className="h-20 w-20 text-green-600 mx-auto mb-6" />
             <h2 className="text-3xl font-bold text-warmGray-800 mb-4">
-              Thank You!
+              Merci !
             </h2>
             <p className="text-warmGray-600 text-lg mb-4">
-              Your feedback has been submitted successfully.
+              Vos commentaires ont été soumis avec succès.
             </p>
             <p className="text-warmGray-500">
-              We appreciate you taking the time to share your coffee meeting experience.
+              Nous apprécions que vous ayez pris le temps de partager votre expérience de rencontre café.
             </p>
           </div>
         </div>
@@ -236,10 +236,10 @@ const EvaluationModern = () => {
               <CoffeeIcon className="h-8 w-8 text-[#8B6F47]" />
             </div>
             <h1 className="text-4xl font-bold text-warmGray-800 mb-3">
-              Coffee Meeting Feedback
+              Commentaires sur la Rencontre Café
             </h1>
             <p className="text-lg text-warmGray-600 max-w-md mx-auto">
-              We'd love to hear about your coffee meeting experience
+              Nous aimerions connaître votre expérience de rencontre café
             </p>
           </div>
 
@@ -248,7 +248,7 @@ const EvaluationModern = () => {
             {/* Rating Section */}
             <div className="text-center">
               <h3 className="text-lg font-medium text-warmGray-700 mb-6">
-                How would you rate your coffee meeting experience?
+                Comment évalueriez-vous votre expérience de rencontre café ?
               </h3>
               <div className="flex justify-center space-x-2 mb-4">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -274,7 +274,7 @@ const EvaluationModern = () => {
                     {getRatingText(hoverRating || rating)}
                   </p>
                   <p className="text-sm text-warmGray-500">
-                    {rating > 0 ? `You rated ${rating} out of 5 stars` : ''}
+                    {rating > 0 ? `Vous avez donné ${rating} étoiles sur 5` : ''}
                   </p>
                 </div>
               )}
@@ -283,7 +283,7 @@ const EvaluationModern = () => {
             {/* Comment Section */}
             <div className="space-y-2">
               <label htmlFor="comment" className="block text-sm font-medium text-warmGray-700">
-                Share your thoughts (optional)
+                Partagez vos pensées (optionnel)
               </label>
               <div className="relative">
                 <div className="absolute top-3 left-3 pointer-events-none">
@@ -295,7 +295,7 @@ const EvaluationModern = () => {
                   onChange={(e) => setComment(e.target.value)}
                   rows={4}
                   className="w-full pl-10 pr-4 py-3 bg-white border-2 border-warmGray-300 text-warmGray-800 placeholder-warmGray-400 focus:outline-none focus:ring-2 focus:ring-[#E8C4A0] focus:border-[#E8C4A0] transition-all duration-200 resize-none shadow-sm"
-                  placeholder="Tell us about your coffee meeting experience..."
+                  placeholder="Parlez-nous de votre expérience de rencontre café..."
                   style={{ borderRadius: '10px' }}
                 />
               </div>
@@ -320,7 +320,7 @@ const EvaluationModern = () => {
                 {submitting ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-[#8B6F47] border-t-transparent mr-3"></div>
-                    <span>Submitting your feedback...</span>
+                    <span>Soumission de vos commentaires...</span>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center">

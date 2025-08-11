@@ -56,20 +56,20 @@ const ForgotPassword = () => {
                 className="w-full bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-4 px-6 rounded-full transition-all duration-200 transform hover:scale-[1.02] flex items-center justify-center"
               >
                 <ArrowLeftIcon className="h-5 w-5 mr-2" />
-                Back to Login
+                Retour à la Connexion
               </button>
             </div>
 
             {/* Resend Link */}
             <div className="text-center pt-4 pb-12">
               <span className="text-warmGray-500 text-sm">
-                Didn't receive the email?{' '}
+                Vous n'avez pas reçu l'email ?{' '}
                 <button
                   type="button"
                   onClick={() => setIsSuccess(false)}
                   className="text-peach-600 hover:text-peach-700 font-medium transition-colors duration-200"
                 >
-                  Try again
+                  Réessayer
                 </button>
               </span>
             </div>
@@ -92,10 +92,10 @@ const ForgotPassword = () => {
           {/* Header */}
           <div className="text-center pt-12 pb-4">
             <h1 className="text-4xl font-bold text-warmGray-800">
-              Forgot Password?
+              Mot de Passe Oublié ?
             </h1>
             <p className="mt-4 text-warmGray-600">
-              Enter your email address and we'll send you a link to reset your password.
+              Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
             </p>
           </div>
 
@@ -145,10 +145,10 @@ const ForgotPassword = () => {
                 {isLoading ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#8B6F47] mr-2"></div>
-                    Sending...
+                    Envoi en cours...
                   </div>
                 ) : (
-                  'Send Reset Link'
+                  'Envoyer le Lien de Réinitialisation'
                 )}
               </button>
             </div>
@@ -161,7 +161,7 @@ const ForgotPassword = () => {
                 className="text-warmGray-500 hover:text-warmGray-700 font-medium transition-colors duration-200 flex items-center justify-center mx-auto"
               >
                 <ArrowLeftIcon className="h-4 w-4 mr-1" />
-                Back to Login
+                Retour à la Connexion
               </button>
             </div>
           </form>

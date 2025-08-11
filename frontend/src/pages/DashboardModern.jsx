@@ -355,7 +355,7 @@ const DashboardModern = () => {
                           "{evaluation.comment.length > 100 ? evaluation.comment.substring(0, 100) + '...' : evaluation.comment}"
                         </p>
                       ) : (
-                        <p className="text-xs text-warmGray-500 italic text-center">No comment provided</p>
+                        <p className="text-xs text-warmGray-500 italic text-center">Aucun commentaire fourni</p>
                       )}
                     </div>
 

@@ -59,7 +59,7 @@ const SearchResults = ({
     const now = new Date();
     
     if (endDate < now) {
-      return <CheckCircleIcon className="h-4 w-4 text-green-500" title="Completed" />;
+      return <CheckCircleIcon className="h-4 w-4 text-green-500" title="Terminée" />;
     } else {
       return <ClockIcon className="h-4 w-4 text-blue-500" title="Active" />;
     }

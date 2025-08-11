@@ -211,7 +211,7 @@ const Header = ({ isHovered = false }) => {
                     className="flex items-center w-full px-4 py-3 text-sm text-warmGray-700 hover:bg-gradient-to-r hover:from-[#E8C4A0]/10 hover:to-cream/10 hover:text-[#8B6F47] transition-all duration-200 group"
                   >
                     <UserIcon className="w-4 h-4 mr-3 text-[#8B6F47]/60 group-hover:text-[#8B6F47] transition-colors" />
-                    <span className="font-medium">Profile</span>
+                    <span className="font-medium">Profil</span>
                   </button>
 
                   <div className="mx-4 my-2 border-t border-[#E8C4A0]/20"></div>
@@ -221,7 +221,7 @@ const Header = ({ isHovered = false }) => {
                     className="flex items-center w-full px-4 py-3 text-sm text-warmGray-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-50 hover:text-red-600 transition-all duration-200 group"
                   >
                     <ArrowRightOnRectangleIcon className="w-4 h-4 mr-3 text-red-400 group-hover:text-red-600 transition-colors" />
-                    <span className="font-medium">Log out</span>
+                    <span className="font-medium">Déconnexion</span>
                   </button>
                 </div>
               </div>

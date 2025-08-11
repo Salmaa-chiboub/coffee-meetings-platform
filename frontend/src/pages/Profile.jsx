@@ -77,7 +77,6 @@ const Profile = () => {
     try {
       const result = await authAPI.updateProfile({
         name: editName.trim(),
-        email: user.email,
         company_name: user.company_name
       });
 
@@ -106,7 +105,6 @@ const Profile = () => {
     try {
       const result = await authAPI.updateProfile({
         name: user.name,
-        email: user.email,
         company_name: editCompany.trim()
       });
 
@@ -177,12 +175,12 @@ const Profile = () => {
 
       if (result.success) {
         updateUser(result.data);
-        setMessage({ type: 'success', text: 'Profile picture removed successfully!' });
+        setMessage({ type: 'success', text: 'Photo de profil supprimée avec succès !' });
       } else {
-        throw new Error(result.message || 'Failed to delete profile picture');
+        throw new Error(result.message || 'Échec de la suppression de la photo de profil');
       }
     } catch (error) {
-      setMessage({ type: 'error', text: error.message || 'Failed to delete profile picture' });
+      setMessage({ type: 'error', text: error.message || 'Échec de la suppression de la photo de profil' });
     } finally {
       setIsUploadingPicture(false);
     }

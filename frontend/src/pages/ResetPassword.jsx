@@ -63,7 +63,7 @@ const ResetPassword = () => {
       console.error('❌ Password Reset Error:', error);
       setError('root', {
         type: 'manual',
-        message: error.message || 'Failed to reset password. Please try again.',
+        message: error.message || 'Échec de la réinitialisation du mot de passe. Veuillez réessayer.',
       });
     } finally {
       setIsLoading(false);
@@ -79,10 +79,10 @@ const ResetPassword = () => {
             {/* Header */}
             <div className="text-center pt-12 pb-4">
               <h1 className="text-4xl font-bold text-warmGray-800">
-                Password Reset Successful!
+                Réinitialisation Réussie !
               </h1>
               <p className="mt-4 text-warmGray-600">
-                Your password has been successfully reset. You can now log in with your new password.
+                Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
               </p>
             </div>
 
@@ -92,7 +92,7 @@ const ResetPassword = () => {
                 onClick={() => navigate('/login')}
                 className="w-full bg-[#E8C4A0] hover:bg-[#DDB892] text-[#8B6F47] font-medium py-4 px-6 rounded-full transition-all duration-200 transform hover:scale-[1.02]"
               >
-                Go to Login
+                Aller à la Connexion
               </button>
             </div>
           </div>
@@ -114,10 +114,10 @@ const ResetPassword = () => {
           {/* Header */}
           <div className="text-center pt-12 pb-4">
             <h1 className="text-4xl font-bold text-warmGray-800">
-              Reset Your Password
+              Réinitialisez Votre Mot de Passe
             </h1>
             <p className="mt-4 text-warmGray-600">
-              Enter your new password below.
+              Entrez votre nouveau mot de passe ci-dessous.
             </p>
           </div>
 
@@ -218,10 +218,10 @@ const ResetPassword = () => {
                 {isLoading ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#8B6F47] mr-2"></div>
-                    Resetting Password...
+                    Réinitialisation en cours...
                   </div>
                 ) : (
-                  'Reset Password'
+                  'Réinitialiser le Mot de Passe'
                 )}
               </button>
             </div>
@@ -233,7 +233,7 @@ const ResetPassword = () => {
                 onClick={() => navigate('/login')}
                 className="text-warmGray-500 hover:text-warmGray-700 font-medium transition-colors duration-200"
               >
-                Back to Login
+                Retour à la Connexion
               </button>
             </div>
           </form>

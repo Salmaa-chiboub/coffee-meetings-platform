@@ -8,19 +8,19 @@ import {
 
 const LazyWorkflowProgress = ({ workflowState, completedSteps }) => {
   const workflowSteps = [
-    { step: 'Campaign Created', icon: DocumentTextIcon, color: 'blue-600' },
-    { step: 'Employees Added', icon: UserGroupIcon, color: 'green-600' }, 
-    { step: 'Criteria Defined', icon: ChartBarIcon, color: 'purple-600' },
-    { step: 'Pairs Generated', icon: UserGroupIcon, color: 'yellow-600' },
-    { step: 'Invitations Sent', icon: CheckIcon, color: 'pink-600' }
+    { step: 'Campagne Créée', icon: DocumentTextIcon, color: 'blue-600' },
+    { step: 'Employés Ajoutés', icon: UserGroupIcon, color: 'green-600' },
+    { step: 'Critères Définis', icon: ChartBarIcon, color: 'purple-600' },
+    { step: 'Paires Générées', icon: UserGroupIcon, color: 'yellow-600' },
+    { step: 'Invitations Envoyées', icon: CheckIcon, color: 'pink-600' }
   ];
 
   return (
     <div className="bg-white rounded-xl border border-warmGray-200 p-4 sm:p-6 shadow-md">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-        <h3 className="text-base sm:text-lg font-semibold text-warmGray-900">Workflow Progress</h3>
+        <h3 className="text-base sm:text-lg font-semibold text-warmGray-900">Progression du Workflow</h3>
         <span className="text-xs sm:text-sm text-warmGray-500 self-start sm:self-auto">
-          {completedSteps}/5 steps completed
+          {completedSteps}/5 étapes terminées
         </span>
       </div>
       

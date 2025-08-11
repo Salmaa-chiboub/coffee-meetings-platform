@@ -72,17 +72,17 @@ const CampaignCreate = () => {
       if (error.end_date) {
         setError('end_date', {
           type: 'manual',
-          message: error.end_date[0] || 'Invalid end date',
+          message: error.end_date[0] || 'Date de fin invalide',
         });
       } else if (error.start_date) {
         setError('start_date', {
           type: 'manual',
-          message: error.start_date[0] || 'Invalid start date',
+          message: error.start_date[0] || 'Date de début invalide',
         });
       } else {
         setError('root', {
           type: 'manual',
-          message: error.message || 'Failed to create campaign. Please try again.',
+          message: error.message || 'Échec de la création de campagne. Veuillez réessayer.',
         });
       }
     } finally {

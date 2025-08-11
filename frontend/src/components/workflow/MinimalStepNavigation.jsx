@@ -8,11 +8,11 @@ const MinimalStepNavigation = ({
   campaignCompleted = false 
 }) => {
   const steps = [
-    { id: 1, title: 'Campaign' },
+    { id: 1, title: 'Campagne' },
     { id: 2, title: 'Upload' },
-    { id: 3, title: 'Criteria' },
-    { id: 4, title: 'Pairs' },
-    { id: 5, title: 'Send' }
+    { id: 3, title: 'Critères' },
+    { id: 4, title: 'Paires' },
+    { id: 5, title: 'Envoi' }
   ];
 
   const getStepStatus = (stepId) => {
