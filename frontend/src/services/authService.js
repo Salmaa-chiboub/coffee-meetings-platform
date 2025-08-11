@@ -7,7 +7,7 @@ export const authService = {
       const result = await authAPI.login(credentials);
 
       if (result.success) {
-        const { access_token, refresh_token, user_id, name, email, profile_picture_url } = result.data;
+        const { access_token, refresh_token, user_id, name, email, company_name, profile_picture_url } = result.data;
 
         // Store tokens using the new token utils
         tokenUtils.setTokens(access_token, refresh_token);
@@ -17,6 +17,7 @@ export const authService = {
           id: user_id,
           name,
           email,
+          company_name,
           profile_picture_url,
           role: 'hr_manager'
         };

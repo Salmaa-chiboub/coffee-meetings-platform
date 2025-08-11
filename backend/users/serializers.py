@@ -64,6 +64,7 @@ class HRManagerLoginSerializer(serializers.ModelSerializer):
             'user_id': user.id,
             'name': user.name,
             'email': user.email,
+            'company_name': user.company_name,
             'profile_picture_url': profile_picture_url,
             'access_token': access_token,
             'refresh_token': refresh_token
