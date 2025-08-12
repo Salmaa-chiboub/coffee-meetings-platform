@@ -24,6 +24,7 @@ from employees.models import Employee
 from evaluations.models import Evaluation
 from matching.models import EmployeePair
 from .decorators import cache_dashboard_response
+from dateutil.relativedelta import relativedelta
 
 class OptimizedPagination(PageNumberPagination):
     page_size = 10
@@ -216,71 +217,58 @@ def rating_distribution(request):
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def evaluation_trends(request):
-    """Get evaluation trends over time"""
+    """Get evaluation trends: current month + 5 previous months"""
     try:
-        period = request.GET.get('period', '6months')
         hr_manager = request.user
 
         # Get campaigns for this HR manager
         hr_campaigns = Campaign.objects.filter(hr_manager=hr_manager)
 
-        # Calculate date range based on period
-        end_date = timezone.now().date()
-        if period == '6months':
-            start_date = end_date - timedelta(days=180)
-            date_format = '%Y-%m'
-            group_by = 'month'
-        elif period == '3months':
-            start_date = end_date - timedelta(days=90)
-            date_format = '%Y-%m'
-            group_by = 'month'
-        else:  # default to 6 months
-            start_date = end_date - timedelta(days=180)
-            date_format = '%Y-%m'
-            group_by = 'month'
+        # Date range: from 1st day of 5 months ago until last day of current month
+        end_date = timezone.now().date().replace(day=1)  # début du mois actuel
+        start_date = (end_date - relativedelta(months=5))  # début du mois d'il y a 5 mois
 
-        # Get evaluations in date range (only used evaluations from HR manager's campaigns)
+        date_format = '%Y-%m'
+
+        # Get evaluations in date range
         evaluations = Evaluation.objects.filter(
-            employee_pair__campaign__in=hr_campaigns,  # Only evaluations from HR manager's campaigns
+            employee_pair__campaign__in=hr_campaigns,
             used=True,
             submitted_at__date__gte=start_date,
-            submitted_at__date__lte=end_date
+            submitted_at__date__lte=end_date + relativedelta(months=1) - timedelta(days=1)  # fin du mois actuel
         )
-        
+
         # Group by month and count
         trends = {}
         for evaluation in evaluations:
             month_key = evaluation.submitted_at.strftime(date_format)
-            if month_key not in trends:
-                trends[month_key] = 0
-            trends[month_key] += 1
-        
-        # Convert to list format expected by frontend
+            trends[month_key] = trends.get(month_key, 0) + 1
+
+        # Build data: exactly 6 months from start_date to end_date
         data = []
-        current_date = start_date
-        while current_date <= end_date:
+        current_date = end_date
+        for i in range(6):
             month_key = current_date.strftime(date_format)
-            label = current_date.strftime('%b') if group_by == 'month' else current_date.strftime('%d/%m')
-            
+            label = current_date.strftime('%b')
             data.append({
                 'label': label,
                 'value': trends.get(month_key, 0)
             })
-            
-            # Move to next month
-            if current_date.month == 12:
-                current_date = current_date.replace(year=current_date.year + 1, month=1)
-            else:
-                current_date = current_date.replace(month=current_date.month + 1)
-        
+            current_date -= relativedelta(months=1)
+
+        # Reverse to have chronological order (oldest → newest)
+        data.reverse()
+
         return Response({
             'success': True,
-            'data': data[-6:]  # Return last 6 months
+            'data': data
         })
-        
+
     except Exception as e:
         return Response({
             'success': False,
